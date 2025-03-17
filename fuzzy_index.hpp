@@ -1,10 +1,12 @@
 #include <iostream>
 #include <map>
 #include <string>
-#include <regex>
+//#include <regex>
 #include <vector>
 #include <bits/stdc++.h>
 using namespace std;
+#include <boost/regex.hpp>
+#include <boost/regex/icu.hpp>
 
 #include "unidecode/unidecode.hpp"
 #include "unidecode/utf8_string_iterator.hpp"
@@ -42,26 +44,35 @@ class FuzzyIndex {
             return output;
         }
 
-        static string encode_string(string &text) {
+        //static vector<string> encode_string(const string &_text) {
+        static string encode_string(const string &_text) {
             // Remove spaces, punctuation, convert non-ascii characters to some romanized equivalent, lower case, return
-            if (text.empty())
-                return text; 
-           
+            if (_text.empty()) {
+                //vector <string> a;
+                return _text;
+            }
+
+            boost::u32regex r = boost::make_u32regex("[_ ]|[^[:L*:]]+");
+            string text(_text);
             cout << text << endl;
-            text = regex_replace(text, regex("[_ ]|[^\\w\\u0080-\\uffff]+"), "");
-            cout << text << endl;
+            text = boost::u32regex_replace(text, r, "");
             cout << text << endl;
             transform(text.begin(), text.end(), text.begin(), ::tolower);
-            // Sometimes unidecode puts spaces in, so remove them
             text = unidecode(text);
+            // Sometimes unidecode puts spaces in, so remove them
             text = regex_replace(text, regex("[ ]+"), "");
             return text;
+//            auto main_part = text.substr(0, MAX_ENCODED_STRING_LENGTH);
+//            auto remainder = text.substr(MAX_ENCODED_STRING_LENGTH);
+//            vector<string> ret = { main_part, remainder};
+//            return ret;
         }
 
-        static string encode_string_for_stupid_artists(string &text) {
+        static string encode_string_for_stupid_artists(const string &_text) {
             //Remove spaces, convert non-ascii characters to some romanized equivalent, lower case, return
-            if (text.empty())
-                return text; 
+            if (_text.empty())
+                return _text; 
+            string text(_text);
             text = regex_replace(text, regex("[\\s]+"), "");
             // TODO: split according to len
             return unidecode(text);
