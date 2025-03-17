@@ -5,7 +5,7 @@
 int main(int argc, char *argv[])
 {
     FuzzyIndex fi("test");
-    auto s = string("This @is an _ artist!!!");
+    auto s = string("This @is an _ artist!!! (モーニング娘。)");
     cout << fi.encode_string(s) << endl;
 
     s = string(" @_!!! \t ");

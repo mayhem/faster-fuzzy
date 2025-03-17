@@ -34,24 +34,27 @@ class FuzzyIndex {
         ~FuzzyIndex() {
         }
 
-        static string &unidecode(const string &str) {
-            unidecode::Utf8StringIterator begin = str;
-            unidecode::Utf8StringIterator end = str + str.length();
-            std::string output;
+        static string unidecode(const string &str) {
+            unidecode::Utf8StringIterator begin = str.c_str();
+            unidecode::Utf8StringIterator end = str.c_str() + str.length();
+            string output;
             unidecode::Unidecode(begin, end, std::back_inserter(output));
             return output;
         }
 
-        static string &encode_string(string &text) {
+        static string encode_string(string &text) {
             // Remove spaces, punctuation, convert non-ascii characters to some romanized equivalent, lower case, return
-            // TODO: sometimes there are trailing spaces: 'Ji He Xue Mo Yang ' 
             if (text.empty())
                 return text; 
            
-            text = regex_replace(text, regex("[_]|[^\\w]+"), "");
+            cout << text << endl;
+            text = regex_replace(text, regex("[_ ]|[^\\w\\u0080-\\uffff]+"), "");
+            cout << text << endl;
+            cout << text << endl;
             transform(text.begin(), text.end(), text.begin(), ::tolower);
-            // TODO: split according to len
-            text = unidecode(text)
+            // Sometimes unidecode puts spaces in, so remove them
+            text = unidecode(text);
+            text = regex_replace(text, regex("[ ]+"), "");
             return text;
         }
 
@@ -61,8 +64,7 @@ class FuzzyIndex {
                 return text; 
             text = regex_replace(text, regex("[\\s]+"), "");
             // TODO: split according to len
-            text = unidecode(text)
-            return text;
+            return unidecode(text);
         }
 
         void build(vector<IndexData> &index_data) {

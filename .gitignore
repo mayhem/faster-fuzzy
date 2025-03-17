@@ -1,2 +1,6 @@
 build
-deps
+deps/nmslib
+deps/unidecode
+deps/SQLiteCpp
+deps/Crow
+.vscode
