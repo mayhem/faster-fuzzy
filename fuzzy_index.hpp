@@ -1,19 +1,20 @@
+#include <stdio.h>
+
 #include <iostream>
 #include <map>
 #include <string>
-//#include <regex>
 #include <vector>
 #include <bits/stdc++.h>
 using namespace std;
-#include <boost/regex.hpp>
-#include <boost/regex/icu.hpp>
 
+#include "jpcre2.hpp"
 #include "unidecode/unidecode.hpp"
 #include "unidecode/utf8_string_iterator.hpp"
 
-
 const auto MAX_ENCODED_STRING_LENGTH = 30;
 const auto NUM_FUZZY_SEARCH_RESULTS = 500;
+
+typedef jpcre2::select<char> jp; 
 
 class IndexData {
     int id;
@@ -23,20 +24,34 @@ class IndexData {
 class FuzzyIndex {
     private:
         shared_ptr<vector<IndexData>> index_data; 
+        
+        // Couldn't get smart_ptr to compile here. odd.
+        jp::Regex *non_word;
+        jp::Regex *spaces_uscore;
+        jp::Regex *spaces;
 
     public:
 
         FuzzyIndex(const string &_name) {
             index_data = shared_ptr<vector<IndexData>>(new vector<IndexData>());
             string name = _name;
+            non_word = new jp::Regex();
+            spaces_uscore = new jp::Regex();
+            spaces = new jp::Regex();
+
+            non_word->setPattern("[^\\w]+").addModifier("n").compile();
+            spaces_uscore->setPattern("[ _]+").addModifier("n").compile();
+            spaces->setPattern("[\\s]+").addModifier("n").compile();
 //            index = nmslib.init(method='simple_invindx', space='negdotprod_sparse_fast', data_type=nmslib.DataType.SPARSE_VECTOR)
 //            vectorizer = TfidfVectorizer(min_df=1, analyzer=ngrams)
         }
         
         ~FuzzyIndex() {
+            delete non_word;
+            delete spaces;
         }
 
-        static string unidecode(const string &str) {
+        string unidecode(const string &str) {
             unidecode::Utf8StringIterator begin = str.c_str();
             unidecode::Utf8StringIterator end = str.c_str() + str.length();
             string output;
@@ -44,38 +59,44 @@ class FuzzyIndex {
             return output;
         }
 
-        //static vector<string> encode_string(const string &_text) {
-        static string encode_string(const string &_text) {
+        vector<string> encode_string(const string &text) {
             // Remove spaces, punctuation, convert non-ascii characters to some romanized equivalent, lower case, return
-            if (_text.empty()) {
-                //vector <string> a;
-                return _text;
+            if (text.empty()) {
+                vector<string> a;
+                return a;
             }
-
-            boost::u32regex r = boost::make_u32regex("[_ ]|[^[:L*:]]+");
-            string text(_text);
-            cout << text << endl;
-            text = boost::u32regex_replace(text, r, "");
-            cout << text << endl;
-            transform(text.begin(), text.end(), text.begin(), ::tolower);
-            text = unidecode(text);
+            string cleaned(non_word->replace(text,"", "g"));
+            cleaned = unidecode(cleaned);
+            transform(cleaned.begin(), cleaned.end(), cleaned.begin(), ::tolower);
             // Sometimes unidecode puts spaces in, so remove them
-            text = regex_replace(text, regex("[ ]+"), "");
-            return text;
-//            auto main_part = text.substr(0, MAX_ENCODED_STRING_LENGTH);
-//            auto remainder = text.substr(MAX_ENCODED_STRING_LENGTH);
-//            vector<string> ret = { main_part, remainder};
-//            return ret;
+            string ret(spaces_uscore->replace(cleaned,"", "g"));
+        
+            auto main_part = ret.substr(0, MAX_ENCODED_STRING_LENGTH);
+            string remainder;
+            if (ret.length() > MAX_ENCODED_STRING_LENGTH)
+                remainder = ret.substr(MAX_ENCODED_STRING_LENGTH);
+            
+            vector<string> out = { main_part, remainder};
+            return out;
         }
 
-        static string encode_string_for_stupid_artists(const string &_text) {
+        vector<string> encode_string_for_stupid_artists(const string &text) {
             //Remove spaces, convert non-ascii characters to some romanized equivalent, lower case, return
-            if (_text.empty())
-                return _text; 
-            string text(_text);
-            text = regex_replace(text, regex("[\\s]+"), "");
-            // TODO: split according to len
-            return unidecode(text);
+            if (text.empty()) {
+                vector<string> a;
+                return a;
+            }
+
+            string cleaned(spaces->replace(text,"", "g"));
+            transform(cleaned.begin(), cleaned.end(), cleaned.begin(), ::tolower);
+        
+            auto main_part = cleaned.substr(0, MAX_ENCODED_STRING_LENGTH);
+            string remainder;
+            if (cleaned.length() > MAX_ENCODED_STRING_LENGTH)
+                remainder = cleaned.substr(MAX_ENCODED_STRING_LENGTH);
+            
+            vector<string> out = { main_part, remainder};
+            return out;
         }
 
         void build(vector<IndexData> &index_data) {

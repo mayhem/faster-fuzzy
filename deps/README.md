@@ -30,3 +30,16 @@ Clone and build the following depedencies here:
   Crow:
 
   https://github.com/CrowCpp/Crow.git
+
+
+  PCRE2
+
+  https://github.com/PCRE2Project/pcre2.git
+
+
+  JPCRE2
+
+  https://github.com/jpcre2/jpcre2.git
+
+  ./configure
+  make

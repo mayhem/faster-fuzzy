@@ -3,4 +3,6 @@ deps/nmslib
 deps/unidecode
 deps/SQLiteCpp
 deps/Crow
+deps/pcre2
+deps/jpcre2
 .vscode
