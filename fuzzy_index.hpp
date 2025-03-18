@@ -11,6 +11,16 @@ using namespace std;
 #include "unidecode/unidecode.hpp"
 #include "unidecode/utf8_string_iterator.hpp"
 
+#include "index.h"
+//#include "custom_space.h"
+#include "init.h"
+#include "index.h"
+#include "params.h"
+#include "rangequery.h"
+#include "knnquery.h"
+#include "knnqueue.h"
+#include "methodfactory.h"
+
 const auto MAX_ENCODED_STRING_LENGTH = 30;
 const auto NUM_FUZZY_SEARCH_RESULTS = 500;
 
@@ -42,6 +52,8 @@ class FuzzyIndex {
             non_word->setPattern("[^\\w]+").addModifier("n").compile();
             spaces_uscore->setPattern("[ _]+").addModifier("n").compile();
             spaces->setPattern("[\\s]+").addModifier("n").compile();
+            
+            similarity::initLibrary(0, LIB_LOGNONE, NULL);
 //            index = nmslib.init(method='simple_invindx', space='negdotprod_sparse_fast', data_type=nmslib.DataType.SPARSE_VECTOR)
 //            vectorizer = TfidfVectorizer(min_df=1, analyzer=ngrams)
         }
@@ -103,7 +115,18 @@ class FuzzyIndex {
             if (index_data.size() == 0)
                 throw std::length_error("no index data provided.");
 
-//            self.index_data = index_data
+//            this->index_data = index_data;
+            similarity::AnyParams index_params({ "NN=11", "efConstruction=50", "indexThreadQty=4" });
+            similarity::AnyParams query_time_params( { "efSearch=50" });
+            //(method='simple_invindx', space='negdotprod_sparse_fast', data_type=nmslib.DataType.SPARSE_VECTOR
+            similarity::Index<float> *index =  
+                            similarity::MethodFactoryRegistry<float>::Instance().CreateMethod(true,
+                                "small_world_rand",
+                                "custom",
+                                 customSpace,
+                                 dataSet);
+
+            index->CreateIndex(index_params);
 //            strings = [x["text"] for x in index_data]
 //            lookup_matrix = self.vectorizer.fit_transform(strings)
 //            self.index.addDataPointBatch(lookup_matrix, list(range(len(strings))))
