@@ -10,9 +10,9 @@ using namespace std;
 #include "jpcre2.hpp"
 #include "unidecode/unidecode.hpp"
 #include "unidecode/utf8_string_iterator.hpp"
+#include "tfidf_vectorizer.hpp"
 
 #include "index.h"
-//#include "custom_space.h"
 #include "init.h"
 #include "index.h"
 #include "params.h"
@@ -27,8 +27,9 @@ const auto NUM_FUZZY_SEARCH_RESULTS = 500;
 typedef jpcre2::select<char> jp; 
 
 class IndexData {
-    int id;
-    string text;
+    public:
+        int id;
+        string text;
 };
 
 class FuzzyIndex {
@@ -118,15 +119,29 @@ class FuzzyIndex {
 //            this->index_data = index_data;
             similarity::AnyParams index_params({ "NN=11", "efConstruction=50", "indexThreadQty=4" });
             similarity::AnyParams query_time_params( { "efSearch=50" });
-            //(method='simple_invindx', space='negdotprod_sparse_fast', data_type=nmslib.DataType.SPARSE_VECTOR
+            //(method='simple_invindx', space='', data_type=nmslib.DataType.SPARSE_VECTOR
+            // Object(IdType id, LabelType label, size_t datalength, const void* data)
+            similarity::ObjectVector data;
+            vector<string> text_data;
+            for(auto entry : index_data) {
+                data.push_back(new similarity::Object(entry.id, 45, entry.text.length(), entry.text.c_str()));
+                text_data.push_back(entry.text);
+            }
+            
+        	TfidfVectorizer vectorizer(text_data);
+        	vector<std::vector<double>> space_data = vectorizer.weightMat;
+            Space<float> space = SpaceFactoryRegistry<float>::Instance().CreateSpace("what the does the space name signify?", empty);
+            dataset.push_back(CreateObjFromStr(id, label, line, inpState.get()).release());
             similarity::Index<float> *index =  
                             similarity::MethodFactoryRegistry<float>::Instance().CreateMethod(true,
-                                "small_world_rand",
-                                "custom",
-                                 customSpace,
-                                 dataSet);
+                                "simple_invindx",
+                                "negdotprod_sparse_fast",
+                                 space,
+                                 data);
+            
+            # TODO: delete space?
 
-            index->CreateIndex(index_params);
+//            index->CreateIndex(index_params);
 //            strings = [x["text"] for x in index_data]
 //            lookup_matrix = self.vectorizer.fit_transform(strings)
 //            self.index.addDataPointBatch(lookup_matrix, list(range(len(strings))))

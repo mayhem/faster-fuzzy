@@ -35,6 +35,10 @@ Clone and build the following depedencies here:
   PCRE2
 
   https://github.com/PCRE2Project/pcre2.git
+  cd pcre2
+  mkdir build
+  cmake ..
+  make
 
 
   JPCRE2
