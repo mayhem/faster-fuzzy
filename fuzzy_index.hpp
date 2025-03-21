@@ -20,6 +20,7 @@ using namespace std;
 #include "knnquery.h"
 #include "knnqueue.h"
 #include "methodfactory.h"
+#include "spacefactory.h"
 
 const auto MAX_ENCODED_STRING_LENGTH = 30;
 const auto NUM_FUZZY_SEARCH_RESULTS = 500;
@@ -30,6 +31,11 @@ class IndexData {
     public:
         int id;
         string text;
+        
+        IndexData(int _id, const char *_text) {
+            id = _id;
+            text = _text;
+        }
 };
 
 class FuzzyIndex {
@@ -124,22 +130,26 @@ class FuzzyIndex {
             similarity::ObjectVector data;
             vector<string> text_data;
             for(auto entry : index_data) {
+                // TODO: Review this, compare to binding
                 data.push_back(new similarity::Object(entry.id, 45, entry.text.length(), entry.text.c_str()));
                 text_data.push_back(entry.text);
             }
             
         	TfidfVectorizer vectorizer(text_data);
-        	vector<std::vector<double>> space_data = vectorizer.weightMat;
-            Space<float> space = SpaceFactoryRegistry<float>::Instance().CreateSpace("what the does the space name signify?", empty);
-            dataset.push_back(CreateObjFromStr(id, label, line, inpState.get()).release());
+        	vector<std::vector<float>> space_data = vectorizer.weightMat;
+           
+            // method='simple_invindx', space='negdotprod_sparse_fast', data_type=nmslib.DataType.SPARSE_VECTOR)
+            // auto index = new IndexWrapper<float>(method, space, space_params, data_type, dtype);
+            auto space = similarity::SpaceFactoryRegistry<float>::Instance().CreateSpace("negdotprod_sparse_fast",
+                                                                                         similarity::AnyParams());
             similarity::Index<float> *index =  
                             similarity::MethodFactoryRegistry<float>::Instance().CreateMethod(true,
                                 "simple_invindx",
                                 "negdotprod_sparse_fast",
-                                 space,
+                                 *space,
                                  data);
             
-            # TODO: delete space?
+            // TODO: delete space?
 
 //            index->CreateIndex(index_params);
 //            strings = [x["text"] for x in index_data]
