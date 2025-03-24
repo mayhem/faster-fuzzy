@@ -4,7 +4,7 @@
 #include <map>
 #include <string>
 #include <vector>
-#include <bits/stdc++.h>
+//#include <bits/stdc++.h>
 using namespace std;
 
 #include "jpcre2.hpp"
@@ -21,6 +21,11 @@ using namespace std;
 #include "knnqueue.h"
 #include "methodfactory.h"
 #include "spacefactory.h"
+#include "space.h"
+#include "space/space_vector.h"
+#include "space/space_sparse_vector.h"
+#include "knnquery.h"
+#include "knnqueue.h"
 
 const auto MAX_ENCODED_STRING_LENGTH = 30;
 const auto NUM_FUZZY_SEARCH_RESULTS = 500;
@@ -38,9 +43,22 @@ class IndexData {
         }
 };
 
+class IndexResult {
+    public:
+        int   id;
+        float distance;
+        
+        IndexResult(int _id, float _distance) {
+            id = _id;
+            distance = _distance;
+        }
+};
+
 class FuzzyIndex {
     private:
         shared_ptr<vector<IndexData>> index_data; 
+        similarity::Index<float> *index = nullptr;
+        similarity::Space<float> *space = nullptr;
         
         // Couldn't get smart_ptr to compile here. odd.
         jp::Regex *non_word;
@@ -60,14 +78,15 @@ class FuzzyIndex {
             spaces_uscore->setPattern("[ _]+").addModifier("n").compile();
             spaces->setPattern("[\\s]+").addModifier("n").compile();
             
-            similarity::initLibrary(0, LIB_LOGNONE, NULL);
-//            index = nmslib.init(method='simple_invindx', space='negdotprod_sparse_fast', data_type=nmslib.DataType.SPARSE_VECTOR)
-//            vectorizer = TfidfVectorizer(min_df=1, analyzer=ngrams)
+            similarity::initLibrary(0, LIB_LOGSTDERR, NULL);
         }
         
         ~FuzzyIndex() {
             delete non_word;
             delete spaces;
+            delete index;
+            if (space != nullptr)
+                delete space;
         }
 
         string unidecode(const string &str) {
@@ -118,44 +137,73 @@ class FuzzyIndex {
             return out;
         }
 
+        similarity::ObjectVector transform_text(vector<string> &text_data) {
+            std::vector<similarity::SparseVectElem<float>> sparse_items;            
+            similarity::ObjectVector data;
+        	TfIdfVectorizer vectorizer;
+            arma::mat X = vectorizer.fit_transform(text_data);
+
+            auto sparse_space = reinterpret_cast<const similarity::SpaceSparseVector<float>*>(space);
+
+            for(int row = 0; row < X.n_rows; row++) {
+                sparse_items.clear();
+                for(int col = 0; col < X.n_cols; col++)
+                        sparse_items.push_back(similarity::SparseVectElem<float>(row, X(row,col)));
+
+                std::sort(sparse_items.begin(), sparse_items.end());
+                data.push_back(sparse_space->CreateObjFromVect(row, -1, sparse_items));
+            }
+            
+            return data;
+        }
+
         void build(vector<IndexData> &index_data) {
             if (index_data.size() == 0)
                 throw std::length_error("no index data provided.");
 
-//            this->index_data = index_data;
-            similarity::AnyParams index_params({ "NN=11", "efConstruction=50", "indexThreadQty=4" });
-            similarity::AnyParams query_time_params( { "efSearch=50" });
-            //(method='simple_invindx', space='', data_type=nmslib.DataType.SPARSE_VECTOR
-            // Object(IdType id, LabelType label, size_t datalength, const void* data)
-            similarity::ObjectVector data;
-            vector<string> text_data;
-            for(auto entry : index_data) {
-                // TODO: Review this, compare to binding
-                data.push_back(new similarity::Object(entry.id, 45, entry.text.length(), entry.text.c_str()));
-                text_data.push_back(entry.text);
-            }
-            
-        	TfidfVectorizer vectorizer(text_data);
-        	vector<std::vector<float>> space_data = vectorizer.weightMat;
-           
             // method='simple_invindx', space='negdotprod_sparse_fast', data_type=nmslib.DataType.SPARSE_VECTOR)
             // auto index = new IndexWrapper<float>(method, space, space_params, data_type, dtype);
-            auto space = similarity::SpaceFactoryRegistry<float>::Instance().CreateSpace("negdotprod_sparse_fast",
-                                                                                         similarity::AnyParams());
-            similarity::Index<float> *index =  
-                            similarity::MethodFactoryRegistry<float>::Instance().CreateMethod(true,
-                                "simple_invindx",
-                                "negdotprod_sparse_fast",
-                                 *space,
-                                 data);
+            space = similarity::SpaceFactoryRegistry<float>::Instance().CreateSpace("negdotprod_sparse_fast",
+                                                                                    similarity::AnyParams());
             
-            // TODO: delete space?
+            vector<string> text_data;
+            for(auto entry : index_data) 
+                text_data.push_back(entry.text);
+            auto data = transform_text(text_data);
 
-//            index->CreateIndex(index_params);
-//            strings = [x["text"] for x in index_data]
-//            lookup_matrix = self.vectorizer.fit_transform(strings)
-//            self.index.addDataPointBatch(lookup_matrix, list(range(len(strings))))
-//            self.index.createIndex()
+            index = similarity::MethodFactoryRegistry<float>::Instance().CreateMethod(true,
+                        "simple_invindx",
+                        "negdotprod_sparse_fast",
+                         *space,
+                         data);
+            // TODO: There were probably needed, so.... ?
+            similarity::AnyParams index_params; //{ "NN=11", "efConstruction=50", "indexThreadQty=4" });
+            index->CreateIndex(index_params);
+        }
+
+        vector<IndexResult> search(string &query_string, float min_confidence, bool debug=false) {
+            // Carry out search, returns list of dicts: "text", "id", "confidence" 
+
+            if (index == nullptr)
+                throw std::length_error("no index available.");
+
+            vector<string> text_data;
+            text_data.push_back(query_string);
+            auto data = transform_text(text_data);
+            
+            unsigned k = NUM_FUZZY_SEARCH_RESULTS;
+            similarity::KNNQuery<float> knn(*space, data[0], k);
+            index->Search(&knn, -1);
+           
+            vector<IndexResult> results;
+            auto queue = knn.Result()->Clone();
+            while (!queue->Empty()) {
+                auto dist = queue->TopDistance();
+                if (dist > min_confidence)
+                    results.push_back(IndexResult(queue->TopObject()->id(), dist));
+                queue->Pop();
+            }
+            return results;
         }
 
         void save(string &index_dir) {
@@ -225,35 +273,4 @@ class FuzzyIndex {
 //            os.unlink(i_dat_file)
         }
 
-        void search(string &query_string, float min_confidence, bool debug=false) {
-            // Carry out search, returns list of dicts: "text", "id", "confidence" 
-//
-//            if self.index is None:
-//                raise IndexError("Must build index before searching")
-//
-//            query_matrix = self.vectorizer.transform([query_string])
-//#        t0 = monotonic()
-//            results = self.index.knnQueryBatch(query_matrix, k=NUM_FUZZY_SEARCH_RESULTS, num_threads=5)
-//#        print("search time: %.2fms" % ((monotonic() - t0) * 1000))
-//            output = []
-//            if debug:
-//                print("Search results for '%s':" % query_string)
-//            for i, conf in zip(results[0][0], results[0][1]):
-//                data = self.index_data[i]
-//                confidence = fabs(conf)
-//                data["confidence"] = confidence
-//                if confidence >= min_confidence:
-//                    output.append(data)
-//                    is_below=" "
-//                else:
-//                    is_below="!"
-//
-//                if debug:
-//                    print("%c %-30s %10d %.3f" % (is_below, data["text"][:30], data["id"], data["confidence"]))
-//            
-//            if debug:
-//                print()
-//
-//            return output
-        }
 };

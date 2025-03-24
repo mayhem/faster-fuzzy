@@ -5,12 +5,21 @@
 int main(int argc, char *argv[])
 {
     FuzzyIndex fi("test");
-   
+    
     vector<IndexData> data;
-    data.push_back(IndexData(1, "help"));
-    data.push_back(IndexData(2, "data"));
+    data.push_back(IndexData(0, "help"));
+    data.push_back(IndexData(1, "data"));
     fi.build(data);
     printf("data indexed!\n");
+
+    string query("helo");
+    auto results = fi.search(query, .0); 
+    printf("post search\n");
+    for( auto i : results ) {
+        printf("%d %.2f\n", i.id, i.distance);
+//        printf("%30s %.2f\n", data[i.id].text.c_str(), i.distance);
+    }
+    
 
 #if 0
     auto s = string("Thiafadfadfadfas @is _ t!!! (モーニング娘。)fudfdf fsd It’s… ");

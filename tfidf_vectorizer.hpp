@@ -1,109 +1,96 @@
-// From https://github.com/taozhaojie/TFIDF_cpp/blob/master/tfidf_vector.cpp
-// TODO: License is unclear
+#ifndef TFIDF_VECTORISER_H
+#define TFIDF_VECTORISER_H
+
+/*
+Copyright <2019> <Pedro Faustini>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 #include <iostream>
-#include <fstream>
-#include <set>
 #include <boost/tokenizer.hpp>
-#include <sstream>
+#include <boost/algorithm/string.hpp>
+#include <string>
+#include <vector>
+#include <armadillo>
+#include <map>
+#include <cmath>
+#include <set>
 
-using namespace std;
+class TfIdfVectorizer
+{
+    public:
+        /**
+         * Constructor.
+         * 
+         * @param binary: If True, all non-zero term counts are set to 1. 
+         *                This does not mean outputs will have only 0/1 values, 
+         *                only that the tf term in tf-idf is binary. 
+         *                (Set binary to true and use_idf to false to get 0/1 outputs.)
+         * @param use_idf: Enable inverse-document-frequency reweighting.
+         * @param lowercase: Convert all characters to lowercase before tokenizing.
+         * @param max_features: use max_features words with the highest tfidf values.
+         *                      If negative, uses all words.
+         * @param norm: Each output will have unit norm. 
+         *              None: no normalization.
+         *              ‘l2’: Sum of squares of vector elements is 1.
+         *              ‘l1’: Sum of absolute values of vector elements is 1. 
+         * @param sublinear_tf: Apply sublinear tf scaling, i.e. replace tf with 1 + log(tf).
+         */
+        TfIdfVectorizer(bool binary=false, bool lowercase=true, bool use_idf=true, int max_features=-1, std::string norm="l2", bool sublinear_tf=false);
 
-class TfidfVectorizer {
-private:
-	std::vector<std::vector<float>> dataMat; // converted bag of words matrix
-	unsigned int nrow; // matrix row number
-	unsigned int ncol; // matrix column number
-	std::vector<std::string> rawDataSet; // raw data
-	std::vector<std::string> vocabList; // all terms
-	std::vector<int> numOfTerms; // used in tf calculation
-	
-	void createVocabList()
-	{
-		std::set<std::string> vocabListSet;
-		for (std::string word : rawDataSet)
-			vocabListSet.insert(word);
-		std::copy(vocabListSet.begin(), vocabListSet.end(), std::back_inserter(vocabList));
-	}
+        /**
+         * Fit the model by computing idf of training data.
+         * 
+         * @param documents: a list of strings. Each string is a document (raw text).
+         */
+        void fit(std::vector<std::string>& documents);
 
-	inline std::vector<float> word2VecMN(const std::string &word)
-	{
-		std::vector<float> returnVec(vocabList.size(), 0);
-		size_t idx = std::find(vocabList.begin(), vocabList.end(), word) - vocabList.begin();
-		if (idx == vocabList.size())
-			cout << "word: " << word << "not found" << endl;
-		else
-			returnVec.at(idx) += 1;
-		return returnVec;
-	}
+        /**
+         * Convert raw documents to a binary/tfidf representation.
+         * 
+         * @param documents: a list of strings. Each string is a document (raw text).
+         * 
+         * @return matrix with numerical features. 
+         *         Each row is a feature. 
+         *         Each column is a document.
+         */
+        arma::mat transform(std::vector<std::string>& documents);
 
-	void vec2mat()
-	{
-		int cnt(0);
-		for (auto it : rawDataSet)
-		{
-			cnt ++;
-			cout << cnt << "\r";
-			std::cout.flush();
-			dataMat.push_back(word2VecMN(it));
-			numOfTerms.push_back(it.size());
-			it.clear();
-		}
-		cout << endl;
-		ncol = dataMat[0].size();
-		nrow = dataMat.size();
-		rawDataSet.clear(); // release memory
-	}
+        /**
+         * Fit, followed by transform over the same argument.
+         * 
+         * @param documents: a list of strings. Each string is a document (raw text).
+         * 
+         * @return matrix with numerical features. 
+         *         Each row is a feature. 
+         *         Each column is a document.
+         */
+        arma::mat fit_transform(std::vector<std::string>& documents);
 
-	inline std::vector<float> vec_sum(const std::vector<float>& a, const std::vector<float>& b)
-	{
-		assert(a.size() == b.size());
-		std::vector<float> result;
-		result.reserve(a.size());
-		std::transform(a.begin(), a.end(), b.begin(), 
-					   std::back_inserter(result), std::plus<float>());
-		return result;
-	}
+        std::map<std::string, double> get_idf_();
+        std::map<std::string, size_t> get_vocabulary_();
 
-	void calMat()
-	{
-		createVocabList();
-		vec2mat();
+    protected:
+        std::vector<std::string> tokenise_document(std::string& document);
+        std::vector<std::vector<std::string>> tokenise_documents(std::vector<std::string>& documents);
+        std::vector<std::map<std::string, int>> word_count(std::vector<std::vector<std::string>>& documents_tokenised);
+        std::vector<std::map<std::string, double>> tf(std::vector<std::vector<std::string>>& documents_tokenised);
+        std::map<std::string, double> idf(std::vector<std::map<std::string, int>>& documents_word_counts);
 
-		std::vector<std::vector<float>> dataMat2(dataMat);
-		std::vector<float> termCount;
-		termCount.resize(ncol);
-
-		for (unsigned int i = 0; i != nrow; ++i)
-		{
-			for (unsigned int j = 0; j != ncol; ++j)
-			{
-				if (dataMat2[i][j] > 1) // only keep 1 and 0
-					dataMat2[i][j] = 1;
-			}
-			termCount = vec_sum(termCount, dataMat2[i]); // no. of doc. each term appears
-		}
-		dataMat2.clear(); //release
-
-		std::vector<float> row_vec;
-		for (unsigned int i = 0; i != nrow; ++i)
-		{
-			for (unsigned int j = 0; j != ncol; ++j)
-			{
-				float tf = dataMat[i][j] / numOfTerms[i];
-				float idf = log((float)nrow / (termCount[j]));
-				row_vec.push_back(tf * idf); // TF-IDF equation
-			}
-			weightMat.push_back(row_vec);
-			row_vec.clear();
-		}
-		nrow = weightMat.size();
-		ncol = weightMat[0].size();
-	}
-
-public:
-	std::vector<std::vector<float>> weightMat; // TF-IDF weighting matrix
-	TfidfVectorizer(std::vector<std::string> & input):rawDataSet(input)
-	{
-		calMat();
-	}
+    private:
+        std::map<std::string, double> idf_;
+        std::map<std::string, size_t> vocabulary_;
+        bool binary;
+        int max_features;
+        double p;
+        bool lowercase;
+        bool use_idf;
+        bool sublinear_tf;
 };
+
+#endif
