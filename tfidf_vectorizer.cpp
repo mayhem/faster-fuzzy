@@ -28,18 +28,14 @@ std::vector<std::string> TfIdfVectorizer::tokenise_document(std::string& documen
 {
     std::vector<std::string> tokens;
     std::string s;
-
-    boost::tokenizer<> tok(document);
-    for(boost::tokenizer<>::iterator beg=tok.begin(); beg!=tok.end();++beg)
-    {
-        s = *beg;
-        if (this->lowercase)
-            boost::algorithm::to_lower(s);
-        tokens.push_back(s);
+   
+    auto l = document.length();
+    for(int i = 0; i < l - 2; i++) {
+        tokens.push_back(document.substr(i, 3));
     }
+
     return tokens;
 }
-
 
 std::vector<std::vector<std::string>> TfIdfVectorizer::tokenise_documents(std::vector<std::string>& documents)
 {

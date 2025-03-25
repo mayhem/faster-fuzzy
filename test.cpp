@@ -2,25 +2,33 @@
 
 #include "fuzzy_index.hpp"
 
+std::vector<std::string> documents = {
+        "This is the first document.", 
+        "This document is the second document.", 
+        "And this is the third one.", 
+        "Is this the first document?"};
+
 int main(int argc, char *argv[])
 {
     FuzzyIndex fi("test");
-    
     vector<IndexData> data;
-    data.push_back(IndexData(0, "help"));
-    data.push_back(IndexData(1, "data"));
+
+    int i = 0;
+    for(auto s : documents) {
+        data.push_back(IndexData(i, s.c_str()));
+        i++;
+    }
     fi.build(data);
     printf("data indexed!\n");
 
-    string query("helo");
+    string query("first");
     auto results = fi.search(query, .0); 
-    printf("post search\n");
+    printf("post search %lu results\n", results.size());
     for( auto i : results ) {
         printf("%d %.2f\n", i.id, i.distance);
 //        printf("%30s %.2f\n", data[i.id].text.c_str(), i.distance);
     }
     
-
 #if 0
     auto s = string("Thiafadfadfadfas @is _ t!!! (モーニング娘。)fudfdf fsd It’s… ");
     auto ret = fi.encode_string(s);

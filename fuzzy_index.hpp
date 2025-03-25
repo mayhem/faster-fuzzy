@@ -59,6 +59,7 @@ class FuzzyIndex {
         shared_ptr<vector<IndexData>> index_data; 
         similarity::Index<float> *index = nullptr;
         similarity::Space<float> *space = nullptr;
+     	TfIdfVectorizer vectorizer;
         
         // Couldn't get smart_ptr to compile here. odd.
         jp::Regex *non_word;
@@ -137,18 +138,25 @@ class FuzzyIndex {
             return out;
         }
 
-        similarity::ObjectVector transform_text(vector<string> &text_data) {
+        similarity::ObjectVector transform_text(arma::mat &matrix, vector<string> &text_data) {
             std::vector<similarity::SparseVectElem<float>> sparse_items;            
             similarity::ObjectVector data;
-        	TfIdfVectorizer vectorizer;
-            arma::mat X = vectorizer.fit_transform(text_data);
 
             auto sparse_space = reinterpret_cast<const similarity::SpaceSparseVector<float>*>(space);
 
-            for(int row = 0; row < X.n_rows; row++) {
+            printf("size: %lld x %lld\n", matrix.n_rows, matrix.n_cols);
+            unsigned int index = 0;
+            for(int row = 0; row < matrix.n_rows; row++) {
                 sparse_items.clear();
-                for(int col = 0; col < X.n_cols; col++)
-                        sparse_items.push_back(similarity::SparseVectElem<float>(row, X(row,col)));
+                for(int col = 0; col < matrix.n_cols; col++) {
+                    auto value = matrix(row,col);
+                    if (value != 0.0) {
+                        sparse_items.push_back(similarity::SparseVectElem<float>(index, value));
+                        printf("(%d,%.3f) ", index, value);
+                    }
+                    index++;
+                }
+                printf("\n");
 
                 std::sort(sparse_items.begin(), sparse_items.end());
                 data.push_back(sparse_space->CreateObjFromVect(row, -1, sparse_items));
@@ -169,7 +177,9 @@ class FuzzyIndex {
             vector<string> text_data;
             for(auto entry : index_data) 
                 text_data.push_back(entry.text);
-            auto data = transform_text(text_data);
+
+            arma::mat matrix = vectorizer.fit_transform(text_data);
+            auto data = transform_text(matrix, text_data);
 
             index = similarity::MethodFactoryRegistry<float>::Instance().CreateMethod(true,
                         "simple_invindx",
@@ -189,7 +199,8 @@ class FuzzyIndex {
 
             vector<string> text_data;
             text_data.push_back(query_string);
-            auto data = transform_text(text_data);
+            arma::mat matrix = vectorizer.transform(text_data);
+            auto data = transform_text(matrix, text_data);
             
             unsigned k = NUM_FUZZY_SEARCH_RESULTS;
             similarity::KNNQuery<float> knn(*space, data[0], k);
@@ -199,8 +210,9 @@ class FuzzyIndex {
             auto queue = knn.Result()->Clone();
             while (!queue->Empty()) {
                 auto dist = queue->TopDistance();
-                if (dist > min_confidence)
-                    results.push_back(IndexResult(queue->TopObject()->id(), dist));
+                // TODO: re-enabled after debugging
+                //if (dist > min_confidence)
+                results.push_back(IndexResult(queue->TopObject()->id(), dist));
                 queue->Pop();
             }
             return results;
