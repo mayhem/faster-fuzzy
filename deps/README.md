@@ -47,3 +47,7 @@ Clone and build the following depedencies here:
 
   ./configure
   make
+  
+  Armadillo
+
+  https://gitlab.com/conradsnicta/armadillo-code

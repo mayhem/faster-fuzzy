@@ -16,7 +16,7 @@ include_directories(deps/nmslib/similarity_search/include
                     deps/unidecode/include
                     deps/pcre2/build
                     deps/jpcre2/src
-                    deps/armadillo
+                    deps/armadillo/include
 )
 target_link_libraries(ff_server /home/robert/metabrainz/faster-fuzzy/deps/nmslib/similarity_search/release/libNonMetricSpaceLib.a
                                 /home/robert/metabrainz/faster-fuzzy/deps/unidecode/build/libunidecode.a

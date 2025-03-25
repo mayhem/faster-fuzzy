@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
     fi.build(data);
     printf("data indexed!\n");
 
-    string query("first");
+    string query("rump");
     auto results = fi.search(query, .0); 
     printf("post search %lu results\n", results.size());
     for( auto i : results ) {
