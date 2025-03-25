@@ -13,6 +13,7 @@ int main(int argc, char *argv[])
     FuzzyIndex fi("test");
     vector<IndexData> data;
 
+    
     int i = 0;
     for(auto s : documents) {
         data.push_back(IndexData(i, s.c_str()));
@@ -21,7 +22,7 @@ int main(int argc, char *argv[])
     fi.build(data);
     printf("data indexed!\n");
 
-    string query("rump");
+    string query("This is the first document");
     auto results = fi.search(query, .0); 
     printf("post search %lu results\n", results.size());
     for( auto i : results ) {

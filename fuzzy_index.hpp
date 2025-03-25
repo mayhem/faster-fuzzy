@@ -172,11 +172,11 @@ class FuzzyIndex {
                 }
 
                 std::sort(sparse_items.begin(), sparse_items.end());
-                printf("%d: ", col);
-                for( auto item : sparse_items ) {
-                  printf("(%d,%.3lf) ", item.id_, (double)item.val_);
-                }
-                printf("\n");
+//                printf("%d: ", col);
+//                for( auto item : sparse_items ) {
+//                  printf("(%d,%.3lf) ", item.id_, (double)item.val_);
+//                }
+//                printf("\n");
         
                 data.push_back(sparse_space->CreateObjFromVect(col, -1, sparse_items));
             }
@@ -189,8 +189,6 @@ class FuzzyIndex {
             if (index_data.size() == 0)
                 throw std::length_error("no index data provided.");
 
-            // method='simple_invindx', space='negdotprod_sparse_fast', data_type=nmslib.DataType.SPARSE_VECTOR)
-            // auto index = new IndexWrapper<float>(method, space, space_params, data_type, dtype);
             space = similarity::SpaceFactoryRegistry<float>::Instance().CreateSpace("negdotprod_sparse_fast",
                                                                                     similarity::AnyParams());
             
@@ -206,11 +204,11 @@ class FuzzyIndex {
                         "negdotprod_sparse_fast",
                          *space,
                          data);
-            // TODO: There were probably needed, so.... ?
-            similarity::AnyParams index_params; //{ "NN=11", "efConstruction=50", "indexThreadQty=4" });
+            similarity::AnyParams index_params;
             index->CreateIndex(index_params);
         }
-    
+
+//0: (0,0.190) (1,0.234) (2,0.190) (5,0.155) (8,0.234) (10,0.190) (14,0.190) (15,0.234) (19,0.190) (20,0.234) (21,0.155) (23,0.155) (25,0.234) (26,0.310) (27,0.190) (33,0.190) (37,0.234) (39,0.234) (40,0.155) (42,0.234) (43,0.234) (45,0.155) (47,0.190)
         vector<IndexResult> search(string &query_string, float min_confidence, bool debug=false) {
             // Carry out search, returns list of dicts: "text", "id", "confidence" 
 
@@ -220,12 +218,14 @@ class FuzzyIndex {
             vector<string> text_data;
             text_data.push_back(query_string);
             arma::mat matrix = vectorizer.transform(text_data);
+            matrix.print("TF-IDF Matrix");
             auto data = transform_text(matrix, text_data);
             
             unsigned k = NUM_FUZZY_SEARCH_RESULTS;
             similarity::KNNQuery<float> knn(*space, data[0], k);
             index->Search(&knn, -1);
-           
+            
+            cout << knn.Result()->Empty() <<  endl; 
             vector<IndexResult> results;
             auto queue = knn.Result()->Clone();
             while (!queue->Empty()) {
