@@ -56,24 +56,25 @@ class IndexResult {
 
 class FuzzyIndex {
     private:
-        shared_ptr<vector<IndexData>> index_data; 
+        string                    name;
+        vector<IndexData>        *index_data; 
         similarity::Index<float> *index = nullptr;
         similarity::Space<float> *space = nullptr;
-     	TfIdfVectorizer vectorizer;
+     	TfIdfVectorizer          *vectorizer = nullptr;
         
-        // Couldn't get smart_ptr to compile here. odd.
-        jp::Regex *non_word;
-        jp::Regex *spaces_uscore;
-        jp::Regex *spaces;
+        jp::Regex                *non_word;
+        jp::Regex                *spaces_uscore;
+        jp::Regex                *spaces;
 
     public:
 
         FuzzyIndex(const string &_name) {
-            index_data = shared_ptr<vector<IndexData>>(new vector<IndexData>());
+            index_data = new vector<IndexData>();
             string name = _name;
             non_word = new jp::Regex();
             spaces_uscore = new jp::Regex();
             spaces = new jp::Regex();
+            vectorizer = new TfIdfVectorizer();
 
             non_word->setPattern("[^\\w]+").addModifier("n").compile();
             spaces_uscore->setPattern("[ _]+").addModifier("n").compile();
@@ -83,6 +84,8 @@ class FuzzyIndex {
         }
         
         ~FuzzyIndex() {
+            delete vectorizer;
+            delete index_data;
             delete non_word;
             delete spaces;
             delete index;
@@ -145,10 +148,11 @@ class FuzzyIndex {
 // 2: (2,0.147) (3,0.231) (5,0.361) (6,0.231) (12,0.231) (13,0.231) (17,0.231) (21,0.120) (22,0.231) (23,0.120) (24,0.231) (26,0.241) (28,0.182) (29,0.231) (35,0.231) (36,0.231) (39,0.182) (40,0.120) (45,0.120) (46,0.364) 
 // 3: (0,0.176) (1,0.218) (5,0.288) (7,0.276) (10,0.176) (14,0.176) (15,0.218) (19,0.176) (20,0.218) (21,0.144) (23,0.144) (25,0.218) (26,0.144) (27,0.176) (32,0.276) (33,0.176) (37,0.218) (40,0.288) (42,0.218) (43,0.218) (45,0.144) (46,0.218) (47,0.176) 
 
-        similarity::ObjectVector
-        transform_text(arma::mat &matrix, vector<string> &text_data) {
+        void
+        transform_text(const arma::mat &matrix, const vector<string> &text_data, similarity::ObjectVector &data) {
+            // TODO: Get this mess to compile, fix all consts.
+            // this use of sparse_items -- safe? Review python bindings
             std::vector<similarity::SparseVectElem<float>> sparse_items;            
-            similarity::ObjectVector data;
 
             auto sparse_space = reinterpret_cast<const similarity::SpaceSparseVector<float>*>(space);
 
@@ -180,8 +184,6 @@ class FuzzyIndex {
         
                 data.push_back(sparse_space->CreateObjFromVect(col, -1, sparse_items));
             }
-            
-            return data;
         }
 
         void
@@ -196,8 +198,9 @@ class FuzzyIndex {
             for(auto entry : index_data) 
                 text_data.push_back(entry.text);
 
-            arma::mat matrix = vectorizer.fit_transform(text_data);
-            auto data = transform_text(matrix, text_data);
+            arma::mat matrix = vectorizer->fit_transform(text_data);
+            similarity::ObjectVector data;
+            transform_text(matrix, text_data, data);
 
             index = similarity::MethodFactoryRegistry<float>::Instance().CreateMethod(true,
                         "simple_invindx",
@@ -217,9 +220,10 @@ class FuzzyIndex {
 
             vector<string> text_data;
             text_data.push_back(query_string);
-            arma::mat matrix = vectorizer.transform(text_data);
+            arma::mat matrix = vectorizer->transform(text_data);
             matrix.print("TF-IDF Matrix");
-            auto data = transform_text(matrix, text_data);
+            similarity::ObjectVector data;
+            transform_text(matrix, text_data, data);
             
             unsigned k = NUM_FUZZY_SEARCH_RESULTS;
             similarity::KNNQuery<float> knn(*space, data[0], k);
