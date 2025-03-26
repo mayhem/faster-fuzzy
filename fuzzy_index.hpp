@@ -150,21 +150,11 @@ class FuzzyIndex {
 
         void
         transform_text(const arma::mat &matrix, const vector<string> &text_data, similarity::ObjectVector &data) {
-            // TODO: Get this mess to compile, fix all consts.
-            // this use of sparse_items -- safe? Review python bindings
             std::vector<similarity::SparseVectElem<float>> sparse_items;            
-
             auto sparse_space = reinterpret_cast<const similarity::SpaceSparseVector<float>*>(space);
 
             printf("size: %lld x %lld\n", matrix.n_rows, matrix.n_cols);
             for(int col = 0; col < matrix.n_cols; col++) {
-                for(int row = 0; row < matrix.n_rows; row++) {
-                    auto value = matrix(row,col);
-                }
-            }
-
-            for(int col = 0; col < matrix.n_cols; col++) {
-                sparse_items.clear();
                 unsigned int index = 0;
                 unsigned int row;
                 for(row = 0; row < matrix.n_rows; row++) {
@@ -182,8 +172,23 @@ class FuzzyIndex {
 //                }
 //                printf("\n");
         
+                printf("sparse items %lu items\n", sparse_items.size());
                 data.push_back(sparse_space->CreateObjFromVect(col, -1, sparse_items));
+                sparse_items.clear();
             }
+            printf("transform text %lu items\n", data.size());
+        }
+        
+        void
+        print_data(similarity::ObjectVector &data)
+        {
+            for(auto obj : data) {
+                printf("(%d, %lu): ", obj->id(), obj->datalength());
+                for (int i = 0; i < obj->datalength(); i++) {
+                    printf("%02X ", obj->data()[i]);
+                }
+                printf("\n");
+            } 
         }
 
         void
@@ -201,6 +206,8 @@ class FuzzyIndex {
             arma::mat matrix = vectorizer->fit_transform(text_data);
             similarity::ObjectVector data;
             transform_text(matrix, text_data, data);
+            
+            print_data(data);
 
             index = similarity::MethodFactoryRegistry<float>::Instance().CreateMethod(true,
                         "simple_invindx",
@@ -209,10 +216,11 @@ class FuzzyIndex {
                          data);
             similarity::AnyParams index_params;
             index->CreateIndex(index_params);
+            data.clear();
         }
 
 //0: (0,0.190) (1,0.234) (2,0.190) (5,0.155) (8,0.234) (10,0.190) (14,0.190) (15,0.234) (19,0.190) (20,0.234) (21,0.155) (23,0.155) (25,0.234) (26,0.310) (27,0.190) (33,0.190) (37,0.234) (39,0.234) (40,0.155) (42,0.234) (43,0.234) (45,0.155) (47,0.190)
-        vector<IndexResult> search(string &query_string, float min_confidence, bool debug=false) {
+        vector<IndexResult> search(const string &query_string, float min_confidence, bool debug=false) {
             // Carry out search, returns list of dicts: "text", "id", "confidence" 
 
             if (index == nullptr)
@@ -224,10 +232,13 @@ class FuzzyIndex {
             matrix.print("TF-IDF Matrix");
             similarity::ObjectVector data;
             transform_text(matrix, text_data, data);
+
+            print_data(data);
             
             unsigned k = NUM_FUZZY_SEARCH_RESULTS;
             similarity::KNNQuery<float> knn(*space, data[0], k);
             index->Search(&knn, -1);
+            data.clear();
             
             cout << knn.Result()->Empty() <<  endl; 
             vector<IndexResult> results;
