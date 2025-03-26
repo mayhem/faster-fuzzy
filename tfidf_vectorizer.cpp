@@ -132,7 +132,7 @@ std::map<std::string, double> TfIdfVectorizer::idf(std::vector<std::map<std::str
         }
     }
     return this->idf_;
-}
+} 
 
 std::vector<std::map<std::string, double>> TfIdfVectorizer::tf(std::vector<std::vector<std::string>>& documents_tokenised)
 {

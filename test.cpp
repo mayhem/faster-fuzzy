@@ -13,14 +13,12 @@ int main(int argc, char *argv[])
     FuzzyIndex fi("test");
     vector<IndexData> data;
 
-    
     int i = 0;
     for(auto s : documents) {
         data.push_back(IndexData(i, s.c_str()));
         i++;
     }
     fi.build(data);
-    printf("data indexed!\n");
 
     string query("This is the first document");
     auto results = fi.search(query, .0); 
