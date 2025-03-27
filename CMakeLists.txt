@@ -12,17 +12,20 @@ project(faster_fuzzy
 )
 
 add_compile_options("-std=c++17")
+add_subdirectory(deps/pcre2)
+add_subdirectory(deps/cista)
+add_subdirectory(deps/armadillo-code)
+add_subdirectory(deps/unidecode)
 add_executable(ff_server test.cpp tfidf_vectorizer.cpp)
 include_directories(deps/nmslib/similarity_search/include
                     deps/unidecode/include
-                    deps/pcre2/build
                     deps/jpcre2/src
-                    deps/armadillo/include
 )
 target_link_libraries(ff_server /home/robert/metabrainz/faster-fuzzy/deps/nmslib/similarity_search/debug/libNonMetricSpaceLib.a
-                                /home/robert/metabrainz/faster-fuzzy/deps/unidecode/build/libunidecode.a
-                                /usr/lib/x86_64-linux-gnu/libboost_regex.a
-                                /home/robert/metabrainz/faster-fuzzy/deps/pcre2/build/libpcre2-8.a
+                                libunidecode
+                                libpcre2-8
                                 armadillo
-				pthread
+                 				pthread
+                                cista
 )
+#                                /usr/lib/x86_64-linux-gnu/libboost_regex.a

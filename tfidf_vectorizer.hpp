@@ -12,6 +12,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
  */
 
 #include <iostream>
+#include <fstream>
 #include <boost/tokenizer.hpp>
 #include <boost/algorithm/string.hpp>
 #include <string>
@@ -74,6 +75,10 @@ class TfIdfVectorizer
 
         std::map<std::string, double> get_idf_();
         std::map<std::string, size_t> get_vocabulary_();
+        
+        void serialize(ofstream &stream) {
+            idf_.serialize(stream);  
+        }
 
     protected:
         std::vector<std::string> tokenise_document(std::string& document);

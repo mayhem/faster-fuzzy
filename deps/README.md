@@ -47,7 +47,16 @@ Clone and build the following depedencies here:
 
   ./configure
   make
+  make install
   
   Armadillo
 
   https://gitlab.com/conradsnicta/armadillo-code
+
+  No setup needed
+
+  Cista
+
+  https://github.com/felixguendling/cista.git
+
+  No setup needed

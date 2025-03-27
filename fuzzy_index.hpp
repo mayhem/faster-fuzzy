@@ -191,14 +191,14 @@ class FuzzyIndex {
 
         vector<IndexResult> search(const string &query_string, float min_confidence, bool debug=false) {
             // Carry out search, returns list of dicts: "text", "id", "confidence" 
+            vector<string> text_data;
+            similarity::ObjectVector data;
 
             if (index == nullptr)
                 throw std::length_error("no index available.");
 
-            vector<string> text_data;
             text_data.push_back(query_string);
             arma::mat matrix = vectorizer->transform(text_data);
-            similarity::ObjectVector data;
             transform_text(matrix, text_data, data);
 
             unsigned k = NUM_FUZZY_SEARCH_RESULTS;
@@ -211,9 +211,8 @@ class FuzzyIndex {
             auto queue = knn.Result()->Clone();
             while (!queue->Empty()) {
                 auto dist = queue->TopDistance();
-                // TODO: re-enable after debugging
-                //if (dist > min_confidence)
-                results.push_back(IndexResult(queue->TopObject()->id(), dist));
+                if (dist > min_confidence)
+                    results.push_back(IndexResult(queue->TopObject()->id(), dist));
                 queue->Pop();
             }
             return results;
