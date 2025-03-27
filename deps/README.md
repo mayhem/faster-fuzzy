@@ -5,7 +5,7 @@ Clone and build the following depedencies here:
 
   nmslib
 
-  https://github.com/nmslib/nmslib.git
+  git@github.com:metabrainz/nmslib.git
 
   install deps: 
 
@@ -20,6 +20,10 @@ Clone and build the following depedencies here:
   Unidecode for C++
 
   https://github.com/marekru/unidecode.git
+
+  edit unidecode/CMakeLists.txt and comment out:
+
+  # add_subdirectory(tests)
 
 
   SQLite Cpp:
@@ -55,8 +59,6 @@ Clone and build the following depedencies here:
 
   No setup needed
 
-  Cista
+  Cereal
 
-  https://github.com/felixguendling/cista.git
-
-  No setup needed
+  https://github.com/USCiLab/cereal.git

@@ -221,3 +221,9 @@ std::map<std::string, size_t> TfIdfVectorizer::get_vocabulary_()
     const std::map<std::string, size_t> v = this->vocabulary_;
     return v;
 }
+
+template<class Archive>
+void TfIdfVectorizer::serialize(Archive & archive)
+{
+    archive( idf_, vocabulary_, binary, max_features, p, lowercase, use_idf, sublinear_tf );
+}
