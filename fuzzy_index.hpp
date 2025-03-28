@@ -11,6 +11,8 @@ using namespace std;
 #include "unidecode/unidecode.hpp"
 #include "unidecode/utf8_string_iterator.hpp"
 #include "tfidf_vectorizer.hpp"
+#include <cereal/archives/binary.hpp>
+#include <cereal/types/vector.hpp>
 
 #include "index.h"
 #include "init.h"
@@ -61,6 +63,7 @@ class FuzzyIndex {
         similarity::Index<float> *index = nullptr;
         similarity::Space<float> *space = nullptr;
      	TfIdfVectorizer           vectorizer;
+        similarity::ObjectVector  vectorized_data;
         
         jp::Regex                *non_word;
         jp::Regex                *spaces_uscore;
@@ -80,6 +83,8 @@ class FuzzyIndex {
             spaces->setPattern("[\\s]+").addModifier("n").compile();
             
             similarity::initLibrary(0, LIB_LOGNONE, NULL);
+            space = similarity::SpaceFactoryRegistry<float>::Instance().CreateSpace("negdotprod_sparse_fast",
+                                                                                    similarity::AnyParams());
         }
         
         ~FuzzyIndex() {
@@ -87,8 +92,7 @@ class FuzzyIndex {
             delete non_word;
             delete spaces;
             delete index;
-            if (space != nullptr)
-                delete space;
+            delete space;
         }
 
         string unidecode(const string &str) {
@@ -166,23 +170,19 @@ class FuzzyIndex {
         build(vector<IndexData> &index_data) {
             if (index_data.size() == 0)
                 throw std::length_error("no index data provided.");
-
-            space = similarity::SpaceFactoryRegistry<float>::Instance().CreateSpace("negdotprod_sparse_fast",
-                                                                                    similarity::AnyParams());
             
             vector<string> text_data;
             for(auto entry : index_data) 
                 text_data.push_back(entry.text);
 
             arma::mat matrix = vectorizer.fit_transform(text_data);
-            similarity::ObjectVector *data = new similarity::ObjectVector();
-            transform_text(matrix, text_data, *data);
-            
-            index = similarity::MethodFactoryRegistry<float>::Instance().CreateMethod(true,
+            transform_text(matrix, text_data, vectorized_data);
+        
+            index = similarity::MethodFactoryRegistry<float>::Instance().CreateMethod(false,
                         "simple_invindx",
                         "negdotprod_sparse_fast",
                          *space,
-                         *data);
+                         vectorized_data);
             similarity::AnyParams index_params;
             index->CreateIndex(index_params);
         }
@@ -208,22 +208,47 @@ class FuzzyIndex {
             vector<IndexResult> results;
             auto queue = knn.Result()->Clone();
             while (!queue->Empty()) {
-                auto dist = queue->TopDistance();
+                auto dist = -queue->TopDistance();
                 if (dist > min_confidence)
                     results.push_back(IndexResult(queue->TopObject()->id(), dist));
                 queue->Pop();
             }
             return results;
         }
-        
-        void save(vector<uint8_t> &save_data) {
-            index->SerializeIndex(save_data);
-            //vectorizer.serialize(save_data);
+       
+        template<class Archive>
+        void save(Archive & archive) const
+        {
+            vector<uint8_t> index_data;
+            index->SerializeIndex(index_data);
+            archive(index_data, vectorizer, vectorized_data); 
         }
-                
-        void load(vector<uint8_t> &load_data) {
-            index->UnserializeIndex(load_data);
-            //vectorizer.unserialize(load_data);
+      
+        template<class Archive>
+        void load(Archive & archive)
+        {
+            vector<uint8_t> index_data;
+            vector<string> dummy;
+
+            // Clean up any object we may have
+            for (auto datum : vectorized_data) {
+                delete datum;
+            }
+            vectorized_data.clear();
+
+            // Restore our data
+            archive(index_data, vectorizer, vectorized_data); 
+            
+            delete index;
+    
+            auto factory = similarity::MethodFactoryRegistry<float>::Instance();
+            index = factory.CreateMethod(false, 
+                                         "simple_invindx",
+                                         "negdotprod_sparse_fast",
+                                         *space, 
+                                         vectorized_data);
+            space->ReadObjectVectorFromBinData(data, dummy, filename + data_suff);
+            index->DeserializeIndex(index_data);
         }
 
 };

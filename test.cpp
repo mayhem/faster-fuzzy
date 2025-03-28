@@ -1,6 +1,8 @@
 #include <stdio.h>
+#include <sstream>
 
 #include "fuzzy_index.hpp"
+#include <cereal/archives/binary.hpp>
 
 std::vector<std::string> documents = {
         "This is the first document.", 
@@ -8,9 +10,10 @@ std::vector<std::string> documents = {
         "And this is the third one.", 
         "Is this the first document?"};
 
+
 int main(int argc, char *argv[])
 {
-    FuzzyIndex fi("test");
+    FuzzyIndex fi("test"), reloaded("fuss");
     vector<IndexData> data;
 
     int i = 0;
@@ -19,9 +22,20 @@ int main(int argc, char *argv[])
         i++;
     }
     fi.build(data);
+    
+    std::stringstream ss;
+    {
+        cereal::BinaryOutputArchive oarchive(ss);
+        oarchive(fi);
+    }
+    
+    {
+        cereal::BinaryInputArchive iarchive(ss);
+        iarchive(reloaded);
+    }
 
     string query("This is the first document");
-    auto results = fi.search(query, .0); 
+    auto results = reloaded.search(query, .0); 
     printf("post search %lu results\n", results.size());
     for( auto i : results ) {
         printf("%d %.2f\n", i.id, i.distance);

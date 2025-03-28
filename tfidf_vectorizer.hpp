@@ -21,6 +21,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 #include <set>
 
 #include <cereal/archives/binary.hpp>
+#include <cereal/types/map.hpp>
+#include <cereal/types/string.hpp>
 
 class TfIdfVectorizer
 {
@@ -77,7 +79,10 @@ class TfIdfVectorizer
         std::map<std::string, size_t> get_vocabulary_();
         
         template<class Archive>
-        void serialize(Archive & archive);
+        void serialize(Archive & archive)
+        {
+            archive( idf_, vocabulary_, binary, max_features, p, lowercase, use_idf, sublinear_tf );
+        }
         
     protected:
         std::vector<std::string> tokenise_document(std::string& document);

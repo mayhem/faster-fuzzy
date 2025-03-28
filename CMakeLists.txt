@@ -26,6 +26,6 @@ target_link_libraries(ff_server /home/robert/metabrainz/faster-fuzzy/deps/nmslib
                                 unidecode
                                 libpcre2-8.a
                                 armadillo
-                 				        pthread
+          				        pthread
                                 cereal
 )
