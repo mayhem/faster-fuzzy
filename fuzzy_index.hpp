@@ -177,7 +177,7 @@ class FuzzyIndex {
 
             arma::mat matrix = vectorizer.fit_transform(text_data);
             transform_text(matrix, text_data, vectorized_data);
-        
+            
             index = similarity::MethodFactoryRegistry<float>::Instance().CreateMethod(false,
                         "simple_invindx",
                         "negdotprod_sparse_fast",
@@ -204,7 +204,6 @@ class FuzzyIndex {
             index->Search(&knn, -1);
             data.clear();
             
-            cout << knn.Result()->Empty() <<  endl; 
             vector<IndexResult> results;
             auto queue = knn.Result()->Clone();
             while (!queue->Empty()) {
@@ -215,21 +214,20 @@ class FuzzyIndex {
             }
             return results;
         }
-       
+
         template<class Archive>
         void save(Archive & archive) const
         {
             vector<uint8_t> index_data;
-            index->SerializeIndex(index_data);
-            archive(index_data, vectorizer, vectorized_data); 
+            index->SerializeIndex(index_data, vectorized_data);
+
+            archive(index_data, vectorizer); 
         }
       
         template<class Archive>
         void load(Archive & archive)
         {
             vector<uint8_t> index_data;
-            vector<string> dummy;
-
             // Clean up any object we may have
             for (auto datum : vectorized_data) {
                 delete datum;
@@ -237,8 +235,7 @@ class FuzzyIndex {
             vectorized_data.clear();
 
             // Restore our data
-            archive(index_data, vectorizer, vectorized_data); 
-            
+            archive(index_data, vectorizer); 
             delete index;
     
             auto factory = similarity::MethodFactoryRegistry<float>::Instance();
@@ -247,8 +244,7 @@ class FuzzyIndex {
                                          "negdotprod_sparse_fast",
                                          *space, 
                                          vectorized_data);
-            space->ReadObjectVectorFromBinData(data, dummy, filename + data_suff);
-            index->DeserializeIndex(index_data);
+            index->UnserializeIndex(index_data, vectorized_data);
         }
 
 };

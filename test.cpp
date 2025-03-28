@@ -28,7 +28,8 @@ int main(int argc, char *argv[])
         cereal::BinaryOutputArchive oarchive(ss);
         oarchive(fi);
     }
-    
+   
+    ss.seekg(ios_base::beg);
     {
         cereal::BinaryInputArchive iarchive(ss);
         iarchive(reloaded);
@@ -36,9 +37,9 @@ int main(int argc, char *argv[])
 
     string query("This is the first document");
     auto results = reloaded.search(query, .0); 
-    printf("post search %lu results\n", results.size());
+    printf("%lu results:\n", results.size());
     for( auto i : results ) {
-        printf("%d %.2f\n", i.id, i.distance);
+        printf("  %d %.2f\n", i.id, i.distance);
 //        printf("%30s %.2f\n", data[i.id].text.c_str(), i.distance);
     }
     
