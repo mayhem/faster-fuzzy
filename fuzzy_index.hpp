@@ -246,5 +246,4 @@ class FuzzyIndex {
                                          vectorized_data);
             index->UnserializeIndex(index_data, vectorized_data);
         }
-
 };
