@@ -4,13 +4,10 @@
 #include <map>
 #include <string>
 #include <vector>
-//#include <bits/stdc++.h>
 using namespace std;
 
-#include "jpcre2.hpp"
-#include "unidecode/unidecode.hpp"
-#include "unidecode/utf8_string_iterator.hpp"
-#include "tfidf_vectorizer.hpp"
+#include "encode.hpp"
+
 #include <cereal/archives/binary.hpp>
 #include <cereal/types/vector.hpp>
 
@@ -64,24 +61,14 @@ class FuzzyIndex {
         similarity::Space<float> *space = nullptr;
      	TfIdfVectorizer           vectorizer;
         similarity::ObjectVector  vectorized_data;
-        
-        jp::Regex                *non_word;
-        jp::Regex                *spaces_uscore;
-        jp::Regex                *spaces;
 
     public:
 
-        FuzzyIndex(const string &_name) {
+        FuzzyIndex(const string &_name) :
+     	    vectorizer(false, false) {
             index_data = new vector<IndexData>();
             string name = _name;
-            non_word = new jp::Regex();
-            spaces_uscore = new jp::Regex();
-            spaces = new jp::Regex();
 
-            non_word->setPattern("[^\\w]+").addModifier("n").compile();
-            spaces_uscore->setPattern("[ _]+").addModifier("n").compile();
-            spaces->setPattern("[\\s]+").addModifier("n").compile();
-            
             similarity::initLibrary(0, LIB_LOGNONE, NULL);
             space = similarity::SpaceFactoryRegistry<float>::Instance().CreateSpace("negdotprod_sparse_fast",
                                                                                     similarity::AnyParams());
@@ -89,59 +76,8 @@ class FuzzyIndex {
         
         ~FuzzyIndex() {
             delete index_data;
-            delete non_word;
-            delete spaces;
             delete index;
             delete space;
-        }
-
-        string unidecode(const string &str) {
-            unidecode::Utf8StringIterator begin = str.c_str();
-            unidecode::Utf8StringIterator end = str.c_str() + str.length();
-            string output;
-            unidecode::Unidecode(begin, end, std::back_inserter(output));
-            return output;
-        }
-
-        vector<string> encode_string(const string &text) {
-            // Remove spaces, punctuation, convert non-ascii characters to some romanized equivalent, lower case, return
-            if (text.empty()) {
-                vector<string> a;
-                return a;
-            }
-            string cleaned(non_word->replace(text,"", "g"));
-            cleaned = unidecode(cleaned);
-            transform(cleaned.begin(), cleaned.end(), cleaned.begin(), ::tolower);
-            // Sometimes unidecode puts spaces in, so remove them
-            string ret(spaces_uscore->replace(cleaned,"", "g"));
-        
-            auto main_part = ret.substr(0, MAX_ENCODED_STRING_LENGTH);
-            string remainder;
-            if (ret.length() > MAX_ENCODED_STRING_LENGTH)
-                remainder = ret.substr(MAX_ENCODED_STRING_LENGTH);
-            
-            vector<string> out = { main_part, remainder};
-            return out;
-        }
-
-        vector<string>
-        encode_string_for_stupid_artists(const string &text) {
-            //Remove spaces, convert non-ascii characters to some romanized equivalent, lower case, return
-            if (text.empty()) {
-                vector<string> a;
-                return a;
-            }
-
-            string cleaned(spaces->replace(text,"", "g"));
-            transform(cleaned.begin(), cleaned.end(), cleaned.begin(), ::tolower);
-        
-            auto main_part = cleaned.substr(0, MAX_ENCODED_STRING_LENGTH);
-            string remainder;
-            if (cleaned.length() > MAX_ENCODED_STRING_LENGTH)
-                remainder = cleaned.substr(MAX_ENCODED_STRING_LENGTH);
-            
-            vector<string> out = { main_part, remainder};
-            return out;
         }
 
         void

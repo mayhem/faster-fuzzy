@@ -21,6 +21,13 @@ int main(int argc, char *argv[])
         data.push_back(IndexData(i, s.c_str()));
         i++;
     }
+//                auto ret = encoder.encode_string(entry.text);
+//                if (ret[0].size() == 0) {
+//                    ret = encoder.encode_string_for_stupid_artists(entry.text);
+//                    if (ret[0].size() == 0) {
+//                    
+//                }
+                
     fi.build(data);
     
     std::stringstream ss;
