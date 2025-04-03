@@ -29,6 +29,8 @@ Clone and build the following depedencies here:
   SQLite Cpp:
 
   https://github.com/SRombauts/SQLiteCpp.git
+  
+  No setup needed
 
 
   Crow:
@@ -62,3 +64,5 @@ Clone and build the following depedencies here:
   Cereal
 
   https://github.com/USCiLab/cereal.git
+
+  No setup needed

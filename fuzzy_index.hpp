@@ -1,5 +1,6 @@
-#include <stdio.h>
+#pragma once
 
+#include <stdio.h>
 #include <iostream>
 #include <map>
 #include <string>
@@ -26,7 +27,6 @@ using namespace std;
 #include "knnquery.h"
 #include "knnqueue.h"
 
-const auto MAX_ENCODED_STRING_LENGTH = 30;
 const auto NUM_FUZZY_SEARCH_RESULTS = 500;
 
 typedef jpcre2::select<char> jp; 
@@ -55,7 +55,6 @@ class IndexResult {
 
 class FuzzyIndex {
     private:
-        string                    name;
         vector<IndexData>        *index_data; 
         similarity::Index<float> *index = nullptr;
         similarity::Space<float> *space = nullptr;
@@ -64,10 +63,9 @@ class FuzzyIndex {
 
     public:
 
-        FuzzyIndex(const string &_name) :
+        FuzzyIndex() :
      	    vectorizer(false, false) {
             index_data = new vector<IndexData>();
-            string name = _name;
 
             similarity::initLibrary(0, LIB_LOGNONE, NULL);
             space = similarity::SpaceFactoryRegistry<float>::Instance().CreateSpace("negdotprod_sparse_fast",

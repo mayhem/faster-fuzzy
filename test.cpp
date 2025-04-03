@@ -1,26 +1,27 @@
 #include <stdio.h>
 #include <sstream>
 
-#include "fuzzy_index.hpp"
-#include <cereal/archives/binary.hpp>
-
-std::vector<std::string> documents = {
-        "This is the first document.", 
-        "This document is the second document.", 
-        "And this is the third one.", 
-        "Is this the first document?"};
+#include "builder.hpp"
+#include "encode.hpp"
 
 
 int main(int argc, char *argv[])
 {
-    FuzzyIndex fi("test"), reloaded("fuss");
-    vector<IndexData> data;
-
-    int i = 0;
-    for(auto s : documents) {
-        data.push_back(IndexData(i, s.c_str()));
-        i++;
+    if (argc != 2) {
+        printf("Usage: builder <index_dir>\n");
+        return -1;
     }
+    string index_dir(argv[1]);
+    IndexBuilder builder(index_dir);
+    
+    builder.build();
+
+#if 0
+//    int i = 0;
+//    for(auto s : documents) {
+//        data.push_back(IndexData(i, s.c_str()));
+//        i++;
+//    }
 //                auto ret = encoder.encode_string(entry.text);
 //                if (ret[0].size() == 0) {
 //                    ret = encoder.encode_string_for_stupid_artists(entry.text);
@@ -50,7 +51,6 @@ int main(int argc, char *argv[])
 //        printf("%30s %.2f\n", data[i.id].text.c_str(), i.distance);
     }
     
-#if 0
     auto s = string("Thiafadfadfadfas @is _ t!!! (モーニング娘。)fudfdf fsd It’s… ");
     auto ret = fi.encode_string(s);
     auto text = ret[0];
