@@ -12,6 +12,7 @@ project(faster_fuzzy
 )
 
 add_compile_options("-std=c++17")
+add_subdirectory(deps/nmslib/similarity_search)
 add_subdirectory(deps/pcre2)
 add_subdirectory(deps/armadillo-code)
 add_subdirectory(deps/unidecode)
@@ -24,11 +25,11 @@ include_directories(deps/nmslib/similarity_search/include
                     deps/cereal
                     deps/SQLiteCpp/include/SQLiteCpp
 )
-target_link_libraries(ff_server /home/robert/metabrainz/faster-fuzzy/deps/nmslib/similarity_search/debug/libNonMetricSpaceLib.a
+target_link_libraries(ff_server NonMetricSpaceLib
                                 unidecode
                                 libpcre2-8.a
                                 armadillo
-          				              pthread
                                 SQLiteCpp 
+                                pthread
                                 cereal
 )
