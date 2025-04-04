@@ -41,7 +41,7 @@ class IndexBuilder {
             try
             {
                 SQLite::Database    db(db_file);
-                SQLite::Statement   query(db, db_query);
+                SQLite::Statement   query(db, fetch_artist_query);
                 
                 while (query.executeStep())
                     artist_ids.push_back(query.getColumn(0));
