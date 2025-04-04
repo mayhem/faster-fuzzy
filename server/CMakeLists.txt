@@ -17,16 +17,19 @@ add_subdirectory(deps/pcre2)
 add_subdirectory(deps/armadillo-code)
 add_subdirectory(deps/unidecode)
 add_subdirectory(deps/cereal)
+add_subdirectory(deps/SQLiteCpp)
 add_executable(ff_server test.cpp tfidf_vectorizer.cpp)
 include_directories(deps/nmslib/similarity_search/include
                     deps/unidecode/include
                     deps/jpcre2/src
                     deps/cereal
+                    deps/SQLiteCpp/include/SQLiteCpp
 )
 target_link_libraries(ff_server NonMetricSpaceLib
                                 unidecode
                                 libpcre2-8.a
                                 armadillo
+                                SQLiteCpp 
                                 pthread
                                 cereal
 )
