@@ -62,7 +62,7 @@ class FuzzyIndex:
         with open(d_file, "wb") as f:
             pickle.dump(self.index_data, f)
             
-    def save_to_mem(self, temp_dir):
+    def serialize(self):
         # TODO: Use scikit to pickle the vectorizer for better memory performance
         # TODO: Do not save the additional data, its only used for debugging
         vec = pickle.dumps(self.vectorizer)
