@@ -92,4 +92,19 @@ class EncodeSearchData {
             vector<string> out = { main_part, remainder};
             return out;
         }
+
+        void 
+        encode_index_data(vector<string> &text_data, vector<unsigned int> *id_data) {
+            for(unsigned int i = text_data.size() - 1; i >= 0; i--) {
+                auto ret = encode_string(text_data[i]);
+                if (ret[0].size() == 0) {
+                    auto stupid = encode_string_for_stupid_artists(text_data[i]);
+                    if (stupid[0].size() == 0) {
+                        text_data.erase(text_data.begin()+i);
+                        id_data.erase(id_data.begin()+i);
+                    }
+                    ret = stupi
+                }
+            }
+        }
 };

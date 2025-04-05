@@ -1,64 +1,60 @@
 #pragma once
+#include <stdio.h>
 #include "fuzzy_index.hpp"
-#include "SQLiteCpp.h"
 
 
 using namespace std;
 
-const auto MAX_ENCODED_STRING_LENGTH = 30;
-
-const char *fetch_artist_query = 
-    " WITH artist_ids AS ("
-    "    SELECT DISTINCT mapping.artist_credit_id"
-    "      FROM mapping"
-    " LEFT JOIN index_cache"
-    "        ON mapping.artist_credit_id = index_cache.artist_credit_id"
-    "     WHERE index_cache.artist_credit_id is null"
-    " )"
-    "    SELECT artist_credit_id, count(*) as cnt"
-    "      FROM artist_ids"
-    "  GROUP BY artist_credit_id order by cnt desc";
-    
-class IndexBuilder {
+//"artist_data.txt
+//"stupid_artist_data.txt
+//
+class ArtistIndexes {
     private:
         FuzzyIndex      index;
-        string          index_dir, db_file; 
+        string          index_dir; 
 
     public:
 
-        IndexBuilder(const string &_index_dir) { 
+        ArtistIndexes(const string &_index_dir) { 
             index_dir = _index_dir;
-            db_file = _index_dir + "/mapping.db";
         }
         
-        ~IndexBuilder() {
+        ~ArtistIndexes() {
         }
         
-        void build() {
-
-            vector<unsigned int> artist_ids;
-             
-            try
-            {
-                SQLite::Database    db(db_file);
-                SQLite::Statement   query(db, fetch_artist_query);
-                
-                while (query.executeStep())
-                    artist_ids.push_back(query.getColumn(0));
-            }
-            catch (std::exception& e)
-            {
-                printf("db exception: %s\n", e.what());
-            }
+        // 幾何学模様 a                  Kikagaku Moyo c
+        void build_artist_index(string &artist_data_file, bool remove_data_file) {
             
-            for(auto artist_id : artist_ids) {
-                build_artist_index(artist_id);
+            vector<unsigned int> index_ids;
+            vector<string>       index_texts;
+            string               file = index_dir;
+
+            file += string("/") + artist_data_file;
+            auto *fp = fopen(file.c_str(), "rb");
+            if (fp == nullptr)
+                throw std::invalid_argument("File not found.\n");
+                    
+            for(;;) {
+                unsigned int id, length;
+
+                if (fread(&id, 1, sizeof(id), fp) != sizeof(id))
+                    break;
+                if (fread(&length, 1, sizeof(length), fp) != sizeof(length))
+                    throw std::invalid_argument("unexpected EOF.\n");
+                
+                char *str = (char *)malloc(length+1);
+                if (fread(str, 1, length, fp) != length)
+                    throw std::invalid_argument("unexpected EOF.\n");
+                
+                *(str + length) = 0;
+                index_texts.push_back(string(str));
+                index_ids.push_back(id);
+                free(str);
             }
-        }
-
-        void build_artist_index(unsigned int artist_id) {
-
-
-
+            fclose(fp);
+            if (remove_data_file)
+                remove(artist_data_file.c_str());
+           
+            index.build(index_ids, index_texts);
         }
 };

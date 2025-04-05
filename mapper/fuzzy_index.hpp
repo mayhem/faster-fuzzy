@@ -28,19 +28,9 @@ using namespace std;
 #include "knnqueue.h"
 
 const auto NUM_FUZZY_SEARCH_RESULTS = 500;
+const auto MAX_ENCODED_STRING_LENGTH = 30;
 
 typedef jpcre2::select<char> jp; 
-
-class IndexData {
-    public:
-        int id;
-        string text;
-        
-        IndexData(int _id, const char *_text) {
-            id = _id;
-            text = _text;
-        }
-};
 
 class IndexResult {
     public:
@@ -55,17 +45,18 @@ class IndexResult {
 
 class FuzzyIndex {
     private:
-        vector<IndexData>        *index_data; 
+        vector<unsigned int>     *index_ids; 
         similarity::Index<float> *index = nullptr;
         similarity::Space<float> *space = nullptr;
      	TfIdfVectorizer           vectorizer;
         similarity::ObjectVector  vectorized_data;
+        EncodeSearchData          encode(MAX_ENCODED_STRING_LENGTH);
 
     public:
 
         FuzzyIndex() :
      	    vectorizer(false, false) {
-            index_data = new vector<IndexData>();
+            index_ids = new vector<unsigned int>();
 
             similarity::initLibrary(0, LIB_LOGNONE, NULL);
             space = similarity::SpaceFactoryRegistry<float>::Instance().CreateSpace("negdotprod_sparse_fast",
@@ -73,13 +64,13 @@ class FuzzyIndex {
         }
         
         ~FuzzyIndex() {
-            delete index_data;
+            delete index_ids;
             delete index;
             delete space;
         }
 
         void
-        transform_text(const arma::mat &matrix, const vector<string> &text_data, similarity::ObjectVector &data) {
+        transform_text(const arma::mat &matrix, similarity::ObjectVector &data) {
             std::vector<similarity::SparseVectElem<float>> sparse_items;            
             auto sparse_space = reinterpret_cast<const similarity::SpaceSparseVector<float>*>(space);
 
@@ -99,18 +90,20 @@ class FuzzyIndex {
                 sparse_items.clear();
             }
         }
-        
-        void
-        build(vector<IndexData> &index_data) {
-            if (index_data.size() == 0)
-                throw std::length_error("no index data provided.");
-            
-            vector<string> text_data;
-            for(auto entry : index_data) 
-                text_data.push_back(entry.text);
 
+        void
+        build(vector<unsigned int> &_index_ids, vector<string> &text_data) {
+            
+            if (text_data.size() == 0)
+                throw std::length_error("no index data provided.");
+            if (text_data.size() != _index_ids.size())
+                throw std::length_error("Length of ids and text vectors differs!");
+
+            // Make a copy, I hope, of the index id data and hold on to it
+            *index_ids = _index_ids; 
+        
             arma::mat matrix = vectorizer.fit_transform(text_data);
-            transform_text(matrix, text_data, vectorized_data);
+            transform_text(matrix, vectorized_data);
             
             index = similarity::MethodFactoryRegistry<float>::Instance().CreateMethod(false,
                         "simple_invindx",
@@ -131,7 +124,7 @@ class FuzzyIndex {
 
             text_data.push_back(query_string);
             arma::mat matrix = vectorizer.transform(text_data);
-            transform_text(matrix, text_data, data);
+            transform_text(matrix, data);
 
             unsigned k = NUM_FUZZY_SEARCH_RESULTS;
             similarity::KNNQuery<float> knn(*space, data[0], k);
@@ -155,7 +148,7 @@ class FuzzyIndex {
             vector<uint8_t> index_data;
             index->SerializeIndex(index_data, vectorized_data);
 
-            archive(index_data, vectorizer); 
+            archive(index_data, vectorizer, index_ids); 
         }
       
         template<class Archive>
@@ -169,7 +162,7 @@ class FuzzyIndex {
             vectorized_data.clear();
 
             // Restore our data
-            archive(index_data, vectorizer); 
+            archive(index_data, vectorizer, index_ids); 
             delete index;
     
             auto factory = similarity::MethodFactoryRegistry<float>::Instance();
