@@ -29,7 +29,6 @@ class Mapping(Model):
     recording_name = TextField()
 
     score = IntegerField(null=False)
-    shard_ch = FixedCharField(null=False)
 
 class IndexCache(Model):
     class Meta:

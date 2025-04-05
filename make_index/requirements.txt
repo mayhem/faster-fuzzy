@@ -1,4 +1,3 @@
-scikit_learn
 unidecode
 psycopg2-binary
 Flask
@@ -7,3 +6,5 @@ alphabet-detector
 lb-matching-tools@git+https://github.com/metabrainz/listenbrainz-matching-tools.git@v2024.01.30.1
 peewee
 tqdm
+scikit-learn
+nmslib-metabrainz

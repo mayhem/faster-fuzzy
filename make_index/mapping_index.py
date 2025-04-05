@@ -2,10 +2,10 @@
 
 import csv
 from time import monotonic
-from pickle import dumps, dump
 from subprocess import Popen, PIPE
-import os
+from struct import pack
 import sys
+import os
 
 from alphabet_detector import AlphabetDetector
 import psycopg2
@@ -17,6 +17,10 @@ from database import Mapping, create_db, open_db, db
 # TODO: Remove the combined field of canonical data dump. Done, but make PR
 
 # For wolf
+
+#DB_CONNECT = "dbname=musicbrainz_db user=musicbrainz host=localhost port=5432 password=musicbrainz"
+
+# For wolf/SSH
 DB_CONNECT = "dbname=musicbrainz_db user=musicbrainz host=localhost port=5432 password=musicbrainz"
 
 # For wolf/docker
@@ -27,6 +31,13 @@ NUM_ROWS_PER_COMMIT = 25000
 MAX_THREADS = 8
 
 class MappingLookupIndex:
+    
+    def save_index_data(self, ad_file, artist_data):
+        with open(ad_file, "wb") as f:
+            for entry in artist_data:
+                text = bytes(entry["text"], "utf-8")
+                f.write(pack("II", entry["id"], len(text)))
+                f.write(text)
 
     def create(self, conn, index_dir):
         last_row = None
@@ -170,19 +181,14 @@ class MappingLookupIndex:
         # Get rid of the CSV files now that we've imported it
         os.unlink(import_file)
 
-        print("Build/save artist indexes")
-        artist_index = FuzzyIndex(name="artist_index")
-        artist_index.build(artist_data, "text")
-        artist_index.save(index_dir)
-
-        if stupid_artist_data:
-            print("Build/save stupid artist indexes")
-            stupid_artist_index = FuzzyIndex(name="stupid_artist_index")
-            stupid_artist_index.build(stupid_artist_data, "text")
-            stupid_artist_index.save(index_dir)
-
+        print("save artist index data")
+        ad_file = os.path.join(index_dir, "artist_data.txt")
+        self.save_index_data(ad_file, artist_data)
+        ad_file = os.path.join(index_dir, "stupid_artist_data.txt")
+        self.save_index_data(ad_file, stupid_artist_data)
+        
         t1 = monotonic()
-        print("loaded data and build artist indexes in %.1f seconds." % (t1 - t0))
+        print("loaded data and saved artist index data in %.1f seconds." % (t1 - t0))
 
 
 if __name__ == "__main__":
