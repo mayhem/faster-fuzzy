@@ -32,25 +32,9 @@ MAX_THREADS = 8
 
 class MappingLookupIndex:
     
-    def save_index_data(self, ad_file, artist_data):
-        with open(ad_file, "wb") as f:
-            for entry in artist_data:
-                text = bytes(entry["text"], "utf-8")
-                f.write(pack("II", entry["id"], len(text)))
-                f.write(text)
-
     def create(self, conn, index_dir):
-        last_row = None
-        current_part_id = None
-
         t0 = monotonic()
         with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as curs:
-            artist_data = []
-            stupid_artist_data = []  # reserved for stupid artists like !!!
-            recording_data = []
-            release_data = []
-            relrec_offsets = []
-            relrec_offset = 0
 
             db_file = os.path.join(index_dir, "mapping.db")
             create_db(db_file)
@@ -77,7 +61,6 @@ class MappingLookupIndex:
                                  ON artist_credit_id = acn.artist_credit
                                JOIN artist a
                                  ON acn.artist = a.id
-                              WHERE artist_credit_id < 10000
                            GROUP BY artist_credit_id
                                   , artist_mbids
                                   , artist_credit_name
@@ -88,10 +71,10 @@ class MappingLookupIndex:
                                   , score
                            ORDER BY artist_credit_id""")
 #                              WHERE artist_credit_id > 1230420 and artist_credit_id < 1230800
+#                              WHERE artist_credit_id < 10000
 
             print("load data")
             mapping_data = []
-            ad = AlphabetDetector()
             import_file = os.path.join(index_dir, "import.csv")
             with open(import_file, 'w', newline='') as csvfile:
                 fieldnames = ["artist_credit_id", 
@@ -113,37 +96,10 @@ class MappingLookupIndex:
                     if i % 1000000 == 0:
                         print("Indexed %d rows" % i)
 
-                    if last_row is not None and row["artist_credit_id"] != last_row["artist_credit_id"]:
-
-                        # Save artist data for artist index
-                        encoded = FuzzyIndex.encode_string(last_row["artist_credit_name"])
-                        if encoded:
-                            artist_data.append({ "text": encoded,
-                                                 "id": last_row["artist_credit_id"] })
-                            if not ad.only_alphabet_chars(last_row["artist_credit_name"], "LATIN"):
-                                encoded = FuzzyIndex.encode_string(last_row["artist_credit_sortname"][0])
-                                if encoded:
-                                    # 幾何学模様 a                  Kikagaku Moyo c
-                                    artist_data.append({ "text": encoded,
-                                                         "id": last_row["artist_credit_id"] })
-
-                        else:
-                            encoded = FuzzyIndex.encode_string_for_stupid_artists(last_row["artist_credit_name"])
-                            if not encoded:
-                                last_row = row
-                                continue
-                            stupid_artist_data.append({ "text": encoded, 
-                                                        "id": last_row["artist_credit_id"] })
-
-                        recording_data = []
-                        release_data = []
-                
                     arow = dict(row)
                     arow["artist_mbids"] = ",".join(row["artist_mbids"])
                     arow["artist_credit_sortname"] = row["artist_credit_sortname"][0]
                     mapping_data.append(arow)
-
-                    last_row = row
 
                     if len(mapping_data) > NUM_ROWS_PER_COMMIT:
                         for mrow in mapping_data:
@@ -151,15 +107,6 @@ class MappingLookupIndex:
                         mapping_data = []
 
                 # dump out the last bits of data
-                encoded = FuzzyIndex.encode_string(row["artist_credit_name"])
-                if encoded:
-                    artist_data.append({ "text": encoded,
-                                         "id": row["artist_credit_id"] })
-                else:
-                    encoded = FuzzyIndex.encode_string_for_stupid_artists(last_row["artist_credit_name"])
-                    stupid_artist_data.append({ "text": encoded,
-                                               "id": row["artist_credit_id"] })
-
                 if mapping_data:
                     for mrow in mapping_data:
                         writer.writerow(mrow)
@@ -181,12 +128,6 @@ class MappingLookupIndex:
         # Get rid of the CSV files now that we've imported it
         os.unlink(import_file)
 
-        print("save artist index data")
-        ad_file = os.path.join(index_dir, "artist_data.txt")
-        self.save_index_data(ad_file, artist_data)
-        ad_file = os.path.join(index_dir, "stupid_artist_data.txt")
-        self.save_index_data(ad_file, stupid_artist_data)
-        
         t1 = monotonic()
         print("loaded data and saved artist index data in %.1f seconds." % (t1 - t0))
 

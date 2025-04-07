@@ -7,6 +7,8 @@
 #include <vector>
 using namespace std;
 
+#include "defs.hpp"
+
 #include "jpcre2.hpp"
 #include "unidecode/unidecode.hpp"
 #include "unidecode/utf8_string_iterator.hpp"
@@ -26,9 +28,7 @@ class EncodeSearchData {
 
     public:
 
-        EncodeSearchData(unsigned int _max_string_length) {
-            max_string_length = _max_string_length;
-
+        EncodeSearchData() {
             non_word = new jp::Regex();
             spaces_uscore = new jp::Regex();
             spaces = new jp::Regex();
@@ -64,7 +64,7 @@ class EncodeSearchData {
             // Sometimes unidecode puts spaces in, so remove them
             string ret(spaces_uscore->replace(cleaned,"", "g"));
         
-            auto main_part = ret.substr(0, max_string_length);
+            auto main_part = ret.substr(0, MAX_ENCODED_STRING_LENGTH);
             string remainder;
             if (ret.length() > max_string_length)
                 remainder = ret.substr(max_string_length);
@@ -94,17 +94,27 @@ class EncodeSearchData {
         }
 
         void 
-        encode_index_data(vector<string> &text_data, vector<unsigned int> *id_data) {
-            for(unsigned int i = text_data.size() - 1; i >= 0; i--) {
-                auto ret = encode_string(text_data[i]);
+        encode_index_data(const vector<unsigned int> &input_ids, const vector<string> &input_texts,
+                          vector<unsigned int> &output_ids,
+                          vector<string>       &output_texts,
+                          vector<string>       &output_rems,
+                          vector<unsigned int> &stupid_ids,
+                          vector<string>       &stupid_texts,
+                          vector<string>       &stupid_rems) {
+            for(unsigned int i = 0; i < input_ids.size(); i++) {
+                auto ret = encode_string(input_texts[i]);
                 if (ret[0].size() == 0) {
-                    auto stupid = encode_string_for_stupid_artists(text_data[i]);
-                    if (stupid[0].size() == 0) {
-                        text_data.erase(text_data.begin()+i);
-                        id_data.erase(id_data.begin()+i);
+                    auto stupid = encode_string_for_stupid_artists(input_texts[i]);
+                    if (stupid[0].size()) {
+                        stupid_ids.push_back(input_ids[i]);
+                        stupid_texts.push_back(stupid[0]);
+                        stupid_rems.push_back(stupid[1]);
+                        continue;
                     }
-                    ret = stupi
                 }
+                output_ids.push_back(input_ids[i]);
+                output_texts.push_back(ret[0]);
+                output_rems.push_back(ret[1]);
             }
         }
 };

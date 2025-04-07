@@ -2,7 +2,6 @@
 #include <sstream>
 
 #include "artist_index.hpp"
-#include "encode.hpp"
 
 
 int main(int argc, char *argv[])
@@ -13,9 +12,7 @@ int main(int argc, char *argv[])
     }
     string index_dir(argv[1]);
     ArtistIndexes builder(index_dir);
-    
-    string artist_data_file("artist_data.txt");
-    builder.build_artist_index(artist_data_file, false);
+    builder.build_artist_index();
 
 #if 0
 //    int i = 0;

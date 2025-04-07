@@ -7,6 +7,7 @@
 #include <vector>
 using namespace std;
 
+#include "tfidf_vectorizer.hpp"
 #include "encode.hpp"
 
 #include <cereal/archives/binary.hpp>
@@ -28,20 +29,6 @@ using namespace std;
 #include "knnqueue.h"
 
 const auto NUM_FUZZY_SEARCH_RESULTS = 500;
-const auto MAX_ENCODED_STRING_LENGTH = 30;
-
-typedef jpcre2::select<char> jp; 
-
-class IndexResult {
-    public:
-        int   id;
-        float distance;
-        
-        IndexResult(int _id, float _distance) {
-            id = _id;
-            distance = _distance;
-        }
-};
 
 class FuzzyIndex {
     private:
@@ -50,7 +37,7 @@ class FuzzyIndex {
         similarity::Space<float> *space = nullptr;
      	TfIdfVectorizer           vectorizer;
         similarity::ObjectVector  vectorized_data;
-        EncodeSearchData          encode(MAX_ENCODED_STRING_LENGTH);
+        EncodeSearchData          encode;
 
     public:
 
