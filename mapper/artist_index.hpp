@@ -55,11 +55,11 @@ class ArtistIndexes {
                 index.build(output_ids, output_texts);
                 // TODO: Write index to DB
             }
-            {
-                FuzzyIndex index;
-                printf("%lu, %lu\n", stupid_ids.size(), stupid_texts.size());
-                index.build(stupid_ids, stupid_texts);
-                // TODO: Write index to DB
-            }
+//            {
+//                FuzzyIndex index;
+//                printf("%lu, %lu\n", stupid_ids.size(), stupid_texts.size());
+//                index.build(stupid_ids, stupid_texts);
+//                // TODO: Write index to DB
+//            }
         }
 };
