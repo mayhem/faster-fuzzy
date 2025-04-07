@@ -9,7 +9,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 Original source from: https://github.com/phfaustini/TfidfVectorizer
  */
-
+#include <stdio.h>
 #include "tfidf_vectorizer.hpp"
 
 
@@ -97,15 +97,26 @@ std::map<std::string, double> TfIdfVectorizer::idf(std::vector<std::map<std::str
     size_t documents = documents_word_counts.size();
     double d_documents = (double)documents;
     double temp_idf;
+    std::unordered_map<std::string, int> doc_freq;
+    
+    printf("num docs: %lu\n", documents);
+    printf("vocab: %lu\n", this->vocabulary_.size());
+
+    for(auto doc : documents_word_counts)
+        for(auto iter = doc.begin(); iter != doc.end(); ++iter) {
+            std::string key = iter->first;
+            auto d = doc_freq.find(key);
+            if (d != doc_freq.end())
+                doc_freq[key] = d->second+1;
+            else
+                doc_freq.insert({key, 1});
+        }
+    
+
     for (auto it = this->vocabulary_.cbegin(); it != this->vocabulary_.cend(); ++it)
     {
         key = (*it).first;
-        value = 0;
-        for (i = 0; i < documents; i++)
-        {
-            if (documents_word_counts[i][key] > 0)
-                value++;
-        }
+        value = doc_freq[key];
         /*Adding both denominator and numerator by 1 to avoid division by 0 AND negative idf */
         temp_idf = std::log((d_documents + 1) / (value + 1)) + 1; //log+1 avoids terms with zero idf to be suppressed.
         this->idf_[key] = temp_idf;
@@ -114,6 +125,7 @@ std::map<std::string, double> TfIdfVectorizer::idf(std::vector<std::map<std::str
     /*Get only the words with highest idf.*/
     if (this->max_features > 0)
     {
+        printf("uh ok\n");
         /*Ordered set, reversed order by value*/
         std::set<std::pair<int, std::string>> temp_idf;
         for (auto const& x : this->idf_)
@@ -136,6 +148,7 @@ std::map<std::string, double> TfIdfVectorizer::idf(std::vector<std::map<std::str
             i++;
         }
     }
+    printf("idf done\n");
     return this->idf_;
 } 
 
@@ -169,7 +182,9 @@ std::vector<std::map<std::string, double>> TfIdfVectorizer::tf(std::vector<std::
 
 arma::mat TfIdfVectorizer::fit_transform(std::vector<std::string>& documents)
 {
+    printf("fit\n");
     fit(documents);
+    printf("fit done\n");
     return transform(documents);
 }
 

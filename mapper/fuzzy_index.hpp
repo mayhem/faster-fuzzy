@@ -88,9 +88,11 @@ class FuzzyIndex {
 
             // Make a copy, I hope, of the index id data and hold on to it
             *index_ids = _index_ids; 
-        
+       
             arma::mat matrix = vectorizer.fit_transform(text_data);
+            printf("fit transform done\n");
             transform_text(matrix, vectorized_data);
+            printf("transform text done\n");
             
             index = similarity::MethodFactoryRegistry<float>::Instance().CreateMethod(false,
                         "simple_invindx",
@@ -98,7 +100,10 @@ class FuzzyIndex {
                          *space,
                          vectorized_data);
             similarity::AnyParams index_params;
+
+            printf("create index\n");
             index->CreateIndex(index_params);
+            printf("create index done\n");
         }
 
         vector<IndexResult> search(const string &query_string, float min_confidence, bool debug=false) {
