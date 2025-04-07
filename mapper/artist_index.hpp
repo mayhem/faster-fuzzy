@@ -7,16 +7,7 @@
 using namespace std;
 
 const char *fetch_artists_query = 
-    " WITH artist_ids AS ("
-    "    SELECT DISTINCT mapping.artist_credit_id"
-    "      FROM mapping"
-    " LEFT JOIN index_cache"
-    "        ON mapping.artist_credit_id = index_cache.artist_credit_id"
-    "     WHERE index_cache.artist_credit_id is null"
-    " )"
-    "    SELECT artist_credit_id, count(*) as cnt"
-    "      FROM artist_ids"
-    "  GROUP BY artist_credit_id order by cnt desc";
+    "SELECT DISTINCT artist_credit_id, artist_credit_name FROM mapping";
 
 class ArtistIndexes {
     private:
@@ -60,13 +51,13 @@ class ArtistIndexes {
                                                              stupid_ids, stupid_texts, stupid_rems);
             {
                 FuzzyIndex index;
-                printf("%lu, %lu", output_ids.size(), output_texts.size());
+                printf("%lu, %lu\n", output_ids.size(), output_texts.size());
                 index.build(output_ids, output_texts);
                 // TODO: Write index to DB
             }
             {
                 FuzzyIndex index;
-                printf("%lu, %lu", stupid_ids.size(), stupid_texts.size());
+                printf("%lu, %lu\n", stupid_ids.size(), stupid_texts.size());
                 index.build(stupid_ids, stupid_texts);
                 // TODO: Write index to DB
             }

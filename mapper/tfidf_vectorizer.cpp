@@ -25,16 +25,21 @@ TfIdfVectorizer::TfIdfVectorizer(bool binary, bool lowercase, bool use_idf, int 
     this->sublinear_tf = sublinear_tf;
 }
 
-
 std::vector<std::string> TfIdfVectorizer::tokenise_document(std::string& document)
 {
     std::vector<std::string> tokens;
-    std::string s;
    
     auto l = document.length();
-    for(int i = 0; i < l - 2; i++) {
-        tokens.push_back(document.substr(i, 3));
+    if (l < 3) {
+        auto d = document;
+        while(d.size() < 3)
+            d += std::string(" ");
+        tokens.push_back(d);
     }
+    else
+        for(int i = 0; i < l - 2; i++) {
+            tokens.push_back(document.substr(i, 3));
+        }
 
     return tokens;
 }

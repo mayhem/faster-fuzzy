@@ -63,7 +63,7 @@ class EncodeSearchData {
             transform(cleaned.begin(), cleaned.end(), cleaned.begin(), ::tolower);
             // Sometimes unidecode puts spaces in, so remove them
             string ret(spaces_uscore->replace(cleaned,"", "g"));
-        
+
             auto main_part = ret.substr(0, MAX_ENCODED_STRING_LENGTH);
             string remainder;
             if (ret.length() > max_string_length)
@@ -104,6 +104,7 @@ class EncodeSearchData {
             for(unsigned int i = 0; i < input_ids.size(); i++) {
                 auto ret = encode_string(input_texts[i]);
                 if (ret[0].size() == 0) {
+                    printf("stupid '%s'\n", input_texts[i].c_str());
                     auto stupid = encode_string_for_stupid_artists(input_texts[i]);
                     if (stupid[0].size()) {
                         stupid_ids.push_back(input_ids[i]);
@@ -115,6 +116,7 @@ class EncodeSearchData {
                 output_ids.push_back(input_ids[i]);
                 output_texts.push_back(ret[0]);
                 output_rems.push_back(ret[1]);
+                printf("'%s'\n", ret[0].c_str());
             }
         }
 };

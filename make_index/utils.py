@@ -1,7 +1,6 @@
 def ngrams(string, n=3):
     """ Take a lookup string (noise removed, lower case, etc) and turn into a list of trigrams """
 
-    string = ' ' + string + ' '  # pad names for ngrams...
     ngrams = zip(*[string[i:] for i in range(n)])
     return [''.join(ngram) for ngram in ngrams]
 

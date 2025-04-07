@@ -7,11 +7,9 @@ from struct import pack
 import sys
 import os
 
-from alphabet_detector import AlphabetDetector
 import psycopg2
 from psycopg2.extras import DictCursor, execute_values
 
-from fuzzy_index import FuzzyIndex
 from database import Mapping, create_db, open_db, db
 
 # TODO: Remove the combined field of canonical data dump. Done, but make PR
@@ -70,8 +68,8 @@ class MappingLookupIndex:
                                   , rec.id
                                   , score
                            ORDER BY artist_credit_id""")
+#                              WHERE artist_credit_id < 20000
 #                              WHERE artist_credit_id > 1230420 and artist_credit_id < 1230800
-#                              WHERE artist_credit_id < 10000
 
             print("load data")
             mapping_data = []
