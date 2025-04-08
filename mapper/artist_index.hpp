@@ -7,7 +7,7 @@
 using namespace std;
 
 const char *fetch_artists_query = 
-    "SELECT DISTINCT artist_credit_id, artist_credit_name FROM mapping limit 500";
+    "SELECT DISTINCT artist_credit_id, artist_credit_name FROM mapping";
 
 class ArtistIndexes {
     private:

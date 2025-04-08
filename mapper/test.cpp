@@ -8,7 +8,7 @@ vector<unsigned int> ids = { 0, 1 };
 
 int main(int argc, char *argv[])
 {
-#if 0
+#if 1
     if (argc != 2) {
         printf("Usage: builder <index_dir>\n");
         return -1;
@@ -18,10 +18,10 @@ int main(int argc, char *argv[])
     builder.build_artist_index();
 #endif
 
+#if 0
     FuzzyIndex fi;
     fi.build(ids, documents);
     
-#if 0
     std::stringstream ss;
     {
         cereal::BinaryOutputArchive oarchive(ss);
@@ -33,7 +33,6 @@ int main(int argc, char *argv[])
         cereal::BinaryInputArchive iarchive(ss);
         iarchive(reloaded);
     }
-#endif
 
     string query("This is a nest");
     auto results = fi.search(query, .0); 
@@ -41,6 +40,7 @@ int main(int argc, char *argv[])
     for( auto i : results ) {
         printf("  %d %.2f\n", i.id, i.distance);
     }
+#endif
     
 #if 0
     auto s = string("Thiafadfadfadfas @is _ t!!! (モーニング娘。)fudfdf fsd It’s… ");
