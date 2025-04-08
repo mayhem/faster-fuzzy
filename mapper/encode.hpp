@@ -24,7 +24,6 @@ class EncodeSearchData {
         jp::Regex                *non_word;
         jp::Regex                *spaces_uscore;
         jp::Regex                *spaces;
-        unsigned int              max_string_length;
 
     public:
 
@@ -59,15 +58,15 @@ class EncodeSearchData {
                 return a;
             }
             string cleaned(non_word->replace(text,"", "g"));
-            cleaned = unidecode(cleaned);
+            //cleaned = unidecode(cleaned);
             transform(cleaned.begin(), cleaned.end(), cleaned.begin(), ::tolower);
             // Sometimes unidecode puts spaces in, so remove them
             string ret(spaces_uscore->replace(cleaned,"", "g"));
 
             auto main_part = ret.substr(0, MAX_ENCODED_STRING_LENGTH);
             string remainder;
-            if (ret.length() > max_string_length)
-                remainder = ret.substr(max_string_length);
+            if (ret.length() > MAX_ENCODED_STRING_LENGTH)
+                remainder = ret.substr(MAX_ENCODED_STRING_LENGTH);
             
             vector<string> out = { main_part, remainder};
             return out;
@@ -84,10 +83,10 @@ class EncodeSearchData {
             string cleaned(spaces->replace(text,"", "g"));
             transform(cleaned.begin(), cleaned.end(), cleaned.begin(), ::tolower);
         
-            auto main_part = cleaned.substr(0, max_string_length);
+            auto main_part = cleaned.substr(0, MAX_ENCODED_STRING_LENGTH);
             string remainder;
-            if (cleaned.length() > max_string_length)
-                remainder = cleaned.substr(max_string_length);
+            if (cleaned.length() > MAX_ENCODED_STRING_LENGTH)
+                remainder = cleaned.substr(MAX_ENCODED_STRING_LENGTH);
             
             vector<string> out = { main_part, remainder};
             return out;
@@ -104,7 +103,6 @@ class EncodeSearchData {
             for(unsigned int i = 0; i < input_ids.size(); i++) {
                 auto ret = encode_string(input_texts[i]);
                 if (ret[0].size() == 0) {
-                    printf("stupid '%s'\n", input_texts[i].c_str());
                     auto stupid = encode_string_for_stupid_artists(input_texts[i]);
                     if (stupid[0].size()) {
                         stupid_ids.push_back(input_ids[i]);
@@ -116,7 +114,6 @@ class EncodeSearchData {
                 output_ids.push_back(input_ids[i]);
                 output_texts.push_back(ret[0]);
                 output_rems.push_back(ret[1]);
-                printf("'%s'\n", ret[0].c_str());
             }
         }
 };

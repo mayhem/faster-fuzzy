@@ -68,14 +68,14 @@ std::vector<std::map<std::string, int>> TfIdfVectorizer::word_count(std::vector<
             words_set.insert(word);
         }
     }
-    printf("word_count()\n");
-    for(size_t d = 0; d < documents_word_counts.size(); d++) {
-        printf("doc %lu: ", d);
-        auto doc = documents_word_counts[d];
-        for (auto it = doc.begin(); it != doc.end(); it++)
-            printf("'%s':%d ", it->first.c_str(), it->second);
-        printf("\n");
-    }
+//    printf("word_count()\n");
+//    for(size_t d = 0; d < documents_word_counts.size(); d++) {
+//        printf("doc %lu: ", d);
+//        auto doc = documents_word_counts[d];
+//        for (auto it = doc.begin(); it != doc.end(); it++)
+//            printf("'%s':%d ", it->first.c_str(), it->second);
+//        printf("\n");
+//    }
 
     size_t i = 0;
     for (std::set<std::string>::iterator it = words_set.begin(); it != words_set.end(); ++it)
@@ -107,8 +107,8 @@ std::map<std::string, double> TfIdfVectorizer::idf(std::vector<std::map<std::str
     double temp_idf;
     std::unordered_map<std::string, int> doc_freq;
     
-    printf("num docs: %lu\n", documents);
-    printf("vocab: %lu\n", this->vocabulary_.size());
+//    printf("num docs: %lu\n", documents);
+//    printf("vocab: %lu\n", this->vocabulary_.size());
 
     for(auto doc : documents_word_counts)
         for(auto iter = doc.begin(); iter != doc.end(); ++iter) {
@@ -129,11 +129,11 @@ std::map<std::string, double> TfIdfVectorizer::idf(std::vector<std::map<std::str
         temp_idf = std::log((d_documents + 1) / (value + 1)) + 1; //log+1 avoids terms with zero idf to be suppressed.
         this->idf_[key] = temp_idf;
     }
-    printf("idf()\n");
-    for(auto &item : this->idf_) {
-        printf("'%s':%.1f ", item.first.c_str(), item.second);
-    }
-    printf("\n");
+//    printf("idf()\n");
+//    for(auto &item : this->idf_) {
+//        printf("'%s':%.1f ", item.first.c_str(), item.second);
+//    }
+//    printf("\n");
 
     /*Get only the words with highest idf.*/
     if (this->max_features > 0)
@@ -188,14 +188,14 @@ std::vector<std::map<std::string, double>> TfIdfVectorizer::tf(std::vector<std::
             }
         } 
     }
-    printf("tf()\n");
-    for(auto &doc : documents_word_frequency) {
-        printf("doc: ");
-        for(auto &itr : doc)
-            printf("('%s':%.1f) ", itr.first.c_str(), itr.second);            
-        printf("\n");
-    }
-    printf("\n");
+//    printf("tf()\n");
+//    for(auto &doc : documents_word_frequency) {
+//        printf("doc: ");
+//        for(auto &itr : doc)
+//            printf("('%s':%.1f) ", itr.first.c_str(), itr.second);            
+//        printf("\n");
+//    }
+//    printf("\n");
 
     return documents_word_frequency;
 }
@@ -203,7 +203,7 @@ std::vector<std::map<std::string, double>> TfIdfVectorizer::tf(std::vector<std::
 arma::mat TfIdfVectorizer::fit_transform(std::vector<std::string>& documents)
 {
     fit(documents);
-    printf("begin transform\n");
+//    printf("begin transform\n");
     return transform(documents);
 }
 
@@ -222,7 +222,7 @@ arma::mat TfIdfVectorizer::transform(std::vector<std::string>& documents)
     printf("transform()\n");
     for (size_t d = 0; d < documents.size(); d++)
     {
-        printf("doc %lu: ", d);
+//        printf("doc %lu: ", d);
         tf_hash = documents_word_counts[d];
         for (auto & itr : tf_hash)
         {
@@ -235,12 +235,12 @@ arma::mat TfIdfVectorizer::transform(std::vector<std::string>& documents)
                 zero++;
             if (this->use_idf) {
                 X_transformed(w, d) = itr.second * idf;
-                printf("('%s' %lu,%lu):%.1f, ", word.c_str(), w, d, tf_hash[word] * idf);                
+//                printf("('%s' %lu,%lu):%.1f, ", word.c_str(), w, d, tf_hash[word] * idf);                
             }
             else
                 X_transformed(w, d) = (tf_hash[word] > 0) ? 1 : 0;
         }
-        printf("\n");
+//        printf("\n");
     }
     printf("%d zero %d non-zero\n", zero, nonzero);
 

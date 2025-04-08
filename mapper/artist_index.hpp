@@ -33,7 +33,9 @@ class ArtistIndexes {
             try
             {
                 SQLite::Database    db(db_file);
+                printf("query\n");
                 SQLite::Statement   query(db, fetch_artists_query);
+                printf("fetch\n");
                 
                 while (query.executeStep()) {
                     index_ids.push_back(query.getColumn(0));
@@ -45,8 +47,9 @@ class ArtistIndexes {
                 printf("db exception: %s\n", e.what());
             }
             vector<unsigned int> output_ids, stupid_ids;
-            vector<string>    output_texts, output_rems, stupid_texts, stupid_rems;
-                        
+            vector<string>       output_texts, output_rems, stupid_texts, stupid_rems;
+                    
+            printf("encode\n");
             encode.encode_index_data(index_ids, index_texts, output_ids, output_texts, output_rems,
                                                              stupid_ids, stupid_texts, stupid_rems);
             {
