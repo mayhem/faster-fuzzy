@@ -68,6 +68,14 @@ std::vector<std::map<std::string, int>> TfIdfVectorizer::word_count(std::vector<
             words_set.insert(word);
         }
     }
+    printf("build word counts\n");
+    for(size_t d = 0; d < documents_word_counts.size(); d++) {
+        printf("doc %lu: ", d);
+        auto doc = documents_word_counts[d];
+        for (auto it = doc.begin(); it != doc.end(); it++)
+            printf("'%s':%d ", it->first.c_str(), it->second);
+        printf("\n");
+    }
 
     size_t i = 0;
     for (std::set<std::string>::iterator it = words_set.begin(); it != words_set.end(); ++it)
@@ -125,7 +133,6 @@ std::map<std::string, double> TfIdfVectorizer::idf(std::vector<std::map<std::str
     /*Get only the words with highest idf.*/
     if (this->max_features > 0)
     {
-        printf("uh ok\n");
         /*Ordered set, reversed order by value*/
         std::set<std::pair<int, std::string>> temp_idf;
         for (auto const& x : this->idf_)
@@ -148,7 +155,6 @@ std::map<std::string, double> TfIdfVectorizer::idf(std::vector<std::map<std::str
             i++;
         }
     }
-    printf("idf done\n");
     return this->idf_;
 } 
 
@@ -182,9 +188,8 @@ std::vector<std::map<std::string, double>> TfIdfVectorizer::tf(std::vector<std::
 
 arma::mat TfIdfVectorizer::fit_transform(std::vector<std::string>& documents)
 {
-    printf("fit\n");
     fit(documents);
-    printf("fit done\n");
+    printf("begin transform\n");
     return transform(documents);
 }
 
@@ -198,20 +203,31 @@ arma::mat TfIdfVectorizer::transform(std::vector<std::string>& documents)
     std::string word;
     size_t w;
     double idf;
+    int zero = 0;
+    int nonzero = 0;
     for (size_t d = 0; d < documents.size(); d++)
     {
+        printf("doc %lu: ", d);
         tf_hash = documents_word_counts[d];
         for (auto& s : this->idf_)
         {
             word = s.first;
             w = this->vocabulary_[word];
             idf = s.second;
-            if (this->use_idf)
+            if (tf_hash[word] > 0)
+                nonzero++;
+            else
+                zero++;
+            if (this->use_idf) {
                 X_transformed(w, d) = tf_hash[word] * idf;
+                printf("(%lu,%lu): %.1f %.1f ", w, d, tf_hash[word], idf);                
+            }
             else
                 X_transformed(w, d) = (tf_hash[word] > 0) ? 1 : 0;
         }
+        printf("\n");
     }
+    printf("%d zero %d non-zero\n", zero, nonzero);
 
     /*Normalize vectors.*/
     if (this->p != 0)
