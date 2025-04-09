@@ -200,18 +200,18 @@ std::vector<std::map<std::string, double>> TfIdfVectorizer::tf(std::vector<std::
     return documents_word_frequency;
 }
 
-arma::mat TfIdfVectorizer::fit_transform(std::vector<std::string>& documents)
+arma::sp_mat TfIdfVectorizer::fit_transform(std::vector<std::string>& documents)
 {
     fit(documents);
 //    printf("begin transform\n");
     return transform(documents);
 }
 
-arma::mat TfIdfVectorizer::transform(std::vector<std::string>& documents)
+arma::sp_mat TfIdfVectorizer::transform(std::vector<std::string>& documents)
 {
     std::vector<std::vector<std::string>> documents_tokenised = tokenise_documents(documents);
     std::vector<std::map<std::string, double>> documents_word_counts = tf(documents_tokenised);
-    arma::mat X_transformed(this->vocabulary_.size(), documents.size());
+    arma::sp_mat X_transformed(this->vocabulary_.size(), documents.size());
 
     std::map<std::string, double> tf_hash;
     std::string word;
@@ -247,6 +247,19 @@ arma::mat TfIdfVectorizer::transform(std::vector<std::string>& documents)
     /*Normalize vectors.*/
     if (this->p != 0)
     {
+        arma::uword last_col = 0;
+        double norm = 0;
+        for(arma::sp_mat::const_iterator it = matrix.begin(); it != matrix.end(); ++it) {
+            // it.row(), *it
+            if (it.col() != last_col) {
+                norm = std::sqrt(norm);
+                
+                norm = 0.0;
+            }    
+            norm += std::pow(*it, this->p);
+            last_col = it.col();
+        }
+            
         for (size_t c = 0; c < X_transformed.n_cols; c++)
         {
             double norm = 0;

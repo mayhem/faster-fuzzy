@@ -57,25 +57,23 @@ class FuzzyIndex {
         }
 
         void
-        transform_text(const arma::mat &matrix, similarity::ObjectVector &data) {
+        transform_text(const arma::sp_mat &matrix, similarity::ObjectVector &data) {
             std::vector<similarity::SparseVectElem<float>> sparse_items;            
             auto sparse_space = reinterpret_cast<const similarity::SpaceSparseVector<float>*>(space);
-
-            for(int col = 0; col < matrix.n_cols; col++) {
-                unsigned int index = 0;
-                unsigned int row;
-                for(row = 0; row < matrix.n_rows; row++) {
-                    auto value = matrix(row,col);
-                    if (value != 0.0) {
-                        sparse_items.push_back(similarity::SparseVectElem<float>(index, value));
-                    }
-                    index++;
+           
+            arma::uword last_col = 0;
+            for(arma::sp_mat::const_iterator it = matrix.begin(); it != matrix.end(); ++it) {
+                if (it.col() != last_col) {
+                    std::sort(sparse_items.begin(), sparse_items.end());
+                    data.push_back(sparse_space->CreateObjFromVect(it.col()-1, -1, sparse_items));
+                    sparse_items.clear();
                 }
-
-                std::sort(sparse_items.begin(), sparse_items.end());
-                data.push_back(sparse_space->CreateObjFromVect(col, -1, sparse_items));
-                sparse_items.clear();
+                sparse_items.push_back(similarity::SparseVectElem<float>(it.row(), *it));
+                last_col = it.col();
             }
+            std::sort(sparse_items.begin(), sparse_items.end());
+            data.push_back(sparse_space->CreateObjFromVect(last_col, -1, sparse_items));
+            sparse_items.clear();
         }
 
         void
@@ -88,8 +86,10 @@ class FuzzyIndex {
 
             // Make a copy, I hope, of the index id data and hold on to it
             *index_ids = _index_ids; 
-       
-            arma::mat matrix = vectorizer.fit_transform(text_data);
+      
+            printf("fit transform\n");
+            arma::sp_mat matrix = vectorizer.fit_transform(text_data);
+            printf("transform text\n");
             transform_text(matrix, vectorized_data);
             
             index = similarity::MethodFactoryRegistry<float>::Instance().CreateMethod(false,
@@ -99,7 +99,9 @@ class FuzzyIndex {
                          vectorized_data);
             similarity::AnyParams index_params;
 
+            printf("create index\n");
             index->CreateIndex(index_params);
+            printf("create index done\n");
         }
 
         vector<IndexResult> search(const string &query_string, float min_confidence, bool debug=false) {
@@ -111,7 +113,7 @@ class FuzzyIndex {
                 throw std::length_error("no index available.");
 
             text_data.push_back(query_string);
-            arma::mat matrix = vectorizer.transform(text_data);
+            arma::sp_mat matrix = vectorizer.transform(text_data);
             transform_text(matrix, data);
 
             unsigned k = NUM_FUZZY_SEARCH_RESULTS;

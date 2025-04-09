@@ -62,7 +62,7 @@ class TfIdfVectorizer
          *         Each row is a feature. 
          *         Each column is a document.
          */
-        arma::mat transform(std::vector<std::string>& documents);
+        arma::sp_mat transform(std::vector<std::string>& documents);
 
         /**
          * Fit, followed by transform over the same argument.
@@ -73,7 +73,7 @@ class TfIdfVectorizer
          *         Each row is a feature. 
          *         Each column is a document.
          */
-        arma::mat fit_transform(std::vector<std::string>& documents);
+        arma::sp_mat fit_transform(std::vector<std::string>& documents);
 
         std::map<std::string, double> get_idf_();
         std::map<std::string, size_t> get_vocabulary_();

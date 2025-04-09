@@ -22,17 +22,17 @@ int main(int argc, char *argv[])
     FuzzyIndex fi;
     fi.build(ids, documents);
     
-    std::stringstream ss;
-    {
-        cereal::BinaryOutputArchive oarchive(ss);
-        oarchive(fi);
-    }
-   
-    ss.seekg(ios_base::beg);
-    {
-        cereal::BinaryInputArchive iarchive(ss);
-        iarchive(reloaded);
-    }
+//    std::stringstream ss;
+//    {
+//        cereal::BinaryOutputArchive oarchive(ss);
+//        oarchive(fi);
+//    }
+//   
+//    ss.seekg(ios_base::beg);
+//    {
+//        cereal::BinaryInputArchive iarchive(ss);
+//        iarchive(reloaded);
+//    }
 
     string query("This is a nest");
     auto results = fi.search(query, .0); 
