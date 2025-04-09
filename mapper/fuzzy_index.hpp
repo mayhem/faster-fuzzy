@@ -50,6 +50,8 @@ class FuzzyIndex {
         }
         
         ~FuzzyIndex() {
+            for(auto &obj : vectorized_data)
+                delete obj;
             delete index;
             delete space;
         }
@@ -113,7 +115,6 @@ class FuzzyIndex {
             unsigned k = NUM_FUZZY_SEARCH_RESULTS;
             similarity::KNNQuery<float> knn(*space, data[0], k);
             index->Search(&knn, -1);
-            data.clear();
             
             vector<IndexResult> results;
             auto queue = knn.Result()->Clone();
@@ -123,6 +124,9 @@ class FuzzyIndex {
                     results.push_back(IndexResult(index_ids[queue->TopObject()->id()], dist));
                 queue->Pop();
             }
+            delete queue;
+            for(auto &obj : data)
+                delete obj;
             return results;
         }
 
