@@ -25,7 +25,7 @@ class ArtistIndexes {
         }
         
         // 幾何学模様 a                  Kikagaku Moyo c
-        void build_artist_index() {
+        FuzzyIndex *build_artist_index() {
             
             vector<unsigned int> index_ids;
             vector<string>       index_texts;
@@ -53,9 +53,10 @@ class ArtistIndexes {
             encode.encode_index_data(index_ids, index_texts, output_ids, output_texts, output_rems,
                                                              stupid_ids, stupid_texts, stupid_rems);
             {
-                FuzzyIndex index;
+                FuzzyIndex *index = new FuzzyIndex();
                 printf("%lu, %lu\n", output_ids.size(), output_texts.size());
-                index.build(output_ids, output_texts);
+                index->build(output_ids, output_texts);
+                return index;
                 // TODO: Write index to DB
             }
 //            {
