@@ -16,14 +16,27 @@ int main(int argc, char *argv[])
     string index_dir(argv[1]);
     ArtistIndexes builder(index_dir);
     FuzzyIndex *fi = builder.build_artist_index();
+    FuzzyIndex reloaded;
 
-    string query("portishead");
-    auto results = fi->search(query, .6); 
+    std::stringstream ss;
+    {
+        cereal::BinaryOutputArchive oarchive(ss);
+        oarchive(*fi);
+    }
+    delete fi;
+    fi = nullptr;
+    ss.seekg(ios_base::beg);
+    {
+        cereal::BinaryInputArchive iarchive(ss);
+        iarchive(reloaded);
+    }
+
+    string query("portished");
+    auto results = reloaded.search(query, .6); 
     printf("%lu results:\n", results.size());
     for( auto i : results ) {
         printf("  %d %.2f\n", i.id, i.distance);
     }
-    delete fi;
 #endif
 
 #if 0

@@ -109,7 +109,6 @@ std::map<std::string, double> TfIdfVectorizer::idf(std::vector<std::map<std::str
                 doc_freq.insert({key, 1});
         }
     
-
     for (auto it = this->vocabulary_.cbegin(); it != this->vocabulary_.cend(); ++it)
     {
         key = (*it).first;

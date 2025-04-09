@@ -32,7 +32,7 @@ const auto NUM_FUZZY_SEARCH_RESULTS = 500;
 
 class FuzzyIndex {
     private:
-        vector<unsigned int>     *index_ids; 
+        vector<unsigned int>      index_ids; 
         similarity::Index<float> *index = nullptr;
         similarity::Space<float> *space = nullptr;
      	TfIdfVectorizer           vectorizer;
@@ -43,7 +43,6 @@ class FuzzyIndex {
 
         FuzzyIndex() :
      	    vectorizer(false, false) {
-            index_ids = new vector<unsigned int>();
 
             similarity::initLibrary(0, LIB_LOGNONE, NULL);
             space = similarity::SpaceFactoryRegistry<float>::Instance().CreateSpace("negdotprod_sparse_fast",
@@ -51,7 +50,6 @@ class FuzzyIndex {
         }
         
         ~FuzzyIndex() {
-            delete index_ids;
             delete index;
             delete space;
         }
@@ -85,11 +83,9 @@ class FuzzyIndex {
                 throw std::length_error("Length of ids and text vectors differs!");
 
             // Make a copy, I hope, of the index id data and hold on to it
-            *index_ids = _index_ids; 
+            index_ids = _index_ids; 
       
-            printf("fit transform\n");
             arma::sp_mat matrix = vectorizer.fit_transform(text_data);
-            printf("transform text\n");
             transform_text(matrix, vectorized_data);
             
             index = similarity::MethodFactoryRegistry<float>::Instance().CreateMethod(false,
@@ -99,9 +95,7 @@ class FuzzyIndex {
                          vectorized_data);
             similarity::AnyParams index_params;
 
-            printf("create index\n");
             index->CreateIndex(index_params);
-            printf("create index done\n");
         }
 
         vector<IndexResult> search(const string &query_string, float min_confidence, bool debug=false) {
@@ -126,7 +120,7 @@ class FuzzyIndex {
             while (!queue->Empty()) {
                 auto dist = -queue->TopDistance();
                 if (dist > min_confidence)
-                    results.push_back(IndexResult(queue->TopObject()->id(), dist));
+                    results.push_back(IndexResult(index_ids[queue->TopObject()->id()], dist));
                 queue->Pop();
             }
             return results;
