@@ -68,8 +68,8 @@ class MappingLookupIndex:
                                   , rec.id
                                   , score
                            ORDER BY artist_credit_id""")
-#                              WHERE artist_credit_id < 20000
 #                              WHERE artist_credit_id > 1230420 and artist_credit_id < 1230800
+#                              WHERE artist_credit_id < 20000
 
             print("load data")
             mapping_data = []

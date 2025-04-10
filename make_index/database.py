@@ -3,7 +3,6 @@ from peewee import *
 
 PRAGMAS = (
     ('foreign_keys', 1),
-#    ('journal_mode', 'WAL'),
 )
 
 db = SqliteDatabase(None, pragmas=PRAGMAS)
@@ -36,8 +35,8 @@ class IndexCache(Model):
         table_name = "index_cache"
         primary_key = False
 
-    artist_credit_id = IntegerField(null=False, index=True)
-    artist_data = BlobField(null=False)
+    entity_id = IntegerField(null=False, index=True, unique=True)
+    index_data = BlobField(null=False)
 
 def create_db(db_file):
     try:
