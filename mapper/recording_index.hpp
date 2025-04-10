@@ -46,7 +46,7 @@ class ReleaseData {
 };
 
 const char *fetch_query = 
-    "SELECT artist_credit_id, artist_credit_name "
+    "SELECT artist_credit_id "
     "     , release_id, release_name "
     "     , recording_id, recording_name "
     "     , score "
@@ -69,10 +69,10 @@ class RecordingIndexes {
         }
         
         void collect_artist_data(unsigned int artist_credit_id) {
-            vector<RecordingData>             recording_data;
-            map<unsigned int, unsigned int>   recording_releases;
-            map<string, unsigned int>         ranks;
-            map<string, vector<RecordingRef>> recording_ref;
+            vector<RecordingData>                   recording_data;
+            map<unsigned int, vector<unsigned int>> recording_releases;
+            map<string, unsigned int>               ranks;
+            map<string, vector<RecordingRef>>       recording_ref;
 
             for(;;) {
                 try
@@ -82,11 +82,18 @@ class RecordingIndexes {
                 
                     query.bind(1, artist_credit_id);
                     while (query.executeStep()) {
-                        vector<string> ret = encode.encode_string(query.getColumn(5));
+                        unsigned int artist_credit_id = query.getColumn(0);
+                        unsigned int release_id = query.getColumn(1);
+                        string       release_name = query.getColumn(2);
+                        unsigned int recording_id = query.getColumn(3);
+                        string       recording_name = query.getColumn(4);
+                        unsigned int rank  = query.getColumn(5);
+
+                        vector<string> ret = encode.encode_string(recording_name);
                         if (ret[0].size() == 0)
                             continue;
                         
-                        RecordingRef ref(query.getColumn(4), query.getColumn(2), query.getColumn(6));
+                        RecordingRef ref(recording_id, release_id, rank);
                         auto iter = recording_ref.find(ret[0]);
                         if (iter == recording_ref.end()) {
                             vector<RecordingRef> vec_ref;
@@ -95,6 +102,22 @@ class RecordingIndexes {
                         }
                         else
                             recording_ref[ret[0]].push_back(ref);
+                            
+                        auto iter2 = recording_releases.find(recording_id);
+                        if (iter2 == recording_releases.end()) {
+                            vector<unsigned int> release_ids;
+                            release_ids.push_back(release_id);
+                            recording_releases[recording_id] = release_ids;
+                        }
+                        else
+                            recording_releases[recording_id].push_back(release_id);
+
+
+                        ret = encode.encode_string(release_name);
+                        if (ret[0].size()) {
+                            string k = to_string(release_id) + string("-") + ret[0];
+                            ranks[k] = rank;
+                        }
                     }
                 }
                 catch (std::exception& e)
@@ -102,6 +125,18 @@ class RecordingIndexes {
                     printf("db exception: %s\n", e.what());
                 }
             }
+            
+            vector<ReleaseData> f_release_data;
+            for(auto &data : release_data) {
+                size_t split_pos = data.first->find('-');
+                string release_id = data.first->substr(0, split_pos);
+                string text = data.first->substr(split_pos + 1);
+                ReleaseData rel(release_id, text, ranks[data]);
+                f_release_data.push_back()
+            }
+            release_data.clear();
+
+            
         }
         
         void build_index() {
