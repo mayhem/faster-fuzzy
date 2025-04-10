@@ -2,6 +2,7 @@
 #include <sstream>
 
 #include "artist_index.hpp"
+#include "recording_index.hpp"
 
 vector<string> documents = { "this is a test", "cam drive rump"};
 vector<unsigned int> ids = { 0, 1 };
