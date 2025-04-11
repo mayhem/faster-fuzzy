@@ -8,16 +8,6 @@
 
 using namespace std;
 
-class RecordingData {
-    public:
-       string text;
-       unsigned int id;
-       
-    RecordingData(unsigned int id_, string &text_) {
-        text= text_;
-        id = id_;
-    }
-};
 
 class RecordingRef {
     public:
@@ -32,16 +22,53 @@ class RecordingRef {
     }
 };
 
-class ReleaseData {
+class RecordingData {
     public:
-       string text;
+       string               text;
+       unsigned int         id;
+       vector<RecordingRef> refs;
+       
+    RecordingData(unsigned int id_, const string &text_, const vector<RecordingRef> &refs_) {
+        text= text_;
+        id = id_;
+        refs = refs_;
+    }
+};
+
+class ReleaseRef {
+    public:
        unsigned int id;
        unsigned int rank;
        
-    ReleaseData(unsigned int id_, string &text_, unsigned int rank_) {
-        text= text_;
+    ReleaseRef(unsigned int id_, unsigned int rank_) {
         id = id_;
         rank = rank;
+    }
+};
+
+class TempReleaseData {
+    public:
+       unsigned int       id;
+       string             text;
+       unsigned int       rank;
+       
+    TempReleaseData(unsigned int id_, string &text_, unsigned int rank_) {
+        id = id_;
+        text= text_;
+        rank = rank_;
+    }
+};
+
+class ReleaseData {
+    public:
+       unsigned int       id;
+       string             text;
+       vector<ReleaseRef> release_refs;
+       
+    ReleaseData(unsigned int id_, const string &text_, const vector<ReleaseRef> &refs_) {
+        id = id_;
+        text= text_;
+        release_refs = refs_;
     }
 };
 
@@ -124,20 +151,45 @@ class RecordingIndexes {
                 }
             }
             
-            vector<ReleaseData> f_release_data;
+            vector<TempReleaseData> f_release_data;
             for(auto &data : ranks) {
                 size_t split_pos = data.first.find('-');
                 int release_id = stoi(data.first.substr(0, split_pos));
                 string text = data.first.substr(split_pos + 1);
-                ReleaseData rel(release_id, text, data.second);
+                TempReleaseData rel(release_id, text, data.second);
                 f_release_data.push_back(rel);
             }
             ranks.clear();
             
-            //map<string, vector<RecordingRef>>       recording_ref;
+            unsigned int i = 0;
             vector<RecordingData> recording_data;
-            for(auto &text : recording_ref) {
-                auto &rec_ref_vec = recording_ref[text];
+            for(auto &itr : recording_ref) {
+                RecordingData data(i, itr.first, itr.second);
+                recording_data.push_back(data);
+                i++;
+            }
+            
+            map<string, vector<ReleaseRef>> release_ref;
+            for(auto &data : f_release_data) {
+                ReleaseRef ref(data.id, data.rank);
+                auto iter = release_ref.find(data.text);
+                if (iter == release_ref.end()) {
+                    vector<ReleaseRef> vec;
+                    vec.push_back(ref);
+                    release_ref[data.text] = vec;
+                }
+                else
+                    release_ref[data.text].push_back(ref);
+            } 
+
+            vector<ReleaseData> release_data;
+            i = 0;
+            for(auto &it : release_ref) {
+                ReleaseData rel(i, it.first, it.second);
+                release_data.push_back(rel);
+                i++;
+            } 
+            
         }
         
         void build_index() {
