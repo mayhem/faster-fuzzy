@@ -69,7 +69,6 @@ class RecordingIndexes {
         }
         
         void collect_artist_data(unsigned int artist_credit_id) {
-            vector<RecordingData>                   recording_data;
             map<unsigned int, vector<unsigned int>> recording_releases;
             map<string, unsigned int>               ranks;
             map<string, vector<RecordingRef>>       recording_ref;
@@ -112,7 +111,6 @@ class RecordingIndexes {
                         else
                             recording_releases[recording_id].push_back(release_id);
 
-
                         ret = encode.encode_string(release_name);
                         if (ret[0].size()) {
                             string k = to_string(release_id) + string("-") + ret[0];
@@ -127,16 +125,19 @@ class RecordingIndexes {
             }
             
             vector<ReleaseData> f_release_data;
-            for(auto &data : release_data) {
-                size_t split_pos = data.first->find('-');
-                string release_id = data.first->substr(0, split_pos);
-                string text = data.first->substr(split_pos + 1);
-                ReleaseData rel(release_id, text, ranks[data]);
-                f_release_data.push_back()
+            for(auto &data : ranks) {
+                size_t split_pos = data.first.find('-');
+                int release_id = stoi(data.first.substr(0, split_pos));
+                string text = data.first.substr(split_pos + 1);
+                ReleaseData rel(release_id, text, data.second);
+                f_release_data.push_back(rel);
             }
-            release_data.clear();
-
+            ranks.clear();
             
+            //map<string, vector<RecordingRef>>       recording_ref;
+            vector<RecordingData> recording_data;
+            for(auto &text : recording_ref) {
+                auto &rec_ref_vec = recording_ref[text];
         }
         
         void build_index() {
