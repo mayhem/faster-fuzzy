@@ -24,12 +24,12 @@ class RecordingRef {
 
 class RecordingData {
     public:
-       string               text;
+       string               text_rem;
        unsigned int         id;
        vector<RecordingRef> refs;
        
-    RecordingData(unsigned int id_, const string &text_, const vector<RecordingRef> &refs_) {
-        text= text_;
+    RecordingData(unsigned int id_, const string &text_rem_, const vector<RecordingRef> &refs_) {
+        text_rem = text_rem_;
         id = id_;
         refs = refs_;
     }
@@ -62,12 +62,12 @@ class TempReleaseData {
 class ReleaseData {
     public:
        unsigned int       id;
-       string             text;
+       string             text_rem;
        vector<ReleaseRef> release_refs;
        
-    ReleaseData(unsigned int id_, const string &text_, const vector<ReleaseRef> &refs_) {
+    ReleaseData(unsigned int id_, const string &text_rem_, const vector<ReleaseRef> &refs_) {
         id = id_;
-        text= text_;
+        text_rem = text_rem_;
         release_refs = refs_;
     }
 };
@@ -94,63 +94,62 @@ class RecordingIndexes {
         
         ~RecordingIndexes() {
         }
-        
-        void collect_artist_data(unsigned int artist_credit_id) {
+       
+        pair<FuzzyIndex *, FuzzyIndex *>
+        build_recording_release_indexes(unsigned int artist_credit_id) {
             map<unsigned int, vector<unsigned int>> recording_releases;
             map<string, unsigned int>               ranks;
             map<string, vector<RecordingRef>>       recording_ref;
 
-            for(;;) {
-                try
-                {
-                    SQLite::Database    db(db_file, SQLite::OPEN_READWRITE);
-                    SQLite::Statement   query(db, fetch_query);
-                
-                    query.bind(1, artist_credit_id);
-                    while (query.executeStep()) {
-                        unsigned int artist_credit_id = query.getColumn(0);
-                        unsigned int release_id = query.getColumn(1);
-                        string       release_name = query.getColumn(2);
-                        unsigned int recording_id = query.getColumn(3);
-                        string       recording_name = query.getColumn(4);
-                        unsigned int rank  = query.getColumn(5);
+            try
+            {
+                SQLite::Database    db(db_file, SQLite::OPEN_READWRITE);
+                SQLite::Statement   query(db, fetch_query);
+            
+                query.bind(1, artist_credit_id);
+                while (query.executeStep()) {
+                    unsigned int artist_credit_id = query.getColumn(0);
+                    unsigned int release_id = query.getColumn(1);
+                    string       release_name = query.getColumn(2);
+                    unsigned int recording_id = query.getColumn(3);
+                    string       recording_name = query.getColumn(4);
+                    unsigned int rank  = query.getColumn(5);
 
-                        vector<string> ret = encode.encode_string(recording_name);
-                        if (ret[0].size() == 0)
-                            continue;
+                    vector<string> ret = encode.encode_string(recording_name);
+                    if (ret[0].size() == 0)
+                        continue;
+                    
+                    RecordingRef ref(recording_id, release_id, rank);
+                    auto iter = recording_ref.find(ret[0]);
+                    if (iter == recording_ref.end()) {
+                        vector<RecordingRef> vec_ref;
+                        vec_ref.push_back(ref);
+                        recording_ref[ret[0]] = vec_ref;
+                    }
+                    else
+                        recording_ref[ret[0]].push_back(ref);
                         
-                        RecordingRef ref(recording_id, release_id, rank);
-                        auto iter = recording_ref.find(ret[0]);
-                        if (iter == recording_ref.end()) {
-                            vector<RecordingRef> vec_ref;
-                            vec_ref.push_back(ref);
-                            recording_ref[ret[0]] = vec_ref;
-                        }
-                        else
-                            recording_ref[ret[0]].push_back(ref);
-                            
-                        auto iter2 = recording_releases.find(recording_id);
-                        if (iter2 == recording_releases.end()) {
-                            vector<unsigned int> release_ids;
-                            release_ids.push_back(release_id);
-                            recording_releases[recording_id] = release_ids;
-                        }
-                        else
-                            recording_releases[recording_id].push_back(release_id);
+                    auto iter2 = recording_releases.find(recording_id);
+                    if (iter2 == recording_releases.end()) {
+                        vector<unsigned int> release_ids;
+                        release_ids.push_back(release_id);
+                        recording_releases[recording_id] = release_ids;
+                    }
+                    else
+                        recording_releases[recording_id].push_back(release_id);
 
-                        ret = encode.encode_string(release_name);
-                        if (ret[0].size()) {
-                            string k = to_string(release_id) + string("-") + ret[0];
-                            ranks[k] = rank;
-                        }
+                    ret = encode.encode_string(release_name);
+                    if (ret[0].size()) {
+                        string k = to_string(release_id) + string("-") + ret[0];
+                        ranks[k] = rank;
                     }
                 }
-                catch (std::exception& e)
-                {
-                    printf("db exception: %s\n", e.what());
-                }
             }
-            
+            catch (std::exception& e)
+            {
+                printf("db exception: %s\n", e.what());
+            }
+        
             vector<TempReleaseData> f_release_data;
             for(auto &data : ranks) {
                 size_t split_pos = data.first.find('-');
@@ -163,9 +162,14 @@ class RecordingIndexes {
             
             unsigned int i = 0;
             vector<RecordingData> recording_data;
+            vector<string> recording_texts;
+            vector<unsigned int> recording_ids;
             for(auto &itr : recording_ref) {
+                // TODO: remainder is actually first part of text
                 RecordingData data(i, itr.first, itr.second);
                 recording_data.push_back(data);
+                recording_texts.push_back(itr.first);
+                recording_ids.push_back(i);
                 i++;
             }
             
@@ -182,91 +186,44 @@ class RecordingIndexes {
                     release_ref[data.text].push_back(ref);
             } 
 
+            vector<string> release_texts;
+            vector<unsigned int> release_ids;
+            
+            // TODO: This will go out of scope and you'll need it for search. 
             vector<ReleaseData> release_data;
             i = 0;
             for(auto &it : release_ref) {
+                // TODO: remainder is actually first part of text
                 ReleaseData rel(i, it.first, it.second);
                 release_data.push_back(rel);
+                release_texts.push_back(it.first);
+                release_ids.push_back(i);
                 i++;
             } 
             
-        }
-        
-        void build_index() {
-            
-            vector<unsigned int> index_ids;
-            vector<string>       index_texts;
-
+            FuzzyIndex *recording_index = new FuzzyIndex();
             try
             {
-                SQLite::Database    db(db_file);
-                log("execute query");
-                SQLite::Statement   query(db, fetch_artists_query);
-        
-                log("fetch rows");
-                while (query.executeStep()) {
-                    index_ids.push_back(query.getColumn(0));
-                    index_texts.push_back(query.getColumn(1));
-                }
+                recording_index->build(recording_ids, recording_texts);
             }
-            catch (std::exception& e)
+            catch(const std::exception& e)
             {
-                printf("db exception: %s\n", e.what());
+                printf("Index build error: '%s'\n", e.what());
+                recording_index = nullptr;
             }
-            vector<unsigned int> output_ids, stupid_ids;
-            vector<string>       output_texts, output_rems, stupid_texts, stupid_rems;
-                    
-            log("encode data");
-            encode.encode_index_data(index_ids, index_texts, output_ids, output_texts, output_rems,
-                                                             stupid_ids, stupid_texts, stupid_rems);
-            log("%lu items in index", output_ids.size());
-            {
-                FuzzyIndex *index = new FuzzyIndex();
-                log("build artist index");
-                index->build(output_ids, output_texts);
 
-                log("serialize artist index");
-                std::stringstream ss;
-                {
-                    cereal::BinaryOutputArchive oarchive(ss);
-                    oarchive(*index);
-                }
-                log("artist index size: %lu", ss.str().length());
+            FuzzyIndex *release_index = new FuzzyIndex();
+            try
+            {
+                release_index->build(release_ids, release_texts);
+            }
+            catch(const std::exception& e)
+            {
+                printf("Index build error: '%s'\n", e.what());
+                release_index = nullptr;
+            }
            
-                std::stringstream sss;
-                if (stupid_ids.size()) {
-                    FuzzyIndex *stupid_index = new FuzzyIndex();
-                    stupid_index->build(stupid_ids, stupid_texts);
-                    {
-                        cereal::BinaryOutputArchive oarchive(sss);
-                        oarchive(*stupid_index);
-                    }
-                    log("stupid artist index size: %lu", sss.str().length());
-                }
-
-                try
-                {
-                    SQLite::Database    db(db_file, SQLite::OPEN_READWRITE);
-                    SQLite::Statement   query(db, insert_blob_query);
-                
-                    log("save artist index");
-                    query.bind(1, ARTIST_INDEX_ENTITY_ID);
-                    query.bind(2, (const char *)ss.str().c_str(), (int32_t)ss.str().length());
-                    query.exec();
-
-                    SQLite::Statement   query2(db, insert_blob_query);
-                    if (stupid_ids.size()) {
-                        log("save stupid artist index");
-                        query2.bind(1, STUPID_ARTIST_INDEX_ENTITY_ID);
-                        query2.bind(2, (const char *)sss.str().c_str(), (int32_t)sss.str().length());
-                        query2.exec();
-                    }
-                }
-                catch (std::exception& e)
-                {
-                    printf("db exception: %s\n", e.what());
-                }
-            }
-            log("done building artists indexes.");
+            pair<FuzzyIndex *, FuzzyIndex *> ind(recording_index, release_index);
+            return ind;
         }
 };
