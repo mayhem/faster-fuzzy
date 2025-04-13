@@ -18,8 +18,8 @@ const char *fetch_pending_artists_query =
     "        SELECT DISTINCT mapping.artist_credit_id"
     "          FROM mapping"
     "     LEFT JOIN index_cache"
-    "            ON mapping.artist_credit_id = index_cache.artist_credit_id"
-    "         WHERE index_cache.artist_credit_id is null"
+    "            ON mapping.artist_credit_id = index_cache.entity_id"
+    "         WHERE index_cache.entity_id is null"
     ")"
     "        SELECT artist_credit_id, count(*) as cnt "
     "          FROM artist_ids "
@@ -75,8 +75,10 @@ class MBIDMapping {
             vector<unsigned int> artist_ids; 
             try
             {
-                SQLite::Database    db(db_file);
+                SQLite::Database    db(db_file, SQLite::OPEN_READWRITE);
                 SQLite::Statement   query(db, fetch_pending_artists_query);
+
+                db.exec("PRAGMA journal_mode=WAL;");
                 
                 while (query.executeStep())
                     artist_ids.push_back(query.getColumn(0));
@@ -113,8 +115,8 @@ class MBIDMapping {
                             newthread->th = new thread(thread_build_index, index_dir, newthread, artist_id); 
                             threads.push_back(newthread);
                             count++;
-                            if ((count % 100) == 0)
-                                printf("%d%% complete (%d/%d)     \r", (int)(count * 100/artist_ids.size()), count, artist_ids.size());
+                            if ((count % 10) == 0)
+                                printf("%d%% complete (%d/%lu)     \r", (int)(count * 100/artist_ids.size()), count, artist_ids.size());
                             break;
                         }    
                     }
