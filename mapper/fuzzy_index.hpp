@@ -134,8 +134,8 @@ class FuzzyIndex {
         void save(Archive & archive) const
         {
             vector<uint8_t> index_data;
-            index->SerializeIndex(index_data, vectorized_data);
-
+            if (index)
+                index->SerializeIndex(index_data, vectorized_data);
             archive(index_data, vectorizer, index_ids); 
         }
       
@@ -152,6 +152,9 @@ class FuzzyIndex {
             // Restore our data
             archive(index_data, vectorizer, index_ids); 
             delete index;
+            
+            if (index_data.size() == 0)
+                return;
     
             auto factory = similarity::MethodFactoryRegistry<float>::Instance();
             index = factory.CreateMethod(false, 

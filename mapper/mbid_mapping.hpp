@@ -3,8 +3,6 @@
 #include <unistd.h>
 #include <thread>
 
-#include "tqdm/tqdm.h"
-
 #include "fuzzy_index.hpp"
 #include "recording_index.hpp"
 #include "SQLiteCpp.h"
@@ -13,7 +11,7 @@ using namespace std;
 
 const float ARTIST_CONFIDENCE_THRESHOLD = .45;
 const int   NUM_ROWS_PER_COMMIT = 25000;
-const int   MAX_THREADS = 8;
+const int   MAX_THREADS = 16;
 
 const char *fetch_pending_artists_query = 
     "WITH artist_ids AS ("
@@ -85,7 +83,8 @@ class MBIDMapping {
 
                 pair<FuzzyIndex *, FuzzyIndex *> indexes;
                 vector<CreatorThread *> threads;
-                for(auto artist_id : tqdm::tqdm(artist_ids)) {
+                unsigned int count = 0;
+                for(auto artist_id : artist_ids) {
 
                     for(;;) {
                         bool erased = false;
@@ -95,7 +94,6 @@ class MBIDMapping {
                                 
                             CreatorThread *th = threads[i];
                             if (th->done) {
-//                                log("join thread: artist %d", th->artist_id);
                                 th->th->join();
                                 delete th->sstream;
                                 write_indexes_to_db(db, th);
@@ -112,9 +110,11 @@ class MBIDMapping {
                             CreatorThread *newthread = new CreatorThread();
                             newthread->done = false;
                             newthread->artist_id = artist_id;
-//                            log("start thread: artist %d", artist_id);
                             newthread->th = new thread(thread_build_index, index_dir, newthread, artist_id); 
                             threads.push_back(newthread);
+                            count++;
+                            if ((count % 100) == 0)
+                                printf("%d%% complete (%d/%d)     \r", (int)(count * 100/artist_ids.size()), count, artist_ids.size());
                             break;
                         }    
                     }

@@ -208,8 +208,7 @@ class RecordingIndexes {
             }
             catch(const std::exception& e)
             {
-                printf("Index build error: '%s'\n", e.what());
-                recording_index = nullptr;
+                //printf("Index build error: '%s'\n", e.what());
             }
 
             FuzzyIndex *release_index = new FuzzyIndex();
@@ -219,8 +218,7 @@ class RecordingIndexes {
             }
             catch(const std::exception& e)
             {
-                printf("Index build error: '%s'\n", e.what());
-                release_index = nullptr;
+                //printf("Index build error: '%s'\n", e.what());
             }
            
             pair<FuzzyIndex *, FuzzyIndex *> ind(recording_index, release_index);
