@@ -103,7 +103,7 @@ class RecordingIndexes {
 
             try
             {
-                SQLite::Database    db(db_file, SQLite::OPEN_READWRITE);
+                SQLite::Database    db(db_file);
                 SQLite::Statement   query(db, fetch_query);
             
                 query.bind(1, artist_credit_id);

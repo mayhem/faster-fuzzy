@@ -68,7 +68,11 @@ class MBIDMapping {
         }
         
         void write_indexes_to_db(SQLite::Database &db, CreatorThread *th) {
-
+            SQLite::Statement query(db, insert_blob_query);
+       
+            query.bind(1, th->artist_id);
+            query.bind(2, (const char *)th->sstream->str().c_str(), (int32_t)th->sstream->str().length());
+            query.exec();
         }
         
         void build_recording_indexes() { 
@@ -86,41 +90,37 @@ class MBIDMapping {
                 pair<FuzzyIndex *, FuzzyIndex *> indexes;
                 vector<CreatorThread *> threads;
                 unsigned int count = 0;
-                for(auto artist_id : artist_ids) {
-
-                    for(;;) {
-                        bool erased = false;
-                        for(int i = threads.size() - 1; i >= 0; i--) {
-                            if (i < 0)
-                                break;
-                                
-                            CreatorThread *th = threads[i];
-                            if (th->done) {
-                                th->th->join();
-                                delete th->sstream;
-                                write_indexes_to_db(db, th);
-                                threads.erase(threads.begin()+i);
-                                delete th;
-                                erased = true;
-                                break;
-                            }
-                        }
-                        if (erased)
-                            continue;
-                        
-                        if (threads.size() < MAX_THREADS) {
-                            CreatorThread *newthread = new CreatorThread();
-                            newthread->done = false;
-                            newthread->artist_id = artist_id;
-                            newthread->th = new thread(thread_build_index, index_dir, newthread, artist_id); 
-                            threads.push_back(newthread);
-                            count++;
-                            if ((count % 10) == 0)
-                                printf("%d%% complete (%d/%lu)     \r", (int)(count * 100/artist_ids.size()), count, artist_ids.size());
+                unsigned int total_count = artist_ids.size();
+                while(artist_ids.size() || threads.size()) {
+                    for(int i = threads.size() - 1; i >= 0; i--) {
+                        if (i < 0)
                             break;
-                        }    
+                            
+                        CreatorThread *th = threads[i];
+                        if (th->done) {
+                            th->th->join();
+                            write_indexes_to_db(db, th);
+                            delete th->sstream;
+                            threads.erase(threads.begin()+i);
+                            delete th;
+                            break;
+                        }
                     }
+                    
+                    if (artist_ids.size() && threads.size() < MAX_THREADS) {
+                        CreatorThread *newthread = new CreatorThread();
+                        unsigned int artist_id = artist_ids[0];
+                        artist_ids.erase(artist_ids.begin());
+                        newthread->done = false;
+                        newthread->artist_id = artist_id;
+                        newthread->th = new thread(thread_build_index, index_dir, newthread, artist_id); 
+                        threads.push_back(newthread);
+                        count++;
+                        if ((count % 10) == 0)
+                            printf("%d%% complete (%d/%u)     \r", (int)(count * 100/total_count), count, total_count);
+                    }    
                 }
+                log("indexed %lu rows                             ", count);
             }
             catch (std::exception& e)
             {
