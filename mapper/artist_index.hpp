@@ -65,22 +65,34 @@ class ArtistIndexes {
                 FuzzyIndex *index = new FuzzyIndex();
                 log("build artist index");
                 index->build(output_ids, output_texts);
+                
+                vector<IndexSupplementalData> supp_data;
+                for(unsigned int i = 0; i < output_ids.size(); i++) {
+                    IndexSupplementalData data = { output_rems[i], output_ids[i] };
+                    supp_data.push_back(data);
+                }
 
                 log("serialize artist index");
                 std::stringstream ss;
                 {
                     cereal::BinaryOutputArchive oarchive(ss);
-                    oarchive(*index);
+                    oarchive(*index, supp_data);
                 }
                 log("artist index size: %lu", ss.str().length());
            
+                supp_data.clear();
+                for(unsigned int i = 0; i < stupid_ids.size(); i++) {
+                    IndexSupplementalData data = { stupid_rems[i], stupid_ids[i] };
+                    supp_data.push_back(data);
+                }
+
                 std::stringstream sss;
                 if (stupid_ids.size()) {
                     FuzzyIndex *stupid_index = new FuzzyIndex();
                     stupid_index->build(stupid_ids, stupid_texts);
                     {
                         cereal::BinaryOutputArchive oarchive(sss);
-                        oarchive(*stupid_index);
+                        oarchive(*stupid_index, supp_data);
                     }
                     log("stupid artist index size: %lu", sss.str().length());
                 }
