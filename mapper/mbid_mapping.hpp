@@ -79,6 +79,7 @@ class MBIDMapping {
             vector<unsigned int> artist_ids; 
             try
             {
+                log("Load data");
                 SQLite::Database    db(db_file, SQLite::OPEN_READWRITE);
                 SQLite::Statement   query(db, fetch_pending_artists_query);
 
@@ -87,6 +88,7 @@ class MBIDMapping {
                 while (query.executeStep())
                     artist_ids.push_back(query.getColumn(0));
 
+                log("Build indexes");
                 pair<FuzzyIndex *, FuzzyIndex *> indexes;
                 vector<CreatorThread *> threads;
                 unsigned int count = 0;
@@ -107,7 +109,7 @@ class MBIDMapping {
                         }
                     }
                     
-                    if (artist_ids.size() && threads.size() < MAX_THREADS) {
+                    while (artist_ids.size() && threads.size() < MAX_THREADS) {
                         CreatorThread *newthread = new CreatorThread();
                         unsigned int artist_id = artist_ids[0];
                         artist_ids.erase(artist_ids.begin());
