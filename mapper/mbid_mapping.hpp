@@ -10,7 +10,7 @@
 using namespace std;
 
 const float ARTIST_CONFIDENCE_THRESHOLD = .45;
-const int   NUM_ROWS_PER_COMMIT = 25000;
+const int   NUM_ROWS_PER_COMMIT = 500;
 const int   MAX_THREADS = 16;
 
 const char *fetch_pending_artists_query = 
@@ -55,7 +55,7 @@ void thread_build_index(const string &index_dir, CreatorThread *th, unsigned int
     
 class MBIDMapping {
     private:
-        string          index_dir, db_file; 
+        string                  index_dir, db_file; 
 
     public:
 
@@ -67,12 +67,17 @@ class MBIDMapping {
         ~MBIDMapping() {
         }
         
-        void write_indexes_to_db(SQLite::Database &db, CreatorThread *th) {
-            SQLite::Statement query(db, insert_blob_query);
-       
-            query.bind(1, th->artist_id);
-            query.bind(2, (const char *)th->sstream->str().c_str(), (int32_t)th->sstream->str().length());
-            query.exec();
+        void write_indexes_to_db(SQLite::Database &db, vector<CreatorThread *> &data) {
+            
+            SQLite::Transaction transaction(db);
+            for(auto &entry : data) {
+                SQLite::Statement query(db, insert_blob_query);
+           
+                query.bind(1, entry->artist_id);
+                query.bind(2, (const char *)entry->sstream->str().c_str(), (int32_t)entry->sstream->str().length());
+                query.exec();
+            }
+            transaction.commit();
         }
         
         void build_recording_indexes() { 
@@ -91,8 +96,12 @@ class MBIDMapping {
                 log("Build indexes");
                 pair<FuzzyIndex *, FuzzyIndex *> indexes;
                 vector<CreatorThread *> threads;
+                vector<CreatorThread *> data_to_commit;
                 unsigned int count = 0;
                 unsigned int total_count = artist_ids.size();
+                
+                auto now = chrono::system_clock::now();
+                time_t t0 = std::chrono::system_clock::to_time_t(now);
                 while(artist_ids.size() || threads.size()) {
                     for(int i = threads.size() - 1; i >= 0; i--) {
                         if (i < 0)
@@ -101,10 +110,18 @@ class MBIDMapping {
                         CreatorThread *th = threads[i];
                         if (th->done) {
                             th->th->join();
-                            write_indexes_to_db(db, th);
-                            delete th->sstream;
+                            th->th = nullptr;
+                            data_to_commit.push_back(th);
                             threads.erase(threads.begin()+i);
-                            delete th;
+
+                            if (data_to_commit.size() >= NUM_ROWS_PER_COMMIT) {
+                                write_indexes_to_db(db, data_to_commit);
+                                for(auto &entry : data_to_commit) {
+                                    delete entry->sstream;
+                                    delete entry;
+                                }
+                                data_to_commit.clear();
+                            }
                             break;
                         }
                     }
@@ -118,8 +135,11 @@ class MBIDMapping {
                         newthread->th = new thread(thread_build_index, index_dir, newthread, artist_id); 
                         threads.push_back(newthread);
                         count++;
-                        if ((count % 10) == 0)
-                            printf("%d%% complete (%d/%u)     \r", (int)(count * 100/total_count), count, total_count);
+                        if ((count % 10) == 0) {
+                            auto nower = chrono::system_clock::now();
+                            time_t t1 = std::chrono::system_clock::to_time_t(nower);
+                            printf("%d%% complete %.1f items/s (%d/%u)     \r", (int)(count * 100/total_count), (float)count/(t1-t0), count, total_count);
+                        }
                     }    
                 }
                 log("indexed %lu rows                             ", count);
