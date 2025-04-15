@@ -51,10 +51,11 @@ class EncodeSearchData {
             return output;
         }
 
-        vector<string> encode_string(const string &text) {
+        pair<string, string>
+        encode_string(const string &text) {
             // Remove spaces, punctuation, convert non-ascii characters to some romanized equivalent, lower case, return
             if (text.empty()) {
-                vector<string> a;
+                pair<string, string> a;
                 return a;
             }
             string cleaned(non_word->replace(text,"", "g"));
@@ -68,15 +69,15 @@ class EncodeSearchData {
             if (ret.length() > MAX_ENCODED_STRING_LENGTH)
                 remainder = ret.substr(MAX_ENCODED_STRING_LENGTH);
             
-            vector<string> out = { main_part, remainder};
+            pair<string, string> out = { main_part, remainder};
             return out;
         }
 
-        vector<string>
+        pair<string, string>
         encode_string_for_stupid_artists(const string &text) {
             //Remove spaces, convert non-ascii characters to some romanized equivalent, lower case, return
             if (text.empty()) {
-                vector<string> a;
+                pair<string, string> a;
                 return a;
             }
 
@@ -88,7 +89,7 @@ class EncodeSearchData {
             if (cleaned.length() > MAX_ENCODED_STRING_LENGTH)
                 remainder = cleaned.substr(MAX_ENCODED_STRING_LENGTH);
             
-            vector<string> out = { main_part, remainder};
+            pair<string, string> out = { main_part, remainder};
             return out;
         }
 
@@ -102,18 +103,18 @@ class EncodeSearchData {
                           vector<string>       &stupid_rems) {
             for(unsigned int i = 0; i < input_ids.size(); i++) {
                 auto ret = encode_string(input_texts[i]);
-                if (ret[0].size() == 0) {
+                if (ret.first.size() == 0) {
                     auto stupid = encode_string_for_stupid_artists(input_texts[i]);
-                    if (stupid[0].size()) {
+                    if (stupid.first.size()) {
                         stupid_ids.push_back(input_ids[i]);
-                        stupid_texts.push_back(stupid[0]);
-                        stupid_rems.push_back(stupid[1]);
+                        stupid_texts.push_back(stupid.first);
+                        stupid_rems.push_back(stupid.second);
                         continue;
                     }
                 }
                 output_ids.push_back(input_ids[i]);
-                output_texts.push_back(ret[0]);
-                output_rems.push_back(ret[1]);
+                output_texts.push_back(ret.first);
+                output_rems.push_back(ret.second);
             }
         }
 };

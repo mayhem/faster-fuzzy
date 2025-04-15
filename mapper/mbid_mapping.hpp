@@ -44,11 +44,15 @@ void thread_build_index(const string &index_dir, CreatorThread *th, unsigned int
     auto indexes = ri.build_recording_release_indexes(artist_id);
     {
         cereal::BinaryOutputArchive oarchive(*th->sstream);
-        oarchive(*indexes.first);
-        oarchive(*indexes.second);
+        oarchive(*indexes.first.first);
+        oarchive(*indexes.first.second);
+        oarchive(*indexes.second.first);
+        oarchive(*indexes.second.second);
     }
-    delete indexes.first;
-    delete indexes.second;
+    delete indexes.first.first;
+    delete indexes.first.second;
+    delete indexes.second.first;
+    delete indexes.second.second;
     th->sstream->seekg(ios_base::beg);
     th->done = true;
 }
