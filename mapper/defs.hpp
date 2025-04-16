@@ -2,6 +2,7 @@
 
 #include <cereal/archives/binary.hpp>
 #include <cereal/types/vector.hpp>
+#include <cereal/types/string.hpp>
 
 const auto MAX_ENCODED_STRING_LENGTH = 30;
 
@@ -37,33 +38,36 @@ class TempReleaseData {
 
 class IndexSupplementalReleaseData {
     public:
-       unsigned int       id;
        string             text_rem;
        vector<EntityRef> release_refs;
        
-        IndexSupplementalReleaseData(unsigned int id_, const string &text_rem_, const vector<EntityRef> &refs_) {
-            id = id_;
+        IndexSupplementalReleaseData() {};
+        IndexSupplementalReleaseData(const string &text_rem_, const vector<EntityRef> &refs_) {
             text_rem = text_rem_;
             release_refs = refs_;
         }
 
         template<class Archive>
-        void serialize(Archive & archive) const
+        void serialize(Archive & archive)
         {
-            archive(id, text_rem, release_refs);
+            archive(text_rem, release_refs);
         }
 };
 
 class IndexSupplementalData {
     public:
 
-        string       remainder;
-        unsigned int entity_id;
+        string       text_rem;
+
+        IndexSupplementalData() {};
+        IndexSupplementalData(const string &text_rem_) {
+            text_rem = text_rem_;
+        }
 
         template<class Archive>
-        void serialize(Archive & archive) const
+        void serialize(Archive & archive)
         {
-            archive(remainder, entity_id);
+            archive(text_rem);
         }
 };
 

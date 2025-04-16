@@ -103,7 +103,7 @@ class RecordingIndexes {
             vector<string> recording_texts;
             vector<unsigned int> recording_ids;
             for(auto &itr : recording_ref) {
-                IndexSupplementalData data = { itr.first.second, itr.second.first };
+                IndexSupplementalData data = { itr.first.second };
                 supp_recording_data->push_back(data);
                 recording_texts.push_back(itr.first.first);
                 recording_ids.push_back(i);
@@ -130,7 +130,7 @@ class RecordingIndexes {
             vector<IndexSupplementalReleaseData> *release_data = new vector<IndexSupplementalReleaseData>();
             i = 0;
             for(auto &it : release_ref) {
-                IndexSupplementalReleaseData rel(i, it.first.second, it.second);
+                IndexSupplementalReleaseData rel = {it.first.second, it.second};
                 release_data->push_back(rel);
                 release_texts.push_back(it.first.first);
                 release_ids.push_back(i);

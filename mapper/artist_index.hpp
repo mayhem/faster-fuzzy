@@ -1,6 +1,9 @@
 #pragma once
 #include <stdio.h>
 #include <ctime>
+
+#include <cereal/archives/binary.hpp>
+
 #include "SQLiteCpp.h"
 #include "fuzzy_index.hpp"
 #include "encode.hpp"
@@ -21,9 +24,10 @@ const char *fetch_blob_query =
 
 class ArtistIndexes {
     private:
-        EncodeSearchData encode;
-        string           index_dir, db_file; 
-        FuzzyIndex      *artist_index, *stupid_artist_index;
+        EncodeSearchData               encode;
+        string                         index_dir, db_file; 
+        FuzzyIndex                     *artist_index, *stupid_artist_index;
+        vector<IndexSupplementalData>  supp_data, stupid_supp_data;
 
     public:
 
@@ -35,6 +39,8 @@ class ArtistIndexes {
         }
         
         ~ArtistIndexes() {
+            delete artist_index;
+            delete stupid_artist_index;
         }
         
         // 幾何学模様 a                  Kikagaku Moyo c
@@ -71,10 +77,10 @@ class ArtistIndexes {
                 log("build artist index");
                 index->build(output_ids, output_texts);
                 
-                vector<IndexSupplementalData> supp_data;
+                vector<IndexSupplementalData> s_data;
                 for(unsigned int i = 0; i < output_ids.size(); i++) {
-                    IndexSupplementalData data = { output_rems[i], output_ids[i] };
-                    supp_data.push_back(data);
+                    IndexSupplementalData data = { output_rems[i] };
+                    s_data.push_back(data);
                 }
 
                 log("serialize artist index");
@@ -87,7 +93,7 @@ class ArtistIndexes {
            
                 supp_data.clear();
                 for(unsigned int i = 0; i < stupid_ids.size(); i++) {
-                    IndexSupplementalData data = { stupid_rems[i], stupid_ids[i] };
+                    IndexSupplementalData data = { stupid_rems[i] };
                     supp_data.push_back(data);
                 }
 
@@ -127,27 +133,60 @@ class ArtistIndexes {
             }
             log("done building artists indexes.");
         }
-        void load_index(const unsigned int entity_id) {
+        
+        bool
+        load_index(const int entity_id, FuzzyIndex *index, vector<IndexSupplementalData> &supp_data) {
             try
             {
-                SQLite::Database    db(db_file);
-                SQLite::Statement   query(db, fetch_blob_query);
+                SQLite::Database      db(db_file);
+                SQLite::Statement     query(db, fetch_blob_query);
             
                 query.bind(1, entity_id);
-                query.exec();
-
-                SQLite::Statement   query2(db, insert_blob_query);
-                if (stupid_ids.size()) {
-                    query2.bind(1, STUPID_ARTIST_INDEX_ENTITY_ID);
-                    query2.bind(2, (const char *)sss.str().c_str(), (int32_t)sss.str().length());
-                    query2.exec();
-                }
+                if (query.executeStep()) {
+                    const void* blob_data = query.getColumn(0).getBlob();
+                    size_t blob_size = query.getColumn(0).getBytes();
+                    
+                    std::stringstream ss;
+                    ss.write(static_cast<const char*>(blob_data), blob_size);
+                    ss.seekg(ios_base::beg);
+                    {
+                        cereal::BinaryInputArchive iarchive(ss);
+                        iarchive(*index, supp_data);
+                    }
+                    return index;
+                } else 
+                    return false;
             }
             catch (std::exception& e)
             {
                 printf("db exception: %s\n", e.what());
             }
+            return false;
         }
-        void load
 
+        bool load() {
+            artist_index = new FuzzyIndex();
+            bool ret = load_index(ARTIST_INDEX_ENTITY_ID, artist_index, supp_data);
+            if (!ret) {
+                throw length_error("failed to load artist index");
+                delete artist_index;
+                artist_index = nullptr;
+                return false;
+            }
+            stupid_artist_index = new FuzzyIndex();
+            return load_index(STUPID_ARTIST_INDEX_ENTITY_ID, stupid_artist_index, stupid_supp_data);
+        }
+        
+        void
+        search(string &artist_name) {
+            if (!artist_index)
+                throw length_error("no index loaded.");
+
+            vector<IndexResult> res;
+            res = artist_index->search(artist_name, .5, true);
+            printf("num results: %lu\n", res.size());
+            for(auto & row : res) {
+                printf("%d: %.2f\n", row.id, row.distance); 
+            }
+        }
 };

@@ -14,13 +14,13 @@ int main(int argc, char *argv[])
     }
     string index_dir(argv[1]);
    
-    log("build artist indexes");
+    log("load artist indexes");
     ArtistIndexes artist_index(index_dir);
-    artist_index.build_artist_index();
-
-    log("build recording indexes");
-    MBIDMapping mapping(index_dir);
-    mapping.build_recording_indexes();
+    artist_index.load();
+    log("artist indexes loaded");
+    
+    string q("portishead");
+    artist_index.search(q);
 
     return 0;
 }
