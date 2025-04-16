@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
     string index_dir(argv[1]);
    
     log("build artist indexes");
-    ArtistIndexes artist_index(index_dir);
+    ArtistIndex artist_index(index_dir);
     artist_index.build();
 
     log("build recording indexes");

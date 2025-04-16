@@ -16,19 +16,19 @@ const char *fetch_query =
     "  FROM mapping "
     " WHERE artist_credit_id = ?";
     
-class RecordingIndexes {
+class RecordingIndex {
     private:
-        EncodeSearchData encode;
         string           index_dir, db_file; 
+        EncodeSearchData encode;
 
     public:
 
-        RecordingIndexes(const string &_index_dir) { 
-            index_dir = _index_dir;
-            db_file = _index_dir + string("/mapping.db");
+        RecordingIndex(const string &index_dir_) {
+            index_dir = index_dir_;
+            db_file = index_dir_ + string("/mapping.db");
         }
         
-        ~RecordingIndexes() {
+        ~RecordingIndex() {
         }
        
         ArtistReleaseRecordingData
@@ -159,5 +159,48 @@ class RecordingIndexes {
             
             ArtistReleaseRecordingData ret(recording_index, supp_recording_data, release_index, release_data);
             return ret;
+        }
+
+        void
+        load_index(const int entity_id, FuzzyIndex *index, vector<IndexSupplementalData> &supp_data) {
+            try
+            {
+                SQLite::Database      db(db_file);
+                SQLite::Statement     query(db, fetch_blob_query);
+            
+                query.bind(1, entity_id);
+                if (query.executeStep()) {
+                    const void* blob_data = query.getColumn(0).getBlob();
+                    size_t blob_size = query.getColumn(0).getBytes();
+                    
+                    std::stringstream ss;
+                    ss.write(static_cast<const char*>(blob_data), blob_size);
+                    ss.seekg(ios_base::beg);
+                    {
+                        cereal::BinaryInputArchive iarchive(ss);
+                        iarchive(*index, supp_data);
+                    }
+                    return;
+                } else 
+                    throw std::length_error("index not found in db");
+            }
+            catch (std::exception& e)
+            {
+                printf("db exception: %s\n", e.what());
+            }
+            return;
+        }
+        ArtistReleaseRecordingData *      
+        load(unsigned int artist_credit_id) {
+            
+            FuzzyIndex *recording_index = new FuzzyIndex(); 
+            vector<IndexSupplementalData> *recording_data = new vector<IndexSupplementalData>();
+            load_index(artist_credit_id, recording_index, *recording_data);
+            
+            FuzzyIndex *release_index = new FuzzyIndex(); 
+            vector<IndexSupplementalReleaseData> *release_data = new vector<IndexSupplementalReleaseData>();
+//            load_index(artist_credit_id, release_index, *release_data);
+
+            return new ArtistReleaseRecordingData(recording_index, recording_data, release_index, release_data);
         }
 };

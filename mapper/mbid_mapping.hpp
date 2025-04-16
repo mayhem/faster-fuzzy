@@ -39,7 +39,7 @@ class CreatorThread {
 };
 
 void thread_build_index(const string &index_dir, CreatorThread *th, unsigned int artist_id) {
-    RecordingIndexes  ri(index_dir);
+    RecordingIndex  ri(index_dir);
     
     th->sstream = new stringstream();
     auto indexes = ri.build_recording_release_indexes(artist_id);

@@ -22,23 +22,24 @@ const char *insert_blob_query =
 const char *fetch_blob_query = 
     "SELECT index_data FROM index_cache WHERE entity_id = ?";
 
-class ArtistIndexes {
+
+class ArtistIndex {
     private:
-        EncodeSearchData               encode;
         string                         index_dir, db_file; 
+        EncodeSearchData               encode;
         FuzzyIndex                     *artist_index, *stupid_artist_index;
         vector<IndexSupplementalData>  supp_data, stupid_supp_data;
 
     public:
 
-        ArtistIndexes(const string &_index_dir) { 
+        ArtistIndex(const string &_index_dir) {
             index_dir = _index_dir;
             db_file = _index_dir + string("/mapping.db");
             artist_index = nullptr;
             stupid_artist_index = nullptr;
         }
         
-        ~ArtistIndexes() {
+        ~ArtistIndex() {
             delete artist_index;
             delete stupid_artist_index;
         }
@@ -153,7 +154,7 @@ class ArtistIndexes {
                         cereal::BinaryInputArchive iarchive(ss);
                         iarchive(*index, supp_data);
                     }
-                    return index;
+                    return true;
                 } else 
                     return false;
             }
