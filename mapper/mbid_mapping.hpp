@@ -5,6 +5,7 @@
 
 #include "fuzzy_index.hpp"
 #include "recording_index.hpp"
+#include "index_cache.hpp"
 #include "SQLiteCpp.h"
 
 using namespace std;
@@ -44,15 +45,15 @@ void thread_build_index(const string &index_dir, CreatorThread *th, unsigned int
     auto indexes = ri.build_recording_release_indexes(artist_id);
     {
         cereal::BinaryOutputArchive oarchive(*th->sstream);
-        oarchive(*indexes.first.first);
-        oarchive(*indexes.first.second);
-        oarchive(*indexes.second.first);
-        oarchive(*indexes.second.second);
+        oarchive(*indexes.recording_index);
+        oarchive(*indexes.recording_data);
+        oarchive(*indexes.release_index);
+        oarchive(*indexes.release_data);
     }
-    delete indexes.first.first;
-    delete indexes.first.second;
-    delete indexes.second.first;
-    delete indexes.second.second;
+    delete indexes.recording_index;
+    delete indexes.recording_data;
+    delete indexes.release_index;
+    delete indexes.release_data;
     th->sstream->seekg(ios_base::beg);
     th->done = true;
 }

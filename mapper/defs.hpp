@@ -71,6 +71,22 @@ class IndexSupplementalData {
         }
 };
 
+class FuzzyIndex;
+class ArtistReleaseRecordingData {
+    public:
+        FuzzyIndex                           *recording_index, *release_index;
+        vector<IndexSupplementalData>        *recording_data;
+        vector<IndexSupplementalReleaseData> *release_data;
+
+        ArtistReleaseRecordingData(FuzzyIndex *rec_index, vector<IndexSupplementalData> *rec_data,
+                                   FuzzyIndex *rel_index, vector<IndexSupplementalReleaseData> *rel_data) {
+            recording_index = rec_index;
+            recording_data = rec_data;
+            release_index = rel_index;
+            release_data = rel_data;
+        };
+};
+
 class IndexResult {
     public:
         unsigned int id;

@@ -31,7 +31,7 @@ class RecordingIndexes {
         ~RecordingIndexes() {
         }
        
-        pair<pair<FuzzyIndex *, vector<IndexSupplementalData> *>, pair<FuzzyIndex *, vector<IndexSupplementalReleaseData> *>>
+        ArtistReleaseRecordingData
         build_recording_release_indexes(unsigned int artist_credit_id) {
             map<unsigned int, vector<unsigned int>>                             recording_releases;
             map<string, pair<string, unsigned int>>                             ranks;
@@ -156,10 +156,8 @@ class RecordingIndexes {
             {
                 //printf("Index build error: '%s'\n", e.what());
             }
-           
-            pair<pair<FuzzyIndex *, vector<IndexSupplementalData> *>,
-                 pair<FuzzyIndex *, vector<IndexSupplementalReleaseData> *>> ind = { { recording_index, supp_recording_data}, 
-                                                                                      { release_index, release_data } };
-            return ind;
+            
+            ArtistReleaseRecordingData ret(recording_index, supp_recording_data, release_index, release_data);
+            return ret;
         }
 };
