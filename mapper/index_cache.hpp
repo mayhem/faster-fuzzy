@@ -29,6 +29,22 @@ class IndexCache {
             mtx.unlock();
         }
         
+        long get_memory_footprint() {
+            std::ifstream status_file("/proc/self/status");
+            std::string line;
+            while (std::getline(status_file, line)) {
+                if (line.rfind("VmRSS:", 0) == 0) {
+                    std::string value;
+                    std::istringstream iss(line);
+                    std::string key, unit;
+                    long rss_kb;
+                    iss >> key >> rss_kb >> unit;
+                    return rss_kb * 1024; // return a value in bytes
+                }
+            }
+            assert(false);
+        }
+        
         void
         trim(unsigned int size) {
 
