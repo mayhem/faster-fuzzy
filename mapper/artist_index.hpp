@@ -16,24 +16,29 @@ const char *fetch_artists_query =
 const char *insert_blob_query = 
     "INSERT INTO index_cache (entity_id, index_data) VALUES (?, ?) "
     "         ON CONFLICT(entity_id) DO UPDATE SET index_data=excluded.index_data";
+const char *fetch_blob_query = 
+    "SELECT index_data FROM index_cache WHERE entity_id = ?";
 
 class ArtistIndexes {
     private:
         EncodeSearchData encode;
         string           index_dir, db_file; 
+        FuzzyIndex      *artist_index, *stupid_artist_index;
 
     public:
 
         ArtistIndexes(const string &_index_dir) { 
             index_dir = _index_dir;
             db_file = _index_dir + string("/mapping.db");
+            artist_index = nullptr;
+            stupid_artist_index = nullptr;
         }
         
         ~ArtistIndexes() {
         }
         
         // 幾何学模様 a                  Kikagaku Moyo c
-        void build_artist_index() {
+        void build() {
             
             vector<unsigned int> index_ids;
             vector<string>       index_texts;
@@ -122,4 +127,27 @@ class ArtistIndexes {
             }
             log("done building artists indexes.");
         }
+        void load_index(const unsigned int entity_id) {
+            try
+            {
+                SQLite::Database    db(db_file);
+                SQLite::Statement   query(db, fetch_blob_query);
+            
+                query.bind(1, entity_id);
+                query.exec();
+
+                SQLite::Statement   query2(db, insert_blob_query);
+                if (stupid_ids.size()) {
+                    query2.bind(1, STUPID_ARTIST_INDEX_ENTITY_ID);
+                    query2.bind(2, (const char *)sss.str().c_str(), (int32_t)sss.str().length());
+                    query2.exec();
+                }
+            }
+            catch (std::exception& e)
+            {
+                printf("db exception: %s\n", e.what());
+            }
+        }
+        void load
+
 };
