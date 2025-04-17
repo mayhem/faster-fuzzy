@@ -147,6 +147,13 @@ class MBIDMapping {
                         }
                     }    
                 }
+                write_indexes_to_db(db, data_to_commit);
+                for(auto &entry : data_to_commit) {
+                    delete entry->sstream;
+                    delete entry;
+                }                                
+                data_to_commit.clear();
+
                 log("indexed %lu rows                             ", count);
             }
             catch (std::exception& e)

@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
     artist_index.load();
     log("artist indexes loaded");
     
-    string q("tiffany");
+    string q("portishead");
     artist_index.search(q);
     int artist_credit_id = 65;
     
@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 //    }
     
     vector<IndexResult> res;
-    string recording("womaninlove");
+    string recording("strangers");
     res = artist_data->recording_index->search(recording, .5, true);
     printf("num results: %lu\n", res.size());
     for(auto & row : res) {

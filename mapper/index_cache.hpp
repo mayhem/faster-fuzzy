@@ -7,6 +7,8 @@
 
 using namespace std;
 
+const int SLEEP_DELAY = 30;
+
 class IndexCache {
     private:
         map<unsigned int, ArtistReleaseRecordingData *> index;
@@ -42,6 +44,7 @@ class IndexCache {
             for(auto &item : index)
                 delete item.second;
             index.clear();
+            last_accessed.clear();
             mtx.unlock();
         }
         
@@ -63,7 +66,25 @@ class IndexCache {
         
         void
         trim() {
-            // Obvs, finish this
+            for(; index.size();) {
+                vector<std::pair<unsigned int, time_t>> access_times(last_accessed.begin(), last_accessed.end());
+                std::sort(access_times.begin(), access_times.end(), [](const auto& a, const auto& b) {
+                    return a.second > b.second;
+                });
+                mtx.lock();
+                int items_to_remove = min((size_t)10, index.size());
+                for(int i = 0; i < items_to_remove; i++) {
+                    unsigned int entity_id = access_times[i].first;
+                    last_accessed.erase(entity_id);
+                    index.erase(entity_id);
+                    delete index[entity_id];
+                }
+                mtx.unlock();
+                
+                long current_use = get_memory_footprint();
+                if (current_use <= cleaning_target)
+                    break;
+            }
         }
         
         void
@@ -90,20 +111,18 @@ class IndexCache {
         }
         
         void cache_cleaner() {
-            log("cache cleaner thread started");
-            
             long baseline = get_memory_footprint();
             log("%luMB available for index cache", max_memory_usage - baseline);
 
             while(!stop) {
-                this_thread::sleep_for(chrono::seconds(30));
+                for(int i = 0; i < SLEEP_DELAY && !stop; i++)
+                    this_thread::sleep_for(chrono::seconds(1));
                 
                 long current = get_memory_footprint();
                 auto used = current - baseline;
                 if (used >= max_memory_usage) 
                     trim();
             }
-            log("cache cleaner thread ended");
         }
         
         void start() {
