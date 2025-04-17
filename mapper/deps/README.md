@@ -29,12 +29,10 @@ Clone and build the following depedencies here:
   SQLite Cpp:
 
   https://github.com/SRombauts/SQLiteCpp.git
-  
   No setup needed
 
 
   Crow:
-
   https://github.com/CrowCpp/Crow.git
 
 
@@ -58,11 +56,9 @@ Clone and build the following depedencies here:
   Armadillo
 
   https://gitlab.com/conradsnicta/armadillo-code
-
   No setup needed
 
   Cereal
 
   https://github.com/USCiLab/cereal.git
-
   No setup needed

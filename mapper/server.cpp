@@ -6,9 +6,12 @@
 #include "mbid_mapping.hpp"
 #include "index_cache.hpp"
 #include "utils.hpp"
+#include "levenshtein.hpp"
 
 int main(int argc, char *argv[])
 {
+
+#if 0    
     if (argc != 2) {
         printf("Usage: builder <index_dir>\n");
         return -1;
@@ -37,6 +40,8 @@ int main(int argc, char *argv[])
         artist_data = rec_index.load(artist_credit_id);
         cache.add(artist_credit_id, artist_data);
     }
+//    std::size_t dist = lev_edit_distance(str1.size(), (const lev_byte *)str1.c_str(),
+//                                         str2.size(), (const lev_byte *)str2.c_str(), 0);
 
 //    artist_data = cache.get(artist_credit_id);
 //    if (!artist_data) {
@@ -51,6 +56,6 @@ int main(int argc, char *argv[])
     for(auto & row : res) {
         printf("%d: %.2f\n", row.id, row.distance); 
     }
-    
+#endif    
     return 0;
 }
