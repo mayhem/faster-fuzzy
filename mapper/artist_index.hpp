@@ -28,7 +28,6 @@ class ArtistIndex {
         string                         index_dir, db_file; 
         EncodeSearchData               encode;
         FuzzyIndex                     *artist_index, *stupid_artist_index;
-        vector<IndexSupplementalData>  supp_data, stupid_supp_data;
 
     public:
 
@@ -42,6 +41,16 @@ class ArtistIndex {
         ~ArtistIndex() {
             delete artist_index;
             delete stupid_artist_index;
+        }
+        
+        FuzzyIndex *
+        index() {
+            return artist_index;
+        }
+
+        FuzzyIndex *
+        stupid() {
+            return stupid_artist_index;
         }
         
         // 幾何学模様 a                  Kikagaku Moyo c
@@ -64,47 +73,34 @@ class ArtistIndex {
             }
             catch (std::exception& e)
             {
-                printf("db exception: %s\n", e.what());
+                printf("build artist db exception: %s\n", e.what());
             }
             vector<unsigned int> output_ids, stupid_ids;
             vector<string>       output_texts, output_rems, stupid_texts, stupid_rems;
                     
             log("encode data");
-            encode.encode_index_data(index_ids, index_texts, output_ids, output_texts, output_rems,
-                                                             stupid_ids, stupid_texts, stupid_rems);
+            encode.encode_index_data(index_ids, index_texts, output_ids, output_texts, stupid_ids, stupid_texts);
             log("%lu items in index", output_ids.size());
             {
                 FuzzyIndex *index = new FuzzyIndex();
                 log("build artist index");
                 index->build(output_ids, output_texts);
                 
-                vector<IndexSupplementalData> s_data;
-                for(unsigned int i = 0; i < output_ids.size(); i++) {
-                    IndexSupplementalData data = { output_rems[i] };
-                    s_data.push_back(data);
-                }
-
                 log("serialize artist index");
                 std::stringstream ss;
                 {
                     cereal::BinaryOutputArchive oarchive(ss);
-                    oarchive(*index, supp_data);
+                    oarchive(*index);
                 }
                 log("artist index size: %lu", ss.str().length());
            
-                supp_data.clear();
-                for(unsigned int i = 0; i < stupid_ids.size(); i++) {
-                    IndexSupplementalData data = { stupid_rems[i] };
-                    supp_data.push_back(data);
-                }
-
                 std::stringstream sss;
                 if (stupid_ids.size()) {
                     FuzzyIndex *stupid_index = new FuzzyIndex();
                     stupid_index->build(stupid_ids, stupid_texts);
                     {
                         cereal::BinaryOutputArchive oarchive(sss);
-                        oarchive(*stupid_index, supp_data);
+                        oarchive(*stupid_index);
                     }
                     log("stupid artist index size: %lu", sss.str().length());
                 }
@@ -129,14 +125,14 @@ class ArtistIndex {
                 }
                 catch (std::exception& e)
                 {
-                    printf("db exception: %s\n", e.what());
+                    printf("save artist index db exception: %s\n", e.what());
                 }
             }
             log("done building artists indexes.");
         }
         
         bool
-        load_index(const int entity_id, FuzzyIndex *index, vector<IndexSupplementalData> &supp_data) {
+        load_index(const int entity_id, FuzzyIndex *index) {
             try
             {
                 SQLite::Database      db(db_file);
@@ -152,7 +148,7 @@ class ArtistIndex {
                     ss.seekg(ios_base::beg);
                     {
                         cereal::BinaryInputArchive iarchive(ss);
-                        iarchive(*index, supp_data);
+                        iarchive(*index);
                     }
                     return true;
                 } else 
@@ -160,14 +156,14 @@ class ArtistIndex {
             }
             catch (std::exception& e)
             {
-                printf("db exception: %s\n", e.what());
+                printf("load artist index db exception: %s\n", e.what());
             }
             return false;
         }
 
         bool load() {
             artist_index = new FuzzyIndex();
-            bool ret = load_index(ARTIST_INDEX_ENTITY_ID, artist_index, supp_data);
+            bool ret = load_index(ARTIST_INDEX_ENTITY_ID, artist_index);
             if (!ret) {
                 throw length_error("failed to load artist index");
                 delete artist_index;
@@ -175,19 +171,6 @@ class ArtistIndex {
                 return false;
             }
             stupid_artist_index = new FuzzyIndex();
-            return load_index(STUPID_ARTIST_INDEX_ENTITY_ID, stupid_artist_index, stupid_supp_data);
-        }
-        
-        void
-        search(string &artist_name) {
-            if (!artist_index)
-                throw length_error("no index loaded.");
-
-            vector<IndexResult> res;
-            res = artist_index->search(artist_name, .5, true);
-            printf("num results: %lu\n", res.size());
-            for(auto & row : res) {
-                printf("%d: %.2f\n", row.id, row.distance); 
-            }
+            return load_index(STUPID_ARTIST_INDEX_ENTITY_ID, stupid_artist_index);
         }
 };

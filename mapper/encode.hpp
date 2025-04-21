@@ -51,11 +51,11 @@ class EncodeSearchData {
             return output;
         }
 
-        pair<string, string>
+        string
         encode_string(const string &text) {
             // Remove spaces, punctuation, convert non-ascii characters to some romanized equivalent, lower case, return
             if (text.empty()) {
-                pair<string, string> a;
+                string a;
                 return a;
             }
             string cleaned(non_word->replace(text,"", "g"));
@@ -64,57 +64,40 @@ class EncodeSearchData {
             // Sometimes unidecode puts spaces in, so remove them
             string ret(spaces_uscore->replace(cleaned,"", "g"));
 
-            auto main_part = ret.substr(0, MAX_ENCODED_STRING_LENGTH);
-            string remainder;
-            if (ret.length() > MAX_ENCODED_STRING_LENGTH)
-                remainder = ret.substr(MAX_ENCODED_STRING_LENGTH);
-            
-            pair<string, string> out = { main_part, remainder};
-            return out;
+            return ret;
         }
 
-        pair<string, string>
+        string
         encode_string_for_stupid_artists(const string &text) {
             //Remove spaces, convert non-ascii characters to some romanized equivalent, lower case, return
             if (text.empty()) {
-                pair<string, string> a;
+                string a;
                 return a;
             }
 
             string cleaned(spaces->replace(text,"", "g"));
             transform(cleaned.begin(), cleaned.end(), cleaned.begin(), ::tolower);
-        
-            auto main_part = cleaned.substr(0, MAX_ENCODED_STRING_LENGTH);
-            string remainder;
-            if (cleaned.length() > MAX_ENCODED_STRING_LENGTH)
-                remainder = cleaned.substr(MAX_ENCODED_STRING_LENGTH);
-            
-            pair<string, string> out = { main_part, remainder};
-            return out;
+            return cleaned;
         }
 
         void 
         encode_index_data(const vector<unsigned int> &input_ids, const vector<string> &input_texts,
                           vector<unsigned int> &output_ids,
                           vector<string>       &output_texts,
-                          vector<string>       &output_rems,
                           vector<unsigned int> &stupid_ids,
-                          vector<string>       &stupid_texts,
-                          vector<string>       &stupid_rems) {
+                          vector<string>       &stupid_texts) {
             for(unsigned int i = 0; i < input_ids.size(); i++) {
                 auto ret = encode_string(input_texts[i]);
-                if (ret.first.size() == 0) {
+                if (ret.size() == 0) {
                     auto stupid = encode_string_for_stupid_artists(input_texts[i]);
-                    if (stupid.first.size()) {
+                    if (stupid.size()) {
                         stupid_ids.push_back(input_ids[i]);
-                        stupid_texts.push_back(stupid.first);
-                        stupid_rems.push_back(stupid.second);
+                        stupid_texts.push_back(stupid);
                         continue;
                     }
                 }
                 output_ids.push_back(input_ids[i]);
-                output_texts.push_back(ret.first);
-                output_rems.push_back(ret.second);
+                output_texts.push_back(ret);
             }
         }
 };

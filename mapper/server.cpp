@@ -20,23 +20,20 @@ int main(int argc, char *argv[])
         return -1;
     }
     string index_dir(argv[1]);
-    string artist_name(argv[2]);
+    string artist_name_arg(argv[2]);
     string recording_name(argv[3]);
    
     log("load artist indexes");
     ArtistIndex artist_index(index_dir);
     artist_index.load();
     
-    auto encoded = encode.encode_string(artist_name); 
-    if (encoded.first.size() == 0) {
-        printf("stupid artists are not supported yet.\n")
+    auto artist_name = encode.encode_string(artist_name_arg); 
+    if (artist_name.size() == 0) {
+        printf("stupid artists are not supported yet.\n");
         return 0;
     }
-    string artist_name(encoded[0]);
-    string artist_remainder(encoded[2]);
-    
     vector<IndexResult> res;
-    res = artist_index->search(artist_name, .5, true);
+    res = artist_index.index()->search(artist_name, .5);
     printf("num results: %lu\n", res.size());
     for(auto & row : res) {
         printf("%d: %.2f\n", row.id, row.distance); 
@@ -64,8 +61,7 @@ int main(int argc, char *argv[])
 //        log("artist data not found");
 //        return 0;
 //    }
-    
-    vector<IndexResult> res;
+        
     string recording("strangers");
     res = artist_data->recording_index->search(recording, .5, true);
     printf("num results: %lu\n", res.size());

@@ -46,12 +46,10 @@ void thread_build_index(const string &index_dir, CreatorThread *th, unsigned int
     {
         cereal::BinaryOutputArchive oarchive(*th->sstream);
         oarchive(*indexes.recording_index);
-        oarchive(*indexes.recording_data);
         oarchive(*indexes.release_index);
         oarchive(*indexes.release_data);
     }
     delete indexes.recording_index;
-    delete indexes.recording_data;
     delete indexes.release_index;
     delete indexes.release_data;
     th->sstream->seekg(ios_base::beg);

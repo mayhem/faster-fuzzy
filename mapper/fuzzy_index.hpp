@@ -7,8 +7,8 @@
 #include <vector>
 using namespace std;
 
+#include "defs.hpp"
 #include "tfidf_vectorizer.hpp"
-#include "encode.hpp"
 
 #include <cereal/archives/binary.hpp>
 #include <cereal/types/vector.hpp>
@@ -33,11 +33,11 @@ const auto NUM_FUZZY_SEARCH_RESULTS = 500;
 class FuzzyIndex {
     private:
         vector<unsigned int>      index_ids; 
+        vector<string>            oversized_text;   // this field is only populated if the field is > MAX_ENCODED_STRING_LENGTH
         similarity::Index<float> *index = nullptr;
         similarity::Space<float> *space = nullptr;
      	TfIdfVectorizer           vectorizer;
         similarity::ObjectVector  vectorized_data;
-        EncodeSearchData          encode;
 
     public:
 
@@ -86,6 +86,18 @@ class FuzzyIndex {
 
             // Make a copy, I hope, of the index id data and hold on to it
             index_ids = _index_ids; 
+            
+            for(int i = 0; i < text_data.size(); i++) {
+                string text = text_data[i];
+                if (text.size() > MAX_ENCODED_STRING_LENGTH) {
+                    oversized_text.push_back(text);
+                    text_data[i] = text.substr(0, MAX_ENCODED_STRING_LENGTH);
+                }
+                else {
+                    string empty;
+                    oversized_text.push_back(empty);
+                }
+            }
       
             arma::sp_mat matrix = vectorizer.fit_transform(text_data);
             transform_text(matrix, vectorized_data);
@@ -136,7 +148,7 @@ class FuzzyIndex {
             vector<uint8_t> index_data;
             if (index)
                 index->SerializeIndex(index_data, vectorized_data);
-            archive(index_data, vectorizer, index_ids); 
+            archive(index_data, vectorizer, index_ids, oversized_text); 
         }
       
         template<class Archive>
@@ -150,7 +162,7 @@ class FuzzyIndex {
             vectorized_data.clear();
 
             // Restore our data
-            archive(index_data, vectorizer, index_ids); 
+            archive(index_data, vectorizer, index_ids, oversized_text); 
             delete index;
             
             if (index_data.size() == 0)

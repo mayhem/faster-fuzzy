@@ -1,5 +1,4 @@
 #include <stdio.h>
-//#include <sstream>
 
 #include "artist_index.hpp"
 #include "mbid_mapping.hpp"

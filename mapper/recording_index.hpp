@@ -9,12 +9,13 @@
 using namespace std;
 
 const char *fetch_query = 
-    "SELECT artist_credit_id "
-    "     , release_id, release_name "
-    "     , recording_id, recording_name "
-    "     , score "
-    "  FROM mapping "
-    " WHERE artist_credit_id = ?";
+    "  SELECT artist_credit_id "
+    "       , release_id, release_name "
+    "       , recording_id, recording_name "
+    "       , score "
+    "    FROM mapping "
+    "   WHERE artist_credit_id = ?"
+    "ORDER BY score";
     
 class RecordingIndex {
     private:
@@ -33,9 +34,9 @@ class RecordingIndex {
        
         ArtistReleaseRecordingData
         build_recording_release_indexes(unsigned int artist_credit_id) {
-            map<unsigned int, vector<unsigned int>>                             recording_releases;
-            map<string, pair<string, unsigned int>>                             ranks;
-            map<pair<string, string>, pair<unsigned int, vector<EntityRef>>> recording_ref;
+            map<unsigned int, vector<unsigned int>>            recording_releases;
+            map<string, unsigned int>                          release_name_rank;
+            map<string, pair<unsigned int, vector<EntityRef>>> recording_ref;
 
             try
             {
@@ -51,8 +52,8 @@ class RecordingIndex {
                     string       recording_name = query.getColumn(4);
                     unsigned int rank  = query.getColumn(5);
 
-                    pair<string, string> ret = encode.encode_string(recording_name);
-                    if (ret.first.size() == 0)
+                    string ret = encode.encode_string(recording_name);
+                    if (ret.size() == 0)
                         continue;
                     
                     EntityRef ref(release_id, rank);
@@ -76,48 +77,43 @@ class RecordingIndex {
                         recording_releases[recording_id].push_back(release_id);
 
                     ret = encode.encode_string(release_name);
-                    if (ret.first.size()) {
-                        string k = to_string(release_id) + string("-") + ret.first;
-                        pair<string, unsigned int> temp = { ret.second, rank};
-                        ranks[k] = temp;
+                    if (ret.size()) {
+                        string k = to_string(release_id) + string("-") + ret;
+                        release_name_rank[k] = rank;
                     }
                 }
             }
             catch (std::exception& e)
             {
-                printf("db exception: %s\n", e.what());
+                printf("build rec index db exception: %s\n", e.what());
             }
         
             vector<TempReleaseData> t_release_data;
-            for(auto &data : ranks) {
+            for(auto &data : release_name_rank) {
                 size_t split_pos = data.first.find('-');
                 int release_id = stoi(data.first.substr(0, split_pos));
                 string text = data.first.substr(split_pos + 1);
-                TempReleaseData rel(release_id, text, data.second.first, data.second.second);
+                TempReleaseData rel(release_id, text, data.second);
                 t_release_data.push_back(rel);
             }
-            ranks.clear();
-            
-            unsigned int i = 0;
-            vector<IndexSupplementalData> *supp_recording_data = new vector<IndexSupplementalData>();
+            release_name_rank.clear();
+            //                 recording_id 
+            //map<string, pair<unsigned int, vector<EntityRef>>> recording_ref;
             vector<string> recording_texts;
             vector<unsigned int> recording_ids;
             for(auto &itr : recording_ref) {
-                IndexSupplementalData data = { itr.first.second };
-                supp_recording_data->push_back(data);
-                recording_texts.push_back(itr.first.first);
-                recording_ids.push_back(i);
-                i++;
+                recording_texts.push_back(itr.first);
+                recording_ids.push_back(itr.second.first);
             }
             
-            map<pair<string, string>, vector<EntityRef>> release_ref;
+            map<string, vector<EntityRef>> release_ref;
             for(auto &data : t_release_data) {
                 EntityRef ref(data.id, data.rank);
-                pair<string, string> k = { data.text, data.remainder };
+                string k = { data.text };
                 auto iter = release_ref.find(k);
                 if (iter == release_ref.end()) {
                     vector<EntityRef> vec;
-                    pair<string, string> k = { data.text, data.remainder };
+                    string k = { data.text };
                     vec.push_back(ref);
                     release_ref[k] = vec;
                 }
@@ -128,11 +124,11 @@ class RecordingIndex {
             vector<string> release_texts;
             vector<unsigned int> release_ids;
             vector<IndexSupplementalReleaseData> *release_data = new vector<IndexSupplementalReleaseData>();
-            i = 0;
+            int i = 0;
             for(auto &it : release_ref) {
-                IndexSupplementalReleaseData rel = {it.first.second, it.second};
+                IndexSupplementalReleaseData rel = {it.second};
                 release_data->push_back(rel);
-                release_texts.push_back(it.first.first);
+                release_texts.push_back(it.first);
                 release_ids.push_back(i);
                 i++;
             } 
@@ -157,12 +153,13 @@ class RecordingIndex {
                 //printf("Index build error: '%s'\n", e.what());
             }
             
-            ArtistReleaseRecordingData ret(recording_index, supp_recording_data, release_index, release_data);
+            ArtistReleaseRecordingData ret(recording_index, release_index, release_data);
             return ret;
         }
 
         void
-        load_index(const int entity_id, FuzzyIndex *index, vector<IndexSupplementalData> &supp_data) {
+        load_index(const int entity_id, FuzzyIndex *recording_index, FuzzyIndex *release_index, 
+                   vector<IndexSupplementalReleaseData> *supp_data) {
             try
             {
                 SQLite::Database      db(db_file);
@@ -179,7 +176,7 @@ class RecordingIndex {
                     ss.seekg(ios_base::beg);
                     {
                         cereal::BinaryInputArchive iarchive(ss);
-                        iarchive(*index, supp_data);
+                        iarchive(*recording_index, *release_index, *supp_data);
                     }
                     return;
                 } else 
@@ -187,21 +184,19 @@ class RecordingIndex {
             }
             catch (std::exception& e)
             {
-                printf("db exception: %s\n", e.what());
+                printf("load rec index db exception: %s\n", e.what());
             }
             return;
         }
+
         ArtistReleaseRecordingData *      
         load(unsigned int artist_credit_id) {
             
             FuzzyIndex *recording_index = new FuzzyIndex(); 
-            vector<IndexSupplementalData> *recording_data = new vector<IndexSupplementalData>();
-            load_index(artist_credit_id, recording_index, *recording_data);
-            
             FuzzyIndex *release_index = new FuzzyIndex(); 
             vector<IndexSupplementalReleaseData> *release_data = new vector<IndexSupplementalReleaseData>();
-//            load_index(artist_credit_id, release_index, *release_data);
+            load_index(artist_credit_id, recording_index, release_index, release_data);
 
-            return new ArtistReleaseRecordingData(recording_index, recording_data, release_index, release_data);
+            return new ArtistReleaseRecordingData(recording_index, release_index, release_data);
         }
 };
