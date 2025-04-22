@@ -64,7 +64,14 @@ int main(int argc, char *argv[])
         
     string recording("strangers");
     res = artist_data->recording_index->search(recording, .5, true);
-    printf("num results: %lu\n", res.size());
+    printf("num rec results: %lu\n", res.size());
+    for(auto & row : res) {
+        printf("%d: %.2f\n", row.id, row.distance); 
+    }
+
+    string release("dummy");
+    res = artist_data->release_index->search(release, .5, true);
+    printf("num rel results: %lu\n", res.size());
     for(auto & row : res) {
         printf("%d: %.2f\n", row.id, row.distance); 
     }
