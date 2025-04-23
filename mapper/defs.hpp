@@ -8,13 +8,13 @@ const auto MAX_ENCODED_STRING_LENGTH = 30;
 
 class EntityRef {
     public:
-        unsigned int id;
-        unsigned int rank;
-       
+       unsigned int id;
+       unsigned int rank;
+      
         EntityRef() {};
-        EntityRef(const unsigned int id_, const unsigned int rank_) {
+        EntityRef(unsigned int id_, unsigned int rank_) {
             id = id_;
-            rank = rank_;
+            rank = rank;
         }
         template<class Archive>
         void serialize(Archive & archive)
@@ -23,7 +23,19 @@ class EntityRef {
         }
 };
 
-// Get rid of this?
+class TempReleaseData {
+    public:
+       unsigned int       id;
+       string             text;
+       unsigned int       rank;
+       
+        TempReleaseData(unsigned int id_, string &text_, unsigned int rank_) {
+            id = id_;
+            text = text_;
+            rank = rank_;
+        }
+};
+
 class IndexSupplementalReleaseData {
     public:
        vector<EntityRef> release_refs;
@@ -37,19 +49,6 @@ class IndexSupplementalReleaseData {
         void serialize(Archive & archive)
         {
             archive(release_refs);
-        }
-};
-
-class TempReleaseData {
-    public:
-       unsigned int       id;
-       string             text, remainder;
-       unsigned int       rank;
-       
-        TempReleaseData(unsigned int id_, string &text_, unsigned int rank_) {
-            id = id_;
-            text = text_;
-            rank = rank_;
         }
 };
 

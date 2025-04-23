@@ -15,13 +15,17 @@ int main(int argc, char *argv[])
 {
     EncodeSearchData encode;
 
-    if (argc != 4) {
-        printf("Usage: builder <index_dir> <artist_name> <recording_name>\n");
+    if (argc < 4) {
+        printf("Usage: builder <index_dir> <artist_name> <recording_name> <release_name>\n");
         return -1;
     }
     string index_dir(argv[1]);
     string artist_name_arg(argv[2]);
     string recording_name(argv[3]);
+    string release_name;
+    
+    if (argc == 5)
+        release_name = string(argv[4]);
    
     log("load artist indexes");
     ArtistIndex artist_index(index_dir);
@@ -62,18 +66,18 @@ int main(int argc, char *argv[])
 //        return 0;
 //    }
         
-    string recording("strangers");
-    res = artist_data->recording_index->search(recording, .5, true);
+    res = artist_data->recording_index->search(recording_name, .5, true);
     printf("num rec results: %lu\n", res.size());
     for(auto & row : res) {
         printf("%d: %.2f\n", row.id, row.distance); 
     }
 
-    string release("dummy");
-    res = artist_data->release_index->search(release, .5, true);
-    printf("num rel results: %lu\n", res.size());
-    for(auto & row : res) {
-        printf("%d: %.2f\n", row.id, row.distance); 
+    if (release_name.size()) {
+        res = artist_data->release_index->search(release_name, .5, true);
+        printf("num rel results: %lu\n", res.size());
+        for(auto & row : res) {
+            printf("%d: %.2f\n", row.id, row.distance); 
+        }
     }
     return 0;
 }

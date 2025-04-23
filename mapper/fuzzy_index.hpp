@@ -12,6 +12,7 @@ using namespace std;
 
 #include <cereal/archives/binary.hpp>
 #include <cereal/types/vector.hpp>
+#include <cereal/types/string.hpp>
 
 #include "index.h"
 #include "init.h"
@@ -33,7 +34,7 @@ const auto NUM_FUZZY_SEARCH_RESULTS = 500;
 class FuzzyIndex {
     private:
         vector<unsigned int>      index_ids; 
-        vector<string>            oversized_text;   // this field is only populated if the field is > MAX_ENCODED_STRING_LENGTH
+        vector<string>            index_texts;   // the full text field, needed for matching long query strings
         similarity::Index<float> *index = nullptr;
         similarity::Space<float> *space = nullptr;
      	TfIdfVectorizer           vectorizer;
@@ -86,19 +87,8 @@ class FuzzyIndex {
 
             // Make a copy, I hope, of the index id data and hold on to it
             index_ids = _index_ids; 
-            
-            for(int i = 0; i < text_data.size(); i++) {
-                string text = text_data[i];
-                if (text.size() > MAX_ENCODED_STRING_LENGTH) {
-                    oversized_text.push_back(text);
-                    text_data[i] = text.substr(0, MAX_ENCODED_STRING_LENGTH);
-                }
-                else {
-                    string empty;
-                    oversized_text.push_back(empty);
-                }
-            }
-      
+            index_texts = text_data;
+           
             arma::sp_mat matrix = vectorizer.fit_transform(text_data);
             transform_text(matrix, vectorized_data);
             
@@ -112,11 +102,11 @@ class FuzzyIndex {
             index->CreateIndex(index_params);
         }
 
-        vector<IndexResult> search(const string &query_string, float min_confidence, bool debug=false) {
-            // Carry out search, returns list of dicts: "text", "id", "confidence" 
+        vector<IndexResult> 
+        search(const string &query_string, float min_confidence, bool debug=false) {
             vector<string> text_data;
             similarity::ObjectVector data;
-
+            
             if (index == nullptr)
                 throw std::length_error("no index available.");
 
@@ -127,19 +117,35 @@ class FuzzyIndex {
             unsigned k = NUM_FUZZY_SEARCH_RESULTS;
             similarity::KNNQuery<float> knn(*space, data[0], k);
             index->Search(&knn, -1);
-            
+
+
+            bool has_long = false; 
             vector<IndexResult> results;
             auto queue = knn.Result()->Clone();
             while (!queue->Empty()) {
                 auto dist = -queue->TopDistance();
-                if (dist > min_confidence)
+                if (dist > min_confidence) {
+                    if (index_texts[queue->TopObject()->id()].size() > 0)
+                        has_long = true;
                     results.push_back(IndexResult(index_ids[queue->TopObject()->id()], dist));
+                }
                 queue->Pop();
             }
             delete queue;
             for(auto &obj : data)
                 delete obj;
+            
+            if (query_string.size() > MAX_ENCODED_STRING_LENGTH || has_long)
+                post_process_long_query(query_string, results);
+
             return results;
+        }
+        
+         
+        void
+        post_process_long_query(const string &query, vector<IndexResult> &results) {
+
+
         }
 
         template<class Archive>
@@ -148,7 +154,7 @@ class FuzzyIndex {
             vector<uint8_t> index_data;
             if (index)
                 index->SerializeIndex(index_data, vectorized_data);
-            archive(index_data, vectorizer, index_ids, oversized_text); 
+            archive(index_data, vectorizer, index_ids, index_texts); 
         }
       
         template<class Archive>
@@ -162,7 +168,7 @@ class FuzzyIndex {
             vectorized_data.clear();
 
             // Restore our data
-            archive(index_data, vectorizer, index_ids, oversized_text); 
+            archive(index_data, vectorizer, index_ids, index_texts); 
             delete index;
             
             if (index_data.size() == 0)
