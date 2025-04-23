@@ -136,14 +136,17 @@ class FuzzyIndex {
                 delete obj;
             
             if (query_string.size() > MAX_ENCODED_STRING_LENGTH || has_long)
-                post_process_long_query(query_string, results);
+                post_process_long_query(query_string, results, min_confidence);
 
             return results;
         }
         
          
         void
-        post_process_long_query(const string &query, vector<IndexResult> &results) {
+        post_process_long_query(const string &query, vector<IndexResult> &results, float min_confidence) {
+            for(int i = results.size() - 1; i <= 0; i--) {
+                auto dist = lev_edit_distance(query.size(), query.c_str(), res.)
+            }
 
 
         }
