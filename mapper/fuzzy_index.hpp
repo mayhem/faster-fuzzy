@@ -9,6 +9,7 @@ using namespace std;
 
 #include "defs.hpp"
 #include "tfidf_vectorizer.hpp"
+#include "levenshtein.hpp"
 
 #include <cereal/archives/binary.hpp>
 #include <cereal/types/vector.hpp>
@@ -110,6 +111,7 @@ class FuzzyIndex {
             if (index == nullptr)
                 throw std::length_error("no index available.");
 
+
             text_data.push_back(query_string);
             arma::sp_mat matrix = vectorizer.transform(text_data);
             transform_text(matrix, data);
@@ -124,9 +126,10 @@ class FuzzyIndex {
             auto queue = knn.Result()->Clone();
             while (!queue->Empty()) {
                 auto dist = -queue->TopDistance();
-                if (dist > min_confidence) {
+                if (1) { //dist > min_confidence) {
                     if (index_texts[queue->TopObject()->id()].size() > 0)
                         has_long = true;
+                    printf("push id %u index: %u\n", index_ids[queue->TopObject()->id()], queue->TopObject()->id());
                     results.push_back(IndexResult(index_ids[queue->TopObject()->id()], dist));
                 }
                 queue->Pop();
@@ -135,20 +138,34 @@ class FuzzyIndex {
             for(auto &obj : data)
                 delete obj;
             
+            reverse(results.begin(), results.end());
+            
             if (query_string.size() > MAX_ENCODED_STRING_LENGTH || has_long)
-                post_process_long_query(query_string, results, min_confidence);
+                return post_process_long_query(query_string, results, min_confidence);
 
             return results;
         }
         
          
-        void
+        vector<IndexResult>
         post_process_long_query(const string &query, vector<IndexResult> &results, float min_confidence) {
-            for(int i = results.size() - 1; i <= 0; i--) {
-                auto dist = lev_edit_distance(query.size(), query.c_str(), res.)
+            vector<IndexResult> updated;
+            
+            for(int i = results.size() - 1; i >= 0; i--) {
+                unsigned int id = results[i].id;
+                size_t dist = lev_edit_distance(query.size(), (const lev_byte*)query.c_str(), 
+                                              index_texts[id].size(), (const lev_byte*)index_texts[id].c_str(), 1);
+                float score = 1.0 - ((float)query.size() / dist);
+                printf("'%s' - '%s' dist %lu %.3f", query.c_str(), index_texts[id].c_str(), dist, score);
+                if (score >= min_confidence) {
+                    printf(" match\n");
+                    IndexResult temp = { id, score };
+                    updated.push_back(temp);
+                }
+                else
+                    printf(" no match\n");
             }
-
-
+            return updated;
         }
 
         template<class Archive>
@@ -173,6 +190,7 @@ class FuzzyIndex {
             // Restore our data
             archive(index_data, vectorizer, index_ids, index_texts); 
             delete index;
+            
             
             if (index_data.size() == 0)
                 return;

@@ -23,6 +23,7 @@ int main(int argc, char *argv[])
     string artist_name_arg(argv[2]);
     string recording_name(argv[3]);
     string release_name;
+    int artist_credit_id;
     
     if (argc == 5)
         release_name = string(argv[4]);
@@ -39,13 +40,16 @@ int main(int argc, char *argv[])
     vector<IndexResult> res;
     res = artist_index.index()->search(artist_name, .5);
     printf("num results: %lu\n", res.size());
+    if (res.size() == 0)
+        return 0;
     for(auto & row : res) {
         printf("%d: %.2f\n", row.id, row.distance); 
     }
-    int artist_credit_id = 65;
+    artist_credit_id = res[0].id;
     
     IndexCache cache(25);
-    cache.start();
+    // TODO: Enable this 
+    //cache.start();
     
     RecordingIndex rec_index(index_dir);
    
