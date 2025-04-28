@@ -126,10 +126,10 @@ class FuzzyIndex {
             auto queue = knn.Result()->Clone();
             while (!queue->Empty()) {
                 auto dist = -queue->TopDistance();
-                if (1) { //dist > min_confidence) {
+                if (dist > min_confidence) {
                     if (index_texts[queue->TopObject()->id()].size() > 0)
                         has_long = true;
-                    printf("push id %u index: %u\n", index_ids[queue->TopObject()->id()], queue->TopObject()->id());
+                    printf("push id %u score: %.3f\n", index_ids[queue->TopObject()->id()], dist);
                     results.push_back(IndexResult(index_ids[queue->TopObject()->id()], dist));
                 }
                 queue->Pop();

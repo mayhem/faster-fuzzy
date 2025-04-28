@@ -127,6 +127,7 @@ class RecordingIndex {
             int i = 0;
             for(auto &it : release_ref) {
                 IndexSupplementalReleaseData rel = {it.second};
+                rel.sort_refs_by_rank();
                 release_data->push_back(rel);
                 release_texts.push_back(it.first);
                 release_ids.push_back(i);

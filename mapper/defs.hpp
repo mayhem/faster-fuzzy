@@ -38,11 +38,18 @@ class TempReleaseData {
 
 class IndexSupplementalReleaseData {
     public:
-       vector<EntityRef> release_refs;
+        vector<EntityRef> release_refs;
        
         IndexSupplementalReleaseData() {};
         IndexSupplementalReleaseData(const vector<EntityRef> &refs_) {
             release_refs = refs_;
+        }
+        
+        void
+        sort_refs_by_rank() {
+            sort(release_refs.begin(), release_refs.end(), [](const EntityRef& a, const EntityRef& b) {
+                return a.rank < b.rank;
+            }); 
         }
 
         template<class Archive>

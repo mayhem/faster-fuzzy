@@ -71,16 +71,36 @@ int main(int argc, char *argv[])
 //    }
         
     res = artist_data->recording_index->search(recording_name, .5, true);
+    if (res.size() == 0) {
+        printf("Not recording results.\n");
+        return 0;
+    }
     printf("num rec results: %lu\n", res.size());
     for(auto & row : res) {
         printf("%d: %.2f\n", row.id, row.distance); 
     }
+    unsigned int recording_id = res[0].id;
 
+    //    vector<IndexResult> 
+    //    release_search(const string &release_name, float min_confidence) {
+    //        auto &res = release_index->search(release_name, min_confidence);
+    //        for(auto & it : res)
+    //            it.id = release_data.release_refs[it.id];
+    //        return res;
+    //    }
+        
+
+    unsigned int release_id = 0;
     if (release_name.size()) {
         res = artist_data->release_index->search(release_name, .5, true);
-        printf("num rel results: %lu\n", res.size());
+        printf("num rel results: %lu\nrels: ", res.size());
         for(auto & row : res) {
-            printf("%d: %.2f\n", row.id, row.distance); 
+            vector<IndexSupplementalReleaseData> supp = *artist_data->release_data;
+            vector<EntityRef> release_refs = supp[row.id].release_refs;
+            for(auto & ref : release_refs) 
+                printf("%u (%u) ", ref.id, ref.rank);
+            
+            printf("\n%d: %.2f\n", row.id, row.distance); 
         }
     }
     return 0;
