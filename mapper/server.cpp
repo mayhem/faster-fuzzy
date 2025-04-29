@@ -76,16 +76,12 @@ int main(int argc, char *argv[])
     unsigned int release_id = 0;
     if (release_name.size()) {
         res = artist_data->release_index->search(release_name, .5, true);
-        printf("num rel results: %lu\nrels: ", res.size());
-        for(auto & row : res) {
-            // TODO: Simplify this
-            vector<IndexSupplementalReleaseData> supp = *artist_data->release_data;
-            vector<EntityRef> release_refs = supp[row.id].release_refs;
-            for(auto & ref : release_refs) 
-                printf("%u (%u) ", ref.id, ref.rank);
-            
-            printf("\n%d: %.2f\n", row.id, row.distance); 
+        if (res.size()) {
+            IndexResult &result = res[0];
+            EntityRef &ref = (*artist_data->release_data)[result.id].release_refs[0];
+            release_id = ref.id;
         }
     }
+    printf("artist id: %u release id: %u recording id: %u\n", artist_credit_id, release_id, recording_id);
     return 0;
 }
