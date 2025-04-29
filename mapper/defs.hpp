@@ -14,7 +14,7 @@ class EntityRef {
         EntityRef() {};
         EntityRef(unsigned int id_, unsigned int rank_) {
             id = id_;
-            rank = rank;
+            rank = rank_;
         }
         template<class Archive>
         void serialize(Archive & archive)
@@ -76,10 +76,12 @@ class ArtistReleaseRecordingData {
 class IndexResult {
     public:
         unsigned int id;
+        unsigned int result_index;
         float        distance;
         
-        IndexResult(unsigned int _id, float _distance) {
+        IndexResult(unsigned int _id, unsigned int _result_index, float _distance) {
             id = _id;
             distance = _distance;
+            result_index = _result_index;
         }
 };

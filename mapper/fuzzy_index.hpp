@@ -5,6 +5,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <math.h>
 using namespace std;
 
 #include "defs.hpp"
@@ -127,10 +128,9 @@ class FuzzyIndex {
             while (!queue->Empty()) {
                 auto dist = -queue->TopDistance();
                 if (dist > min_confidence) {
-                    if (index_texts[queue->TopObject()->id()].size() > 0)
+                    if (index_texts[queue->TopObject()->id()].size() > MAX_ENCODED_STRING_LENGTH)
                         has_long = true;
-                    printf("push id %u score: %.3f\n", index_ids[queue->TopObject()->id()], dist);
-                    results.push_back(IndexResult(index_ids[queue->TopObject()->id()], dist));
+                    results.push_back(IndexResult(index_ids[queue->TopObject()->id()], queue->TopObject()->id(), dist));
                 }
                 queue->Pop();
             }
@@ -153,13 +153,18 @@ class FuzzyIndex {
             
             for(int i = results.size() - 1; i >= 0; i--) {
                 unsigned int id = results[i].id;
+                unsigned int index = results[i].result_index;
                 size_t dist = lev_edit_distance(query.size(), (const lev_byte*)query.c_str(), 
-                                              index_texts[id].size(), (const lev_byte*)index_texts[id].c_str(), 1);
-                float score = 1.0 - ((float)query.size() / dist);
-                printf("'%s' - '%s' dist %lu %.3f", query.c_str(), index_texts[id].c_str(), dist, score);
+                                                index_texts[index].size(), (const lev_byte*)index_texts[index].c_str(), 1);
+                float score;
+                if (dist == 0)
+                    score = 1.0;
+                else  
+                    score = fabs(1.0 - ((float)query.size() / dist));
+                printf("'%s' - '%s' %u dist %lu %.3f", query.c_str(), index_texts[index].c_str(), id, dist, score);
                 if (score >= min_confidence) {
                     printf(" match\n");
-                    IndexResult temp = { id, score };
+                    IndexResult temp = { id, index, score };
                     updated.push_back(temp);
                 }
                 else

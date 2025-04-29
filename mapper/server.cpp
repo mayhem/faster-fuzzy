@@ -61,14 +61,6 @@ int main(int argc, char *argv[])
         artist_data = rec_index.load(artist_credit_id);
         cache.add(artist_credit_id, artist_data);
     }
-//    std::size_t dist = lev_edit_distance(str1.size(), (const lev_byte *)str1.c_str(),
-//                                         str2.size(), (const lev_byte *)str2.c_str(), 0);
-
-//    artist_data = cache.get(artist_credit_id);
-//    if (!artist_data) {
-//        log("artist data not found");
-//        return 0;
-//    }
         
     res = artist_data->recording_index->search(recording_name, .5, true);
     if (res.size() == 0) {
@@ -81,20 +73,12 @@ int main(int argc, char *argv[])
     }
     unsigned int recording_id = res[0].id;
 
-    //    vector<IndexResult> 
-    //    release_search(const string &release_name, float min_confidence) {
-    //        auto &res = release_index->search(release_name, min_confidence);
-    //        for(auto & it : res)
-    //            it.id = release_data.release_refs[it.id];
-    //        return res;
-    //    }
-        
-
     unsigned int release_id = 0;
     if (release_name.size()) {
         res = artist_data->release_index->search(release_name, .5, true);
         printf("num rel results: %lu\nrels: ", res.size());
         for(auto & row : res) {
+            // TODO: Simplify this
             vector<IndexSupplementalReleaseData> supp = *artist_data->release_data;
             vector<EntityRef> release_refs = supp[row.id].release_refs;
             for(auto & ref : release_refs) 

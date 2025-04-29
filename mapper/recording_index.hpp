@@ -117,7 +117,7 @@ class RecordingIndex {
                     vec.push_back(ref);
                     release_ref[k] = vec;
                 }
-                else
+                else 
                     release_ref[k].push_back(ref);
             } 
 
@@ -170,7 +170,6 @@ class RecordingIndex {
                 if (query.executeStep()) {
                     const void* blob_data = query.getColumn(0).getBlob();
                     size_t blob_size = query.getColumn(0).getBytes();
-                    printf("read %lu bytes\n", blob_size);
                     
                     std::stringstream ss;
                     ss.write(static_cast<const char*>(blob_data), blob_size);
