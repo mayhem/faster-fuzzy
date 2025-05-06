@@ -75,13 +75,31 @@ class ArtistReleaseRecordingData {
 
 class IndexResult {
     public:
-        unsigned int id;
-        unsigned int result_index;
-        float        distance;
+        unsigned int   id;
+        unsigned int   result_index;
+        float          distance;
         
         IndexResult(unsigned int _id, unsigned int _result_index, float _distance) {
             id = _id;
             distance = _distance;
             result_index = _result_index;
         }
+};
+
+class SearchResult {
+    public:
+        unsigned int   artist_credit_id, release_id, recording_id;
+        float          distance;
+        string         artist_credit_name;
+        vector<string> artist_credit_mbids;
+        string         release_name;
+        string         release_mbid;
+        string         recording_name;
+        string         recording_mbid;
+       
+        SearchResult(unsigned int _artist_credit_id, unsigned int _release_id, unsigned int _recording_id) {
+            artist_credit_id = _artist_credit_id;
+            release_id = _release_id;
+            recording_id = _recording_id;
+        };
 };

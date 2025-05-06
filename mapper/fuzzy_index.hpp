@@ -160,7 +160,7 @@ class FuzzyIndex {
                 if (dist == 0)
                     score = 1.0;
                 else  
-                    score = fabs(1.0 - ((float)query.size() / dist));
+                    score = fabs(1.0 - ((float)index_texts[index].size() / dist));
                 printf("'%s' - '%s' %u dist %lu %.3f", query.c_str(), index_texts[index].c_str(), id, dist, score);
                 if (score >= min_confidence) {
                     printf(" match\n");
