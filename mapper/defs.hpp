@@ -77,8 +77,10 @@ class IndexResult {
     public:
         unsigned int   id;
         unsigned int   result_index;
+        // TODO: rename this to confidence
         float          distance;
         
+        IndexResult() {}
         IndexResult(unsigned int _id, unsigned int _result_index, float _distance) {
             id = _id;
             distance = _distance;
@@ -97,6 +99,7 @@ class SearchResult {
         string         recording_name;
         string         recording_mbid;
        
+        SearchResult() {}
         SearchResult(unsigned int _artist_credit_id, unsigned int _release_id, unsigned int _recording_id) {
             artist_credit_id = _artist_credit_id;
             release_id = _release_id;

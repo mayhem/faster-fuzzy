@@ -27,9 +27,9 @@ class ArtistIndex {
     private:
         string                         index_dir, db_file; 
         EncodeSearchData               encode;
-        FuzzyIndex                     *artist_index, *stupid_artist_index;
 
     public:
+        FuzzyIndex                     *artist_index, *stupid_artist_index;
 
         ArtistIndex(const string &_index_dir) {
             index_dir = _index_dir;
