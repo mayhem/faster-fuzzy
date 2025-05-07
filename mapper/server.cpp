@@ -59,7 +59,6 @@ fetch_metadata(const string &index_dir, vector<SearchResult> &results) {
         values += string(")\n");
     }
     query += string(fetch_metadata_query_1);
-    printf("%s\n", query.c_str());
 
     try
     {
@@ -107,7 +106,6 @@ int main(int argc, char *argv[])
     if (argc == 5)
         release_name = string(argv[4]);
    
-    log("load artist indexes");
     ArtistIndex artist_index(index_dir);
     artist_index.load();
     
@@ -117,13 +115,9 @@ int main(int argc, char *argv[])
         return 0;
     }
     vector<IndexResult> res;
-    res = artist_index.index()->search(artist_name, .5);
-    printf("num results: %lu\n", res.size());
+    res = artist_index.index()->search(artist_name, .7);
     if (res.size() == 0)
         return 0;
-    for(auto & row : res) {
-        printf("%d: %.2f\n", row.id, row.distance); 
-    }
     artist_credit_id = res[0].id;
     
     IndexCache cache(25);
@@ -131,51 +125,65 @@ int main(int argc, char *argv[])
     //cache.start();
     
     RecordingIndex rec_index(index_dir);
-   
     ArtistReleaseRecordingData *artist_data;
     
     artist_data = cache.get(artist_credit_id);
     if (!artist_data) {
-        log("not found, loading.");
         artist_data = rec_index.load(artist_credit_id);
         cache.add(artist_credit_id, artist_data);
     }
         
-    res = artist_data->recording_index->search(recording_name, .5, true);
+    auto recording_name_encoded = encode.encode_string(recording_name); 
+    if (recording_name_encoded.size() == 0) {
+        printf("recording name contains no word characters.\n");
+        return 0;
+    }
+    res = artist_data->recording_index->search(recording_name_encoded, .7);
     if (res.size() == 0) {
         printf("Not recording results.\n");
         return 0;
-    }
-    printf("num rec results: %lu\n", res.size());
-    for(auto & row : res) {
-        printf("%d: %.2f\n", row.id, row.distance); 
     }
     unsigned int recording_id = res[0].id;
 
     unsigned int release_id = 0;
     if (release_name.size()) {
-        res = artist_data->release_index->search(release_name, .5, true);
+        auto release_name_encoded = encode.encode_string(release_name); 
+        if (release_name_encoded.size() == 0) {
+            printf("warning: release name contains no word characters, ignoring.\n");
+            return 0;
+        }
+        res = artist_data->release_index->search(release_name_encoded, .7);
         if (res.size()) {
             IndexResult &result = res[0];
             EntityRef &ref = (*artist_data->release_data)[result.id].release_refs[0];
             release_id = ref.id;
         }
     }
-    printf("artist id: %u release id: %u recording id: %u\n", artist_credit_id, release_id, recording_id);
+    
+    if (artist_credit_id == 0 || release_id == 0 || recording_id == 0) {
+        printf("%d, %d, %d\n", artist_credit_id, release_id, recording_id);
+        printf("not all data resolved.\n");
+        return 0;
+    }
     
     SearchResult sres(artist_credit_id, release_id, recording_id);
     vector<SearchResult> sresults;
     sresults.push_back(sres);
    
-    // TODO
-    // 'sunday bloody sunday' - 'sundaybloodysunday' 8421 dist 2 9.000 match
-    
     fetch_metadata(index_dir, sresults);
     for(auto &r : sresults) {
-        printf("%-40s %-40s %-40s\n", 
+        printf("%-40s: %s %d\n", 
             r.artist_credit_name.substr(0, 39).c_str(),
+            r.artist_credit_mbids[0].c_str(),
+            r.artist_credit_id);
+        printf("%-40s: %s %d\n", 
             r.release_name.substr(0, 39).c_str(),
-            r.recording_name.substr(0, 39).c_str());
+            r.release_mbid.c_str(),
+            r.release_id);
+        printf("%-40s: %s %d\n", 
+            r.recording_name.substr(0, 39).c_str(),
+            r.recording_mbid.c_str(),
+            r.recording_id);
     }
     return 0;
 }

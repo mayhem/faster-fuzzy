@@ -31,7 +31,7 @@ using namespace std;
 #include "knnquery.h"
 #include "knnqueue.h"
 
-const auto NUM_FUZZY_SEARCH_RESULTS = 500;
+const auto NUM_FUZZY_SEARCH_RESULTS = 10;
 
 class FuzzyIndex {
     private:
@@ -127,7 +127,7 @@ class FuzzyIndex {
             auto queue = knn.Result()->Clone();
             while (!queue->Empty()) {
                 auto dist = -queue->TopDistance();
-                if (dist > min_confidence) {
+                if (dist >= min_confidence) {
                     if (index_texts[queue->TopObject()->id()].size() > MAX_ENCODED_STRING_LENGTH)
                         has_long = true;
                     results.push_back(IndexResult(index_ids[queue->TopObject()->id()], queue->TopObject()->id(), dist));
@@ -139,36 +139,32 @@ class FuzzyIndex {
                 delete obj;
             
             reverse(results.begin(), results.end());
-            
             if (query_string.size() > MAX_ENCODED_STRING_LENGTH || has_long)
                 return post_process_long_query(query_string, results, min_confidence);
 
             return results;
         }
-        
          
         vector<IndexResult>
         post_process_long_query(const string &query, vector<IndexResult> &results, float min_confidence) {
             vector<IndexResult> updated;
-            
+           
             for(int i = results.size() - 1; i >= 0; i--) {
                 unsigned int id = results[i].id;
                 unsigned int index = results[i].result_index;
                 size_t dist = lev_edit_distance(query.size(), (const lev_byte*)query.c_str(), 
                                                 index_texts[index].size(), (const lev_byte*)index_texts[index].c_str(), 1);
-                float score;
+                float conf;
                 if (dist == 0)
-                    score = 1.0;
-                else  
-                    score = fabs(1.0 - ((float)index_texts[index].size() / dist));
-                printf("'%s' - '%s' %u dist %lu %.3f", query.c_str(), index_texts[index].c_str(), id, dist, score);
-                if (score >= min_confidence) {
-                    printf(" match\n");
-                    IndexResult temp = { id, index, score };
+                    conf = 1.0;
+                else 
+                    conf = 1.0 - fabs((float)dist / query.size());
+
+                //printf("'%s' - '%s' %u dist %lu %.3f", query.c_str(), index_texts[index].c_str(), id, dist, conf);
+                if (conf >= min_confidence) {
+                    IndexResult temp = { id, index, conf };
                     updated.push_back(temp);
                 }
-                else
-                    printf(" no match\n");
             }
             return updated;
         }
