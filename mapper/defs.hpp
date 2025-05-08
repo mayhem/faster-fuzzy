@@ -78,12 +78,12 @@ class IndexResult {
         unsigned int   id;
         unsigned int   result_index;
         // TODO: rename this to confidence
-        float          distance;
+        float          confidence;
         
         IndexResult() {}
-        IndexResult(unsigned int _id, unsigned int _result_index, float _distance) {
+        IndexResult(unsigned int _id, unsigned int _result_index, float _confidence) {
             id = _id;
-            distance = _distance;
+            confidence = _confidence;
             result_index = _result_index;
         }
 };
@@ -91,7 +91,7 @@ class IndexResult {
 class SearchResult {
     public:
         unsigned int   artist_credit_id, release_id, recording_id;
-        float          distance;
+        float          confidence;
         string         artist_credit_name;
         vector<string> artist_credit_mbids;
         string         release_name;
@@ -100,9 +100,10 @@ class SearchResult {
         string         recording_mbid;
        
         SearchResult() {}
-        SearchResult(unsigned int _artist_credit_id, unsigned int _release_id, unsigned int _recording_id) {
+        SearchResult(unsigned int _artist_credit_id, unsigned int _release_id, unsigned int _recording_id, float _confidence) {
             artist_credit_id = _artist_credit_id;
             release_id = _release_id;
             recording_id = _recording_id;
+            confidence = _confidence;
         };
 };

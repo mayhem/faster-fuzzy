@@ -65,7 +65,7 @@ class MappingSearch {
             return result;
         }
 
-        void
+        bool
         fetch_metadata(vector<SearchResult> &results) {
             string db_file = index_dir + string("/mapping.db");
            
@@ -87,6 +87,7 @@ class MappingSearch {
             }
             query += string(fetch_metadata_query_1);
 
+            bool found = false;
             try
             {
                 SQLite::Database    db(db_file);
@@ -108,22 +109,22 @@ class MappingSearch {
                     results[index].release_name = db_query.getColumn(4).getString();
                     results[index].recording_mbid = db_query.getColumn(5).getString();
                     results[index].recording_name = db_query.getColumn(6).getString();
+                    found = true;
                 }
             }
             catch (std::exception& e)
             {
                 printf("build artist db exception: %s\n", e.what());
             }
+            
+            return found;
         }
         
-        pair<SearchResult, float>
+        SearchResult
         recording_release_search(unsigned int artist_credit_id, const string &release_name, const string &recording_name) {
             ArtistReleaseRecordingData *artist_data;
-            SearchResult                no_search_result;
-            pair<SearchResult, float>   no_result = { no_search_result, 0.0 };
+            SearchResult                no_result;
             IndexResult                 rel_result, rec_result;
-            unsigned int                release_id = 0;
-            unsigned int                recording_id = 0;
             
             // Add thresholding
 
@@ -147,16 +148,24 @@ class MappingSearch {
                 printf("No recording results.\n");
                 return no_result;
             }
+            
+            //        res = artist_data->release_index->search(release_name_encoded, .7);
+            //        if (res.size()) {
+            //            IndexResult &result = res[0];
+            //            EntityRef &ref = (*artist_data->release_data)[result.id].release_refs[0];
+            //            release_id = ref.id;
+            //        }
+            
 
             if (release_name.size()) {
                 auto release_name_encoded = encode.encode_string(release_name); 
                 if (release_name_encoded.size()) {
                     vector<IndexResult> rel_results = artist_data->release_index->search(release_name_encoded, .7);
                     if (rel_results.size()) {
-                        EntityRef &ref = (*artist_data->release_data)[rel_results[0].id].release_refs[0];
-                        release_id = ref.id;
+                        IndexResult &result = rel_results[0];
+                        EntityRef &ref = (*artist_data->release_data)[result.id].release_refs[0];
                         rel_result.id = ref.id;
-                        rel_result.distance = rel_results[0].distance;
+                        rel_result.confidence = result.confidence;
                     } else
                         printf("warning: no release matches, ignoring release.\n");
                 }
@@ -165,11 +174,11 @@ class MappingSearch {
             }
             float score;
             if (release_name.size())
-                score = (rec_result.distance + rel_result.distance) / 2.0;
+                score = (rec_result.confidence + rel_result.confidence) / 2.0;
             else
-                score = rec_result.distance;
+                score = rec_result.confidence;
                 
-            pair<SearchResult, float> out = { SearchResult(artist_credit_id, rel_result.id, rec_result.id), score };
+            SearchResult out(artist_credit_id, rel_result.id, rec_result.id, score);
             return out;
         }
         
@@ -195,12 +204,14 @@ class MappingSearch {
             unsigned int artist_credit_id = res[0].id;
 
             for(auto &it : res) {
-                pair<SearchResult, float> r = recording_release_search(artist_credit_id, release_name, recording_name); 
-                if (r.second > .7) {
+                SearchResult r = recording_release_search(artist_credit_id, release_name, recording_name); 
+                if (r.confidence > .7) {
                     vector<SearchResult> v;
-                    v.push_back(r.first);
-                    fetch_metadata(v);
-                    return r.first;
+                    v.push_back(r);
+                    if (!fetch_metadata(v))
+                        throw std::length_error("failed to load metadata from sqlite.");
+
+                    return r;
                 }
             }
             return output;

@@ -17,21 +17,26 @@ int main(int argc, char *argv[])
     string recording_name(argv[3]);
     string release_name;
     MappingSearch search(index_dir, 25);
+    search.load();
     SearchResult result;
     
     result = search.search(artist_name, release_name, recording_name);
-    printf("%-40s: %s %d\n", 
-        result.artist_credit_name.substr(0, 39).c_str(),
+    printf("%d %d %d\n", 
+        result.artist_credit_id, result.release_id, result.recording_id);
+    printf("'%s'\n", result.artist_credit_name.c_str());
+    printf("'%s'\n", result.recording_name.c_str());
+    printf("%-8d %s %s\n", 
+        result.artist_credit_id,
         result.artist_credit_mbids[0].c_str(),
-        result.artist_credit_id);
-    printf("%-40s: %s %d\n", 
-        result.release_name.substr(0, 39).c_str(),
+        result.artist_credit_name.c_str());
+    printf("%-8d %s %s\n", 
+        result.release_id,
         result.release_mbid.c_str(),
-        result.release_id);
-    printf("%-40s: %s %d\n", 
-        result.recording_name.substr(0, 39).c_str(),
+        result.release_name.c_str());
+    printf("%-8d %s %s\n", 
+        result.recording_id,
         result.recording_mbid.c_str(),
-        result.recording_id);
+        result.recording_name.c_str());
 
     return 0;
 }
