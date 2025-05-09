@@ -99,7 +99,12 @@ class SearchResult {
         string         recording_name;
         string         recording_mbid;
        
-        SearchResult() {}
+        SearchResult() {
+            artist_credit_id = 0;
+            release_id = 0;
+            recording_id = 0;
+            confidence = 0.0;
+        }
         SearchResult(unsigned int _artist_credit_id, unsigned int _release_id, unsigned int _recording_id, float _confidence) {
             artist_credit_id = _artist_credit_id;
             release_id = _release_id;

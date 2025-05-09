@@ -13,17 +13,12 @@
 
 // TODO: Implement DB connection re-use
 
-const char *fetch_metadata_query_0 = 
-    "  WITH input(ind, artist_credit_id, release_id, recording_id) AS ( "
-    "       VALUES ";
-const char *fetch_metadata_query_1 = 
-    "  )"
-    "  SELECT ind, artist_mbids, artist_credit_name, release_mbid, release_name, recording_mbid, recording_name "
+const char *fetch_metadata_query = 
+    "  SELECT artist_mbids, artist_credit_name, release_mbid, release_name, recording_mbid, recording_name "
     "    FROM mapping "
-    "    JOIN input "
-    "      ON input.artist_credit_id = mapping.artist_credit_id AND "
-    "         input.release_id = mapping.release_id AND "
-    "         input.recording_id = mapping.recording_id";
+    "   WHERE mapping.artist_credit_id = ? AND "
+    "         mapping.release_id = ? AND "
+    "         mapping.recording_id = ?";
 
 class MappingSearch {
     private:
@@ -66,58 +61,34 @@ class MappingSearch {
         }
 
         bool
-        fetch_metadata(vector<SearchResult> &results) {
+        fetch_metadata(SearchResult &result) {
             string db_file = index_dir + string("/mapping.db");
            
-            string query = string(fetch_metadata_query_0);
-            string values;
-            for (size_t i = 0; i < results.size(); i++) {
-                if (i > 0) {
-                    query += string(", ");
-                    values += string(", ");
-                } 
-                query += string("(?, ?, ?, ?)");
-                values += string("(");
-                values += to_string(results[i].artist_credit_id);
-                values += string(",");
-                values += to_string(results[i].release_id);
-                values += string(",");
-                values += to_string(results[i].recording_id);
-                values += string(")\n");
-            }
-            query += string(fetch_metadata_query_1);
-
-            bool found = false;
             try
             {
                 SQLite::Database    db(db_file);
-                SQLite::Statement   db_query(db, query);
+                SQLite::Statement   db_query(db, string(fetch_metadata_query));
                 
-                int index = 1;
-                for (const auto& result : results) {
-                    db_query.bind(index, (index++)-1);
-                    db_query.bind(index++, result.artist_credit_id);
-                    db_query.bind(index++, result.release_id);
-                    db_query.bind(index++, result.recording_id);
-                }
+                db_query.bind(1, result.artist_credit_id);
+                db_query.bind(2, result.release_id);
+                db_query.bind(3, result.recording_id);
 
                 while (db_query.executeStep()) {
-                    index = db_query.getColumn(0).getInt();
-                    results[index].artist_credit_mbids = split(db_query.getColumn(1).getString());
-                    results[index].artist_credit_name = db_query.getColumn(2).getString();
-                    results[index].release_mbid = db_query.getColumn(3).getString();
-                    results[index].release_name = db_query.getColumn(4).getString();
-                    results[index].recording_mbid = db_query.getColumn(5).getString();
-                    results[index].recording_name = db_query.getColumn(6).getString();
-                    found = true;
+                    result.artist_credit_mbids = split(db_query.getColumn(0).getString());
+                    result.artist_credit_name = db_query.getColumn(1).getString();
+                    result.release_mbid = db_query.getColumn(2).getString();
+                    result.release_name = db_query.getColumn(3).getString();
+                    result.recording_mbid = db_query.getColumn(4).getString();
+                    result.recording_name = db_query.getColumn(5).getString();
+                    return true;
                 }
             }
             catch (std::exception& e)
             {
-                printf("build artist db exception: %s\n", e.what());
+                printf("fetch metadata db exception: %s\n", e.what());
             }
             
-            return found;
+            return false;
         }
         
         SearchResult
@@ -149,14 +120,6 @@ class MappingSearch {
                 return no_result;
             }
             
-            //        res = artist_data->release_index->search(release_name_encoded, .7);
-            //        if (res.size()) {
-            //            IndexResult &result = res[0];
-            //            EntityRef &ref = (*artist_data->release_data)[result.id].release_refs[0];
-            //            release_id = ref.id;
-            //        }
-            
-
             if (release_name.size()) {
                 auto release_name_encoded = encode.encode_string(release_name); 
                 if (release_name_encoded.size()) {
@@ -182,7 +145,7 @@ class MappingSearch {
             return out;
         }
         
-        SearchResult
+        SearchResult *
         search(const string &artist_credit_name, const string &release_name, const string &recording_name) {
             SearchResult         output;
             vector<IndexResult>  res;
@@ -194,26 +157,23 @@ class MappingSearch {
             else {
                 auto stupid_name = encode.encode_string_for_stupid_artists(artist_credit_name); 
                 if (!stupid_name.size())
-                    return output;
+                    return nullptr;
 
                 res = artist_index->stupid_artist_index->search(artist_name, .7);
             }
             if (!res.size())
-                return output;
+                return nullptr;
             
             unsigned int artist_credit_id = res[0].id;
 
             for(auto &it : res) {
                 SearchResult r = recording_release_search(artist_credit_id, release_name, recording_name); 
                 if (r.confidence > .7) {
-                    vector<SearchResult> v;
-                    v.push_back(r);
-                    if (!fetch_metadata(v))
+                    if (!fetch_metadata(r))
                         throw std::length_error("failed to load metadata from sqlite.");
-
-                    return r;
+                    return new SearchResult(r);
                 }
             }
-            return output;
+            return nullptr;
         }
 };
