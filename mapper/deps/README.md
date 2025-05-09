@@ -62,3 +62,9 @@ Clone and build the following depedencies here:
 
   https://github.com/USCiLab/cereal.git
   No setup needed
+
+
+  Catch2
+
+  https://github.com/catchorg/Catch2.git
+  No setup needed

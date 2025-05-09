@@ -152,14 +152,14 @@ class MappingSearch {
 
             auto artist_name = encode.encode_string(artist_credit_name); 
             if (artist_name.size()) {
-                res = artist_index->artist_index->search(artist_name, .7);
+                res = artist_index->artist_index->search(artist_name, .5);
             }
             else {
                 auto stupid_name = encode.encode_string_for_stupid_artists(artist_credit_name); 
                 if (!stupid_name.size())
                     return nullptr;
 
-                res = artist_index->stupid_artist_index->search(artist_name, .7);
+                res = artist_index->stupid_artist_index->search(artist_name, .5);
             }
             if (!res.size())
                 return nullptr;

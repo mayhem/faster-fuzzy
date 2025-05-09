@@ -6,6 +6,20 @@
 #include "search.hpp"
 #include "utils.hpp"
 
+string
+make_comma_sep_string(const vector<string> &str_array) {
+    string ret; 
+    int index = 0;
+    for(auto &it : str_array) {
+        if (index > 0)
+            ret += string(",");
+                
+        ret += it;
+        index += 1;
+    }
+    return ret;
+}
+
 int main(int argc, char *argv[])
 {
     if (argc < 4) {
@@ -38,6 +52,9 @@ int main(int argc, char *argv[])
             result->recording_id,
             result->recording_mbid.c_str(),
             result->recording_name.c_str());
+        string mbids = make_comma_sep_string(result->artist_credit_mbids);
+        printf("    { \"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\" },\n", artist_name.c_str(), release_name.c_str(), recording_name.c_str(),
+                                                            mbids.c_str(), result->release_mbid.c_str(), result->recording_mbid.c_str());
         
         delete result;
     }
