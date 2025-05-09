@@ -152,6 +152,7 @@ class MappingSearch {
 
             auto artist_name = encode.encode_string(artist_credit_name); 
             if (artist_name.size()) {
+                printf("ARTIST SEARCH: '%s' (%s)\n", artist_credit_name.c_str(), artist_name.c_str());
                 res = artist_index->artist_index->search(artist_name, .5);
             }
             else {
@@ -159,10 +160,13 @@ class MappingSearch {
                 if (!stupid_name.size())
                     return nullptr;
 
+                printf("STUPID ARTIST SEARCH: '%s' (%s)\n", artist_credit_name.c_str(), artist_name.c_str());
                 res = artist_index->stupid_artist_index->search(artist_name, .5);
             }
-            if (!res.size())
+            if (!res.size()) {
+                printf("  no results\n");
                 return nullptr;
+            }
             
             unsigned int artist_credit_id = res[0].id;
 
