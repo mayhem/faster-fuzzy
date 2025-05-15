@@ -58,6 +58,11 @@ class FuzzyIndex {
             delete index;
             delete space;
         }
+        
+        string
+        get_index_text(unsigned int offset) {
+            return index_texts[offset];
+        }
 
         void
         transform_text(const arma::sp_mat &matrix, similarity::ObjectVector &data) {

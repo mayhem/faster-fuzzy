@@ -142,6 +142,7 @@ class MBIDMapping {
                             auto nower = chrono::system_clock::now();
                             time_t t1 = std::chrono::system_clock::to_time_t(nower);
                             printf("%d%% complete %.1f items/s (%d/%u)     \r", (int)(count * 100/total_count), (float)count/(t1-t0), count, total_count);
+                            fflush(stderr);
                         }
                     }    
                 }

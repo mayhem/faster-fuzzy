@@ -20,6 +20,14 @@ const char *fetch_metadata_query =
     "         mapping.release_id = ? AND "
     "         mapping.recording_id = ?";
 
+const char *fetch_metadata_query_without_release = 
+    "  SELECT artist_mbids, artist_credit_name, release_mbid, release_name, recording_mbid, recording_name "
+    "    FROM mapping "
+    "   WHERE mapping.artist_credit_id = ? AND "
+    "         mapping.recording_id = ? "
+    "ORDER BY score "
+    "   LIMIT 1";
+
 class MappingSearch {
     private:
         string              index_dir;
@@ -63,15 +71,27 @@ class MappingSearch {
         bool
         fetch_metadata(SearchResult &result) {
             string db_file = index_dir + string("/mapping.db");
+            string query;
+            
+            printf("fetch metadata %d %d %d\n", result.artist_credit_id, result.release_id, result.recording_id);
+            
+            if (result.release_id)
+                query = string(fetch_metadata_query);
+            else
+                query = string(fetch_metadata_query_without_release);
            
             try
             {
                 SQLite::Database    db(db_file);
-                SQLite::Statement   db_query(db, string(fetch_metadata_query));
+                SQLite::Statement   db_query(db, string(query));
                 
                 db_query.bind(1, result.artist_credit_id);
-                db_query.bind(2, result.release_id);
-                db_query.bind(3, result.recording_id);
+                if (result.release_id) {
+                    db_query.bind(2, result.release_id);
+                    db_query.bind(3, result.recording_id);
+                }
+                else 
+                    db_query.bind(2, result.recording_id);
 
                 while (db_query.executeStep()) {
                     result.artist_credit_mbids = split(db_query.getColumn(0).getString());
@@ -95,7 +115,8 @@ class MappingSearch {
         recording_release_search(unsigned int artist_credit_id, const string &release_name, const string &recording_name) {
             ArtistReleaseRecordingData *artist_data;
             SearchResult                no_result;
-            IndexResult                 rel_result, rec_result;
+            IndexResult                 rel_result = { 0, 0, 0.0 };
+            IndexResult                 rec_result = { 0, 0, 0.0 };
             
             // Add thresholding
 
@@ -112,9 +133,12 @@ class MappingSearch {
                 return no_result;
             }
 
+            printf("RECORDING SEARCH: '%s' (%s)\n", recording_name.c_str(), recording_name_encoded.c_str());
             vector<IndexResult> rec_results = artist_data->recording_index->search(recording_name_encoded, .7);
             if (rec_results.size()) {
                 rec_result = rec_results[0];
+                string text = artist_data->recording_index->get_index_text(rec_results[0].result_index);
+                printf("  %s %.2f\n", text.c_str(), rec_results[0].confidence);
             } else {
                 printf("No recording results.\n");
                 return no_result;
@@ -122,6 +146,7 @@ class MappingSearch {
             
             if (release_name.size()) {
                 auto release_name_encoded = encode.encode_string(release_name); 
+                printf("RELEASE SEARCH: '%s' (%s)\n", release_name.c_str(), release_name_encoded.c_str());
                 if (release_name_encoded.size()) {
                     vector<IndexResult> rel_results = artist_data->release_index->search(release_name_encoded, .7);
                     if (rel_results.size()) {
@@ -129,20 +154,26 @@ class MappingSearch {
                         EntityRef &ref = (*artist_data->release_data)[result.id].release_refs[0];
                         rel_result.id = ref.id;
                         rel_result.confidence = result.confidence;
+
+                        string text = artist_data->release_index->get_index_text(rel_results[0].result_index);
+                        printf("  %s %.2f\n", text.c_str(), rel_results[0].confidence);
                     } else
-                        printf("warning: no release matches, ignoring release.\n");
+                        printf("  no release matches, ignoring release.\n");
                 }
                 else
                     printf("warning: release name contains no word characters, ignoring release.\n");
             }
             float score;
-            if (release_name.size())
+            if (release_name.size()) {
                 score = (rec_result.confidence + rel_result.confidence) / 2.0;
-            else
+                SearchResult out(artist_credit_id, rel_result.id, rec_result.id, score);
+                return out;
+            } else {
                 score = rec_result.confidence;
+                SearchResult out(artist_credit_id, 0, rec_result.id, score);
+                return out;
+            }
                 
-            SearchResult out(artist_credit_id, rel_result.id, rec_result.id, score);
-            return out;
         }
         
         SearchResult *
@@ -166,6 +197,10 @@ class MappingSearch {
             if (!res.size()) {
                 printf("  no results\n");
                 return nullptr;
+            }
+            else {
+                string text = artist_index->artist_index->get_index_text(res[0].result_index);
+                printf("  %s %.2f\n", text.c_str(), res[0].confidence);
             }
             
             unsigned int artist_credit_id = res[0].id;
