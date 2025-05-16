@@ -195,17 +195,21 @@ class MappingSearch {
                 if (!stupid_name.size())
                     return nullptr;
 
-                printf("STUPID ARTIST SEARCH: '%s' (%s)\n", artist_credit_name.c_str(), artist_name.c_str());
-                res = artist_index->stupid_artist_index->search(artist_name, .5);
+                printf("STUPID ARTIST SEARCH: '%s' (%s)\n", artist_credit_name.c_str(), stupid_name.c_str());
+                res = artist_index->stupid_artist_index->search(stupid_name, .5);
             }
             if (!res.size()) {
                 printf("  no results\n");
                 return nullptr;
             }
             else {
+                string text;
                 for(auto &it : res) {
                     if (it.confidence >= artist_threshold) {
-                        string text = artist_index->artist_index->get_index_text(it.result_index);
+                        if (artist_name.size()) 
+                            text = artist_index->artist_index->get_index_text(it.result_index);
+                        else
+                            text = artist_index->stupid_artist_index->get_index_text(it.result_index);
                         printf("  %s %d %.2f\n", text.c_str(), it.id, it.confidence);
                     }
                 }

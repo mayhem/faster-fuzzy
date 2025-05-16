@@ -59,6 +59,7 @@ class MappingLookupIndex:
                                  ON artist_credit_id = acn.artist_credit
                                JOIN artist a
                                  ON acn.artist = a.id
+                              WHERE artist_credit_id > 3734610 and artist_credit_id < 3734620
                            GROUP BY artist_credit_id
                                   , artist_mbids
                                   , artist_credit_name
@@ -68,7 +69,6 @@ class MappingLookupIndex:
                                   , rec.id
                                   , score
                            ORDER BY artist_credit_id""")
-#                              WHERE artist_credit_id > 1230420 and artist_credit_id < 1230800
 #                              WHERE artist_credit_id < 20000
 
             print("load data")
