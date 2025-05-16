@@ -133,17 +133,6 @@ class MappingSearch {
                 return no_result;
             }
 
-            printf("RECORDING SEARCH: '%s' (%s)\n", recording_name.c_str(), recording_name_encoded.c_str());
-            vector<IndexResult> rec_results = artist_data->recording_index->search(recording_name_encoded, .7);
-            if (rec_results.size()) {
-                rec_result = rec_results[0];
-                string text = artist_data->recording_index->get_index_text(rec_results[0].result_index);
-                printf("  %s %.2f\n", text.c_str(), rec_results[0].confidence);
-            } else {
-                printf("No recording results.\n");
-                return no_result;
-            }
-            
             if (release_name.size()) {
                 auto release_name_encoded = encode.encode_string(release_name); 
                 printf("RELEASE SEARCH: '%s' (%s)\n", release_name.c_str(), release_name_encoded.c_str());
@@ -163,6 +152,18 @@ class MappingSearch {
                 else
                     printf("warning: release name contains no word characters, ignoring release.\n");
             }
+
+            printf("RECORDING SEARCH: '%s' (%s)\n", recording_name.c_str(), recording_name_encoded.c_str());
+            vector<IndexResult> rec_results = artist_data->recording_index->search(recording_name_encoded, .7);
+            if (rec_results.size()) {
+                rec_result = rec_results[0];
+                string text = artist_data->recording_index->get_index_text(rec_results[0].result_index);
+                printf("  %s %.2f\n", text.c_str(), rec_results[0].confidence);
+            } else {
+                printf("No recording results.\n");
+                return no_result;
+            }
+            
             float score;
             if (release_name.size()) {
                 score = (rec_result.confidence + rel_result.confidence) / 2.0;
@@ -175,6 +176,9 @@ class MappingSearch {
             }
                 
         }
+       
+        // TODO: Create dynamic thresholds based on length. Shorter artists will need more checks.
+        const float artist_threshold = .5;
         
         SearchResult *
         search(const string &artist_credit_name, const string &release_name, const string &recording_name) {
@@ -199,20 +203,26 @@ class MappingSearch {
                 return nullptr;
             }
             else {
-                string text = artist_index->artist_index->get_index_text(res[0].result_index);
-                printf("  %s %.2f\n", text.c_str(), res[0].confidence);
-            }
-            
-            unsigned int artist_credit_id = res[0].id;
-
-            for(auto &it : res) {
-                SearchResult r = recording_release_search(artist_credit_id, release_name, recording_name); 
-                if (r.confidence > .7) {
-                    if (!fetch_metadata(r))
-                        throw std::length_error("failed to load metadata from sqlite.");
-                    return new SearchResult(r);
+                for(auto &it : res) {
+                    if (it.confidence >= artist_threshold) {
+                        string text = artist_index->artist_index->get_index_text(it.result_index);
+                        printf("  %s %d %.2f\n", text.c_str(), it.id, it.confidence);
+                    }
                 }
             }
+            
+            for(auto &it : res) {
+                if (it.confidence >= artist_threshold) {
+                    SearchResult r = recording_release_search(it.id, release_name, recording_name); 
+                    if (r.confidence > .7) {
+                        if (!fetch_metadata(r))
+                            throw std::length_error("failed to load metadata from sqlite.");
+                        printf("\n");
+                        return new SearchResult(r);
+                    }
+                }
+            }
+            printf("No matches found.\n");
             return nullptr;
         }
 };

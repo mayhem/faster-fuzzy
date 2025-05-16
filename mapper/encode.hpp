@@ -50,7 +50,7 @@ class EncodeSearchData {
             unidecode::Unidecode(begin, end, std::back_inserter(output));
             return output;
         }
-
+        
         string
         encode_string(const string &text) {
             // Remove spaces, punctuation, convert non-ascii characters to some romanized equivalent, lower case, return
@@ -59,7 +59,7 @@ class EncodeSearchData {
                 return a;
             }
             string cleaned(non_word->replace(text,"", "g"));
-            //cleaned = unidecode(cleaned);
+            cleaned = unidecode(cleaned);
             transform(cleaned.begin(), cleaned.end(), cleaned.begin(), ::tolower);
             // Sometimes unidecode puts spaces in, so remove them
             string ret(spaces_uscore->replace(cleaned,"", "g"));
