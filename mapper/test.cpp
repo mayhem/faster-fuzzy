@@ -45,6 +45,7 @@ TestCase test_cases[] = {
     { "Charli xcx","BRAT","365","260b6184-8828-48eb-945c-bc4cb6fc34ca","82082eb8-19a0-4957-9a99-e8fda1bb6b88","bd9fd6a1-d41b-4b82-9ead-a4f958749a77" },
     { "Milana","MALLORCA STONER VOL.1","Forest Tale","3ac26f6c-0370-4451-a321-0880849257f9", "60422eb6-5d26-4e8e-801a-ab0d30d787e4","3c532ced-12af-44f8-85d8-7e88302e4bbe" },
     { "x#!*┦97","1 LP","untitled 1","78308fa1-b583-4b6c-a592-931df0126d29","3e7cb8db-6d89-4a54-8128-113f297fa83d","bc3c4795-e1bf-4350-b976-09be082bf077" },
+    { "The Beach Boys","The Smile Sessions","Child Is Father of the Man","ebfc1398-8d96-47e3-82c3-f782abcdb13d","581db767-5221-424b-b6a0-d5db2ff707a1","710ef859-ad3e-4e0e-981b-cecad50e41f4" },
 
 // Encoding issues?
 //    { "Yaakov Shwekey","גוף ונשמה 1/4","Galgalim","90820c40-dfee-4d31-9147-a56383df402b","59855bd1-9e13-4b55-9c77-c793c4dd8cc2" },
@@ -53,12 +54,11 @@ TestCase test_cases[] = {
 //    { "Hans Zimmer, Lorne Balfe & Benjamin Wallfisch","Dunkirk: Original Motion Picture Soundtrack","End Titles","9cba57da-0a50-48d0-8a7b-232e31e196a0", "4d4b8a77-6c2e-4e6f-bc12-e563e9efab91","94f64a3f-b7d8-472f-99bb-ca07afad55da" },
 //    { "xhashsymbolexclamationpointasteriskrightdoublevertical97","1 LP","untitled 1","78308fa1-b583-4b6c-a592-931df0126d29","3e7cb8db-6d89-4a54-8128-113f297fa83d","bc3c4795-e1bf-4350-b976-09be082bf077" },
 //    { "Ornette Coleman","Ornette!","W.R.U.","31ea99e3-c222-4809-8912-95678314beec","4c7b347e-16b2-41eb-b56e-97edb77ee961","43065996-51e7-4942-8803-aa2a0249b8a6" },
+// Missing two artists credit ids, one artist. Advanced artist support needed.
+//    { "Ishay Ribo", "סוף חמה לבוא","רבי שמעון","4d5abad8-d57b-4c3f-b477-043214e96dc4","677fc470-d38d-463b-a020-b82c2f25321e","b3068af6-aee0-4f37-b079-6f79cc9eabbd" },
 // This one requires Album + Soundtrack to be ranked higher than EP.
 //    { "Angelo Badalamenti","","Laura Palmer’s Theme","e441d678-b225-3ea1-808c-9c488fdc3ac6","5894dac5-0260-4175-b36e-e34680a859d6","4cc6e566-96c3-4709-9ec0-a9b39c115e2f" },
-// Missing recordings in the sqlite database
-//    { "Ishay Ribo","סוף חמה לבוא","רבי שמעון","4d5abad8-d57b-4c3f-b477-043214e96dc4","677fc470-d38d-463b-a020-b82c2f25321e","b3068af6-aee0-4f37-b079-6f79cc9eabbd" },
 // Failed to load metadata
-//    { "The Beach Boys","The Smile Sessions","Child Is Father of the Man","ebfc1398-8d96-47e3-82c3-f782abcdb13d","581db767-5221-424b-b6a0-d5db2ff707a1","710ef859-ad3e-4e0e-981b-cecad50e41f4" },
 //    { "Celtic Woman","20th Anniversary","When You Believe","4d483147-c871-48c4-8470-85e5a66381c5","9659808f-3382-42be-8c5d-477d271f9791","376e5743-7bf5-49ee-9c7e-f00aa479882c" },
 //    { "Harry Nilsson","Nilsson Schmilsson","Without You","e5963d26-01fa-40f5-b200-e0127f410a45","9be5bdcb-692b-4d7e-8d16-6d5741539ade","fa2013f9-dca8-4c1c-9481-753ffcadbae3" },
 // Needs stupid indexes for release and recordings!

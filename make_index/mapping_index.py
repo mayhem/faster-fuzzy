@@ -59,7 +59,7 @@ class MappingLookupIndex:
                                  ON artist_credit_id = acn.artist_credit
                                JOIN artist a
                                  ON acn.artist = a.id
-                              WHERE artist_credit_id > 3734610 and artist_credit_id < 3734620
+                              WHERE artist_credit_id = 3734617
                            GROUP BY artist_credit_id
                                   , artist_mbids
                                   , artist_credit_name
@@ -69,6 +69,7 @@ class MappingLookupIndex:
                                   , rec.id
                                   , score
                            ORDER BY artist_credit_id""")
+#                              WHERE artist_credit_id > 3734610 and artist_credit_id < 3734620
 #                              WHERE artist_credit_id < 20000
 
             print("load data")
@@ -124,7 +125,7 @@ class MappingLookupIndex:
             return
 
         # Get rid of the CSV files now that we've imported it
-        os.unlink(import_file)
+        #os.unlink(import_file)
 
         t1 = monotonic()
         print("loaded data and saved artist index data in %.1f seconds." % (t1 - t0))
