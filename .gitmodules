@@ -1,0 +1,27 @@
+[submodule "mapper/deps/nmslib"]
+	path = mapper/deps/nmslib
+	url = https://github.com/metabrainz/nmslib-metabrainz.git
+[submodule "mapper/deps/unidecode"]
+	path = mapper/deps/unidecode
+	url = https://github.com/metabrainz/unidecode.git
+[submodule "mapper/deps/SQLiteCpp"]
+	path = mapper/deps/SQLiteCpp
+	url = https://github.com/SRombauts/SQLiteCpp.git
+[submodule "mapper/deps/Crow"]
+	path = mapper/deps/Crow
+	url = https://github.com/CrowCpp/Crow.git
+[submodule "mapper/deps/pcre2"]
+	path = mapper/deps/pcre2
+	url = https://github.com/PCRE2Project/pcre2.git
+[submodule "mapper/deps/jpcre2"]
+	path = mapper/deps/jpcre2
+	url = https://github.com/jpcre2/jpcre2.git
+[submodule "mapper/deps/armadillo-code"]
+	path = mapper/deps/armadillo-code
+	url = https://gitlab.com/conradsnicta/armadillo-code
+[submodule "mapper/deps/cereal"]
+	path = mapper/deps/cereal
+	url = https://github.com/USCiLab/cereal.git
+[submodule "mapper/deps/Catch2"]
+	path = mapper/deps/Catch2
+	url = https://github.com/catchorg/Catch2.git
