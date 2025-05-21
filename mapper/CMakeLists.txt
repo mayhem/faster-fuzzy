@@ -23,7 +23,6 @@ add_subdirectory(deps/Catch2)
 add_executable(mapping_server server.cpp tfidf_vectorizer.cpp levenshtein.cpp)
 add_executable(mapping_creator mapping.cpp tfidf_vectorizer.cpp)
 add_executable(mapping_test test.cpp tfidf_vectorizer.cpp levenshtein.cpp)
-add_executable(mapping_encode encode_test.cpp)
 include_directories(deps/nmslib/similarity_search/include
                     deps/unidecode/include
                     deps/jpcre2/src
@@ -56,8 +55,4 @@ target_link_libraries(mapping_test NonMetricSpaceLib
                                    pthread
                                    cereal
                                    Catch2::Catch2
-)
-
-target_link_libraries(mapping_encode unidecode
-                                     cereal
 )
