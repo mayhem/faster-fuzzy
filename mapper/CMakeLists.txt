@@ -11,7 +11,10 @@ project(faster_fuzzy
     CXX
 )
 
+# TODO: Pin all depedencies
+
 add_compile_options("-std=c++17")
+
 add_subdirectory(deps/nmslib/similarity_search)
 add_subdirectory(deps/pcre2)
 add_subdirectory(deps/armadillo-code)
@@ -19,8 +22,7 @@ add_subdirectory(deps/unidecode)
 add_subdirectory(deps/cereal)
 add_subdirectory(deps/SQLiteCpp)
 add_subdirectory(deps/Catch2)
-add_subdirectory(deps/taopq)
-add_subdirectory(deps/postgresql/src/interfaces/libpq)
+add_subdirectory(deps/libpqxx)
 
 add_executable(mapping_server server.cpp tfidf_vectorizer.cpp levenshtein.cpp)
 add_executable(mapping_creator mapping.cpp tfidf_vectorizer.cpp)
@@ -31,7 +33,6 @@ include_directories(deps/nmslib/similarity_search/include
                     deps/cereal
                     deps/SQLiteCpp/include/SQLiteCpp
                     deps/Catch2/src
-                    deps/taopq/include
 )
 target_link_libraries(mapping_creator NonMetricSpaceLib
                                       unidecode
@@ -40,7 +41,7 @@ target_link_libraries(mapping_creator NonMetricSpaceLib
                                       SQLiteCpp 
                                       pthread
                                       cereal
-                                      taopq
+                                      pqxx
 )
 target_link_libraries(mapping_server NonMetricSpaceLib
                                      unidecode

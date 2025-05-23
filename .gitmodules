@@ -25,3 +25,6 @@
 [submodule "mapper/deps/Catch2"]
 	path = mapper/deps/Catch2
 	url = https://github.com/catchorg/Catch2.git
+[submodule "mapper/deps/libpqxx"]
+	path = mapper/deps/libpqxx
+	url = https://github.com/jtv/libpqxx.git
