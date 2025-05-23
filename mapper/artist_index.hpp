@@ -3,7 +3,7 @@
 #include <ctime>
 
 #include <cereal/archives/binary.hpp>
-
+#include <pqxx/pqxx>
 #include "SQLiteCpp.h"
 #include "fuzzy_index.hpp"
 #include "encode.hpp"
@@ -15,7 +15,8 @@ const int ARTIST_INDEX_ENTITY_ID = -1;
 const int STUPID_ARTIST_INDEX_ENTITY_ID = -2;
 
 const char *fetch_artists_query = 
-    "SELECT DISTINCT artist_credit_id, artist_credit_name FROM mapping";
+    "SELECT id AS artist_credit_id, name AS artist_credit_name FROM artist_credit";
+
 const char *insert_blob_query = 
     "INSERT INTO index_cache (entity_id, index_data) VALUES (?, ?) "
     "         ON CONFLICT(entity_id) DO UPDATE SET index_data=excluded.index_data";
@@ -61,15 +62,20 @@ class ArtistIndex {
 
             try
             {
-                SQLite::Database    db(db_file);
-                log("execute query");
-                SQLite::Statement   query(db, fetch_artists_query);
-        
-                log("fetch rows");
-                while (query.executeStep()) {
-                    index_ids.push_back(query.getColumn(0));
-                    index_texts.push_back(query.getColumn(1));
+                pqxx::connection     conn("dbname=musicbrainz_db user=musicbrainz host=localhost port=5432");
+                pqxx::nontransaction txn(conn);
+               
+                printf("execute query\n");
+                pqxx::result result  = txn.exec(fetch_artists_query);
+                
+                for (pqxx::row row : result) {
+                    // Access columns by their name or index
+                    // For example, row["id"] or row[0]
+                    index_ids.push_back(row["artist_credit_id"].as<int>());
+                    index_texts.push_back(row["artist_credit_name"].as<std::string>());
                 }
+
+                log("fetch rows");
             }
             catch (std::exception& e)
             {
