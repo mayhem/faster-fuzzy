@@ -62,21 +62,35 @@ class ArtistIndex {
 
             try
             {
-                auto conn = PQconnectdb("dbname=musicbrainz_db user=musicbrainz host=localhost port=5432");
-//                pqxx::connection     conn("dbname=musicbrainz_db user=musicbrainz host=localhost port=5432");
-//                pqxx::nontransaction txn(conn);
+                PGconn     *conn;
+                PGresult   *res;
+                
+                conn = PQconnectdb("dbname=musicbrainz_db user=musicbrainz password=musicbrainz host=127.0.0.1 port=5432");
+                if (PQstatus(conn) != CONNECTION_OK) {
+                    printf("Connection to database failed: %s\n", PQerrorMessage(conn));
+                    PQfinish(conn);
+                    return;
+                }
                
                 printf("execute query\n");
-//                pqxx::result result  = txn.exec(fetch_artists_query);
-                
-//                for (pqxx::row row : result) {
-//                    // Access columns by their name or index
-//                    // For example, row["id"] or row[0]
-//                    index_ids.push_back(row["artist_credit_id"].as<int>());
-//                    index_texts.push_back(row["artist_credit_name"].as<std::string>());
-//                }
-
+                res = PQexec(conn, fetch_artists_query);
+                if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+                    printf("Query failed: %s\n", PQerrorMessage(conn));
+                    PQclear(res);
+                    PQfinish(conn);
+                    return;
+                }
                 log("fetch rows");
+                for (int i = 0; i < PQntuples(res); i++) {
+                    int id = atoi(PQgetvalue(res, i, 0));
+                    string text(PQgetvalue(res, i, 1));
+
+                    index_ids.push_back(id);
+                    index_texts.push_back(text);
+                }
+            
+                // Clear the PGresult object to free memory
+                PQclear(res);
             }
             catch (std::exception& e)
             {

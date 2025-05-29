@@ -35,9 +35,6 @@ add_executable(mapping_server server.cpp tfidf_vectorizer.cpp levenshtein.cpp)
 add_executable(mapping_creator mapping.cpp tfidf_vectorizer.cpp)
 add_executable(mapping_test test.cpp tfidf_vectorizer.cpp levenshtein.cpp)
 
-#message(STATUS "include dir for libpq is: ${libpq_SOURCE_DIR}")
-#target_include_directories(mapping_creator PUBLIC "${libpq_SOURCE_DIR}/libpq/interfaces/libpq")
-
 include_directories(deps/nmslib/similarity_search/include
                     deps/unidecode/include
                     deps/jpcre2/src
