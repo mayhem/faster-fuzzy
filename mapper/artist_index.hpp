@@ -3,7 +3,7 @@
 #include <ctime>
 
 #include <cereal/archives/binary.hpp>
-#include <pqxx/pqxx>
+#include "libpq-fe.h"
 #include "SQLiteCpp.h"
 #include "fuzzy_index.hpp"
 #include "encode.hpp"
@@ -62,18 +62,19 @@ class ArtistIndex {
 
             try
             {
-                pqxx::connection     conn("dbname=musicbrainz_db user=musicbrainz host=localhost port=5432");
-                pqxx::nontransaction txn(conn);
+                auto conn = PQconnectdb("dbname=musicbrainz_db user=musicbrainz host=localhost port=5432");
+//                pqxx::connection     conn("dbname=musicbrainz_db user=musicbrainz host=localhost port=5432");
+//                pqxx::nontransaction txn(conn);
                
                 printf("execute query\n");
-                pqxx::result result  = txn.exec(fetch_artists_query);
+//                pqxx::result result  = txn.exec(fetch_artists_query);
                 
-                for (pqxx::row row : result) {
-                    // Access columns by their name or index
-                    // For example, row["id"] or row[0]
-                    index_ids.push_back(row["artist_credit_id"].as<int>());
-                    index_texts.push_back(row["artist_credit_name"].as<std::string>());
-                }
+//                for (pqxx::row row : result) {
+//                    // Access columns by their name or index
+//                    // For example, row["id"] or row[0]
+//                    index_ids.push_back(row["artist_credit_id"].as<int>());
+//                    index_texts.push_back(row["artist_credit_name"].as<std::string>());
+//                }
 
                 log("fetch rows");
             }

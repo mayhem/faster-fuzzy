@@ -24,17 +24,30 @@ add_subdirectory(deps/cereal)
 add_subdirectory(deps/SQLiteCpp)
 add_subdirectory(deps/Catch2)
 
+include(FetchContent)
+FetchContent_Declare(libpq
+    GIT_REPOSITORY https://gitlab.com/sabelka/libpq-standalone
+    GIT_TAG        REL_16_1
+    SOURCE_SUBDIR libpq)
+FetchContent_MakeAvailable(libpq)
+
 add_executable(mapping_server server.cpp tfidf_vectorizer.cpp levenshtein.cpp)
 add_executable(mapping_creator mapping.cpp tfidf_vectorizer.cpp)
 add_executable(mapping_test test.cpp tfidf_vectorizer.cpp levenshtein.cpp)
+
+#message(STATUS "include dir for libpq is: ${libpq_SOURCE_DIR}")
+#target_include_directories(mapping_creator PUBLIC "${libpq_SOURCE_DIR}/libpq/interfaces/libpq")
+
 include_directories(deps/nmslib/similarity_search/include
                     deps/unidecode/include
                     deps/jpcre2/src
                     deps/cereal
                     deps/SQLiteCpp/include/SQLiteCpp
                     deps/Catch2/src
-                    deps/libpqxx/include
+                    ${libpq_SOURCE_DIR}/libpq/interfaces/libpq
+                    ${libpq_SOURCE_DIR}/libpq/include
 )
+
 target_link_libraries(mapping_creator NonMetricSpaceLib
                                       unidecode
                                       libpcre2-8.a
@@ -42,8 +55,8 @@ target_link_libraries(mapping_creator NonMetricSpaceLib
                                       SQLiteCpp 
                                       pthread
                                       cereal
-                                      pqxx
                                       pq
+                                      bsd
 )
 target_link_libraries(mapping_server NonMetricSpaceLib
                                      unidecode
