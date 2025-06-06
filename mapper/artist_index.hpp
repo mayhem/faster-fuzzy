@@ -1,6 +1,8 @@
 #pragma once
 #include <stdio.h>
 #include <ctime>
+#include <set>
+#include <cassert>
 
 #include <cereal/archives/binary.hpp>
 #include "libpq-fe.h"
@@ -14,8 +16,29 @@ using namespace std;
 const int ARTIST_INDEX_ENTITY_ID = -1;
 const int STUPID_ARTIST_INDEX_ENTITY_ID = -2;
 
+// TODO: Artist index results could give the same artist_credit_id twice -- don't carry out two searches!
 const char *fetch_artists_query = 
-    "SELECT id AS artist_credit_id, name AS artist_credit_name FROM artist_credit";
+    " WITH acs AS ( "
+    "       SELECT DISTINCT artist_credit AS artist_credit_id "
+    "         FROM recording "
+    ")"
+    "       SELECT a.id AS artist_id"
+    "            , a.name AS artist_name"
+    "            , ac.id AS artist_credit_id"
+    "            , ac.name AS artist_credit_name"
+    "            , ac.artist_count"
+    "         FROM musicbrainz.artist_credit ac"
+    "         JOIN musicbrainz.artist_credit_name acn"
+    "           ON acn.artist_credit = ac.id"
+    "         JOIN artist a"
+    "           ON acn.artist = a.id"
+    "         JOIN acs "
+    "           ON ac.id = acs.artist_credit_id "
+    "        WHERE artist_count = 1"
+//    "          AND a.id > 1117030 AND a.id < 1117100"
+    "          AND a.id > 1" 
+    "     ORDER BY artist_credit_id, artist_id";
+//    "          AND a.id < 1000"
 
 const char *insert_blob_query = 
     "INSERT INTO index_cache (entity_id, index_data) VALUES (?, ?) "
@@ -57,8 +80,9 @@ class ArtistIndex {
         // 幾何学模様 a                  Kikagaku Moyo c
         void build() {
             
-            vector<unsigned int> index_ids;
-            vector<string>       index_texts;
+            vector<unsigned int>                               index_ids;
+            vector<string>                                     index_texts;
+            map<unsigned int, set<string>>                     alias_map;
 
             try
             {
@@ -80,13 +104,66 @@ class ArtistIndex {
                     PQfinish(conn);
                     return;
                 }
+
+//        17 | Bob Dylan            |               17 | Bob Dylan
+//        17 | Bob Dylan            |           837138 | Боб Дилан
+//        17 | Bob Dylan            |          1198224 | Blind Boy Grunt
+//        17 | Bob Dylan            |          1373453 | ボブ ディラン
+//        17 | Bob Dylan            |          1666647 | Bob Dylan with a Chi
+//        17 | Bob Dylan            |          2544378 | Bob Dylan with frien
+//        17 | Bob Dylan            |          3398709 | Bob Dylan & The Band
+//        17 | Bob Dylan            |          4299648 | Bob Dylan and His Ba
+//        18 | 10cc                 |          1390218 | 10-CC
+//        18 | 10cc                 |               18 | 10cc
+//        18 | 10cc                 |          1318360 | 10 CC
+//        18 | 10cc                 |           937655 | Ten CC
+//        18 | 10cc                 |          1031053 | 10 cc
+//        18 | 10cc                 |          1326938 | 10 C. C.
+//        18 | 10cc                 |          1279783 | 10C.C
+//        
+
+//artist_id | artist_name | artist_credit_id | artist_credit_name | artist_count 
+//-----------+-------------+------------------+--------------------+--------------
+//    109013 | !!!         |           109013 | !!!                |            1
+//    109013 | !!!         |          1983644 | Chk Chk Chk        |            1
+//    109013 | !!!         |          3181714 | !!! (Chk Chk Chk)  |            1
+
+
+            //map<unsigned int, set<string>> index_aliases;
+            
                 log("fetch rows");
+                unsigned int last_id = 0;
+                unsigned int saved_artist_credit_id = 0;
+                string last_text;
+                vector<pair<unsigned int, string>> aliases;
                 for (int i = 0; i < PQntuples(res); i++) {
                     int id = atoi(PQgetvalue(res, i, 0));
                     string text(PQgetvalue(res, i, 1));
+                    unsigned int artist_credit_id = atoi(PQgetvalue(res, i, 2));
+                    string artist_credit_name = PQgetvalue(res, i, 3);
+                    
+                    if (last_id == 0)
+                        last_id = id;
 
-                    index_ids.push_back(id);
-                    index_texts.push_back(text);
+                    if (id != last_id) {
+                        // Save collected data
+                        index_ids.push_back(saved_artist_credit_id);
+                        index_texts.push_back(last_text);
+                        process_aliases(aliases, alias_map);
+                        aliases.clear();
+                        
+                        // Now look at the first row of the next artist 
+                        saved_artist_credit_id = artist_credit_id; 
+                    }
+                    
+                    if (artist_credit_id != id && text != artist_credit_name) {
+                        //printf("add alias: %d '%s' '%s'\n", id, text.c_str(), artist_credit_name.c_str());
+                        pair<unsigned int, string> p = { artist_credit_id, artist_credit_name };
+                        aliases.push_back(p);
+                    }
+                    
+                    last_id = id;
+                    last_text = text;
                 }
             
                 // Clear the PGresult object to free memory
@@ -100,7 +177,7 @@ class ArtistIndex {
             vector<string>       output_texts, output_rems, stupid_texts, stupid_rems;
                     
             log("encode data");
-            encode.encode_index_data(index_ids, index_texts, output_ids, output_texts, stupid_ids, stupid_texts);
+            encode.encode_index_data(index_ids, index_texts, alias_map, output_ids, output_texts, stupid_ids, stupid_texts);
             log("%lu items in index", output_ids.size());
             {
                 FuzzyIndex *index = new FuzzyIndex();
@@ -113,7 +190,7 @@ class ArtistIndex {
                     cereal::BinaryOutputArchive oarchive(ss);
                     oarchive(*index);
                 }
-                log("artist index size: %lu", ss.str().length());
+                log("artist index size: %lu bytes", ss.str().length());
            
                 std::stringstream sss;
                 if (stupid_ids.size()) {
@@ -150,6 +227,24 @@ class ArtistIndex {
                 }
             }
             log("done building artists indexes.");
+        }
+        
+        void
+        process_aliases(const vector<pair<unsigned int, string>> &artist_aliases, map<unsigned int, set<string>> &global_aliases) {
+            set<string> texts;
+
+            printf("process: \n");
+            for(auto &it : artist_aliases) {
+                texts.insert(it.second);
+                printf("  %s\n", it.second.c_str());
+            }
+
+            for(auto &it : artist_aliases) {
+                global_aliases[it.first] = texts;
+                //printf("Add to global: %d\n", it.first);
+                for(auto &i : texts)
+                    printf("  %s\n", i.c_str());
+            }
         }
         
         bool

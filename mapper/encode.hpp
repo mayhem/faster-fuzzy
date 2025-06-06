@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <iostream>
 #include <map>
+#include <set>
 #include <string>
 #include <vector>
 using namespace std;
@@ -79,13 +80,31 @@ class EncodeSearchData {
             transform(cleaned.begin(), cleaned.end(), cleaned.begin(), ::tolower);
             return cleaned;
         }
+        
+        set<string>
+        reduce_aliases(const set<string> &aliases, const string &encoded_name) {
+            set<string> result;
+
+            for(auto &it : aliases) {
+                auto ret = encode_string(it);
+                if (!ret.size())
+                    continue;
+
+                if (ret != encoded_name)
+                    result.insert(ret);
+            }
+            
+            return result;
+        }
 
         void 
-        encode_index_data(const vector<unsigned int> &input_ids, const vector<string> &input_texts,
-                          vector<unsigned int> &output_ids,
-                          vector<string>       &output_texts,
-                          vector<unsigned int> &stupid_ids,
-                          vector<string>       &stupid_texts) {
+        encode_index_data(const vector<unsigned int>           &input_ids,
+                          const vector<string>                 &input_texts,
+                          map<unsigned int, set<string>>       &alias_map,
+                          vector<unsigned int>                 &output_ids,
+                          vector<string>                       &output_texts,
+                          vector<unsigned int>                 &stupid_ids,
+                          vector<string>                       &stupid_texts) {
             for(unsigned int i = 0; i < input_ids.size(); i++) {
                 auto ret = encode_string(input_texts[i]);
                 if (ret.size() == 0) {
@@ -98,6 +117,18 @@ class EncodeSearchData {
                 }
                 output_ids.push_back(input_ids[i]);
                 output_texts.push_back(ret);
+               
+                auto reduced = reduce_aliases(alias_map[input_ids[i]], ret);
+                for(auto &it : reduced) {
+                    output_ids.push_back(input_ids[i]);
+                    output_texts.push_back(it);
+                    
+//                    if (input_ids[i] == 3734617 || 
+//                        input_ids[i] == 1316054 ||
+//                        input_ids[i] == 3823048 ||
+//                        input_ids[i] == 3818190)
+//                        printf("%d: add '%s'\n", input_ids[i], it.c_str());
+                } 
             }
         }
 };

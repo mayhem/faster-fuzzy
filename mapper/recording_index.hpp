@@ -55,6 +55,8 @@ class RecordingIndex {
                     string ret = encode.encode_string(recording_name);
                     if (ret.size() == 0)
                         continue;
+
+                    printf("%d '%s' '%s'\n", recording_id, ret.c_str(), recording_name.c_str());
                     
                     EntityRef ref(release_id, rank);
                     auto iter = recording_ref.find(ret);
@@ -82,6 +84,7 @@ class RecordingIndex {
                         release_name_rank[k] = rank;
                     }
                 }
+                printf("===================================\n\n");
             }
             catch (std::exception& e)
             {
@@ -97,8 +100,6 @@ class RecordingIndex {
                 t_release_data.push_back(rel);
             }
             release_name_rank.clear();
-            //                 recording_id 
-            //map<string, pair<unsigned int, vector<EntityRef>>> recording_ref;
             vector<string> recording_texts;
             vector<unsigned int> recording_ids;
             for(auto &itr : recording_ref) {
@@ -179,8 +180,10 @@ class RecordingIndex {
                         iarchive(*recording_index, *release_index, *supp_data);
                     }
                     return;
-                } else 
+                } else {
+                    printf("Cannot load index for %d\n", entity_id);
                     throw std::length_error("index not found in db");
+                }
             }
             catch (std::exception& e)
             {
