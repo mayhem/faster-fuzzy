@@ -82,7 +82,7 @@ class EncodeSearchData {
         }
         
         set<string>
-        reduce_aliases(const set<string> &aliases, const string &encoded_name) {
+        reduce_aliases(const vector<string> &aliases, const string &encoded_name) {
             set<string> result;
 
             for(auto &it : aliases) {
@@ -100,12 +100,13 @@ class EncodeSearchData {
         void 
         encode_index_data(const vector<unsigned int>           &input_ids,
                           const vector<string>                 &input_texts,
-                          map<unsigned int, set<string>>       &alias_map,
+                          map<unsigned int, vector<string>>    &alias_map,
                           vector<unsigned int>                 &output_ids,
                           vector<string>                       &output_texts,
                           vector<unsigned int>                 &stupid_ids,
                           vector<string>                       &stupid_texts) {
             for(unsigned int i = 0; i < input_ids.size(); i++) {
+                printf("encode: %d: '%s'\n", input_ids[i], input_texts[i].c_str());
                 auto ret = encode_string(input_texts[i]);
                 if (ret.size() == 0) {
                     auto stupid = encode_string_for_stupid_artists(input_texts[i]);
@@ -117,17 +118,13 @@ class EncodeSearchData {
                 }
                 output_ids.push_back(input_ids[i]);
                 output_texts.push_back(ret);
-               
+
                 auto reduced = reduce_aliases(alias_map[input_ids[i]], ret);
                 for(auto &it : reduced) {
                     output_ids.push_back(input_ids[i]);
                     output_texts.push_back(it);
                     
-//                    if (input_ids[i] == 3734617 || 
-//                        input_ids[i] == 1316054 ||
-//                        input_ids[i] == 3823048 ||
-//                        input_ids[i] == 3818190)
-//                        printf("%d: add '%s'\n", input_ids[i], it.c_str());
+                    printf("   alias '%s'\n", it.c_str());
                 } 
             }
         }

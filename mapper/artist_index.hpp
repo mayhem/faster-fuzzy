@@ -34,10 +34,10 @@ const char *fetch_artists_query =
     "           ON acn.artist = a.id"
     "         JOIN acs "
     "           ON ac.id = acs.artist_credit_id "
-    "        WHERE artist_count = 1"
+    "        WHERE a.id > 1" 
+//    "          AND a.id = 1053737"
+    "     ORDER BY artist_id, artist_credit_id";
 //    "          AND a.id > 1117030 AND a.id < 1117100"
-    "          AND a.id > 1" 
-    "     ORDER BY artist_credit_id, artist_id";
 //    "          AND a.id < 1000"
 
 const char *insert_blob_query = 
@@ -82,7 +82,7 @@ class ArtistIndex {
             
             vector<unsigned int>                               index_ids;
             vector<string>                                     index_texts;
-            map<unsigned int, set<string>>                     alias_map;
+            map<unsigned int, vector<string>>                  alias_map;
 
             try
             {
@@ -96,7 +96,6 @@ class ArtistIndex {
                     return;
                 }
                
-                printf("execute query\n");
                 res = PQexec(conn, fetch_artists_query);
                 if (PQresultStatus(res) != PGRES_TUPLES_OK) {
                     printf("Query failed: %s\n", PQerrorMessage(conn));
@@ -105,62 +104,63 @@ class ArtistIndex {
                     return;
                 }
 
-//        17 | Bob Dylan            |               17 | Bob Dylan
-//        17 | Bob Dylan            |           837138 | Боб Дилан
-//        17 | Bob Dylan            |          1198224 | Blind Boy Grunt
-//        17 | Bob Dylan            |          1373453 | ボブ ディラン
-//        17 | Bob Dylan            |          1666647 | Bob Dylan with a Chi
-//        17 | Bob Dylan            |          2544378 | Bob Dylan with frien
-//        17 | Bob Dylan            |          3398709 | Bob Dylan & The Band
-//        17 | Bob Dylan            |          4299648 | Bob Dylan and His Ba
-//        18 | 10cc                 |          1390218 | 10-CC
-//        18 | 10cc                 |               18 | 10cc
-//        18 | 10cc                 |          1318360 | 10 CC
-//        18 | 10cc                 |           937655 | Ten CC
-//        18 | 10cc                 |          1031053 | 10 cc
-//        18 | 10cc                 |          1326938 | 10 C. C.
-//        18 | 10cc                 |          1279783 | 10C.C
-//        
-
-//artist_id | artist_name | artist_credit_id | artist_credit_name | artist_count 
-//-----------+-------------+------------------+--------------------+--------------
-//    109013 | !!!         |           109013 | !!!                |            1
-//    109013 | !!!         |          1983644 | Chk Chk Chk        |            1
-//    109013 | !!!         |          3181714 | !!! (Chk Chk Chk)  |            1
-
-
-            //map<unsigned int, set<string>> index_aliases;
-            
                 log("fetch rows");
-                unsigned int last_id = 0;
-                unsigned int saved_artist_credit_id = 0;
-                string last_text;
-                vector<pair<unsigned int, string>> aliases;
-                for (int i = 0; i < PQntuples(res); i++) {
-                    int id = atoi(PQgetvalue(res, i, 0));
-                    string text(PQgetvalue(res, i, 1));
-                    unsigned int artist_credit_id = atoi(PQgetvalue(res, i, 2));
-                    string artist_credit_name = PQgetvalue(res, i, 3);
-                    
-                    if (last_id == 0)
-                        last_id = id;
+                unsigned int         last_id = 0;
+                unsigned int         saved_artist_credit_id = 0;
+                string               last_text;
+                vector<unsigned int> alias_ids;
+                vector<string>       alias_texts;
+                for (int i = 0; i < PQntuples(res) + 1; i++) {
+                    int id, artist_credit_id, artist_count;
+                    string text, artist_credit_name;
+
+                    if (i < PQntuples(res)) {
+                        id = atoi(PQgetvalue(res, i, 0));
+                        text = PQgetvalue(res, i, 1);
+                        artist_credit_id = atoi(PQgetvalue(res, i, 2));
+                        artist_credit_name = PQgetvalue(res, i, 3);
+                        artist_count = atoi(PQgetvalue(res, i, 4));
+                        if (last_id == 0) {
+                            last_id = id;
+                            saved_artist_credit_id = artist_credit_id;
+                        }
+                    }
+                    else 
+                        id = 0;
 
                     if (id != last_id) {
-                        // Save collected data
-                        index_ids.push_back(saved_artist_credit_id);
-                        index_texts.push_back(last_text);
-                        process_aliases(aliases, alias_map);
-                        aliases.clear();
+                        size_t i;
+                        for(i = 0; i < alias_ids.size(); i++) {
+                            alias_map[alias_ids[i]] = alias_texts;
+                            printf("aliases: %d -> ", alias_ids[i]);
+                            int j = 0;
+                            for(auto &meh : alias_texts) {
+                                printf("'%s' ", meh.c_str());
+                                j++;
+                            }
+                            if (j > 0)
+                                printf("\n");
+                        }
+                        if (i > 0)
+                            printf("\n");
+                        if (i == PQntuples(res) - 1) 
+                            break;
+                        alias_ids.clear();
+                        alias_texts.clear();
                         
                         // Now look at the first row of the next artist 
                         saved_artist_credit_id = artist_credit_id; 
                     }
                     
-                    if (artist_credit_id != id && text != artist_credit_name) {
-                        //printf("add alias: %d '%s' '%s'\n", id, text.c_str(), artist_credit_name.c_str());
-                        pair<unsigned int, string> p = { artist_credit_id, artist_credit_name };
-                        aliases.push_back(p);
+                    // Check to see why the other artsts are not here
+                    
+                    printf("raw: %d '%s' -> %d '%s'\n", id, text.c_str(), artist_credit_id, artist_credit_name.c_str());
+                    if (artist_credit_id != id && artist_count == 1 && text != artist_credit_name) {
+                        alias_ids.push_back(artist_credit_id);
+                        alias_texts.push_back(artist_credit_name);
                     }
+                    index_ids.push_back(artist_credit_id);
+                    index_texts.push_back(artist_credit_name);
                     
                     last_id = id;
                     last_text = text;
@@ -227,24 +227,6 @@ class ArtistIndex {
                 }
             }
             log("done building artists indexes.");
-        }
-        
-        void
-        process_aliases(const vector<pair<unsigned int, string>> &artist_aliases, map<unsigned int, set<string>> &global_aliases) {
-            set<string> texts;
-
-            printf("process: \n");
-            for(auto &it : artist_aliases) {
-                texts.insert(it.second);
-                printf("  %s\n", it.second.c_str());
-            }
-
-            for(auto &it : artist_aliases) {
-                global_aliases[it.first] = texts;
-                //printf("Add to global: %d\n", it.first);
-                for(auto &i : texts)
-                    printf("  %s\n", i.c_str());
-            }
         }
         
         bool
