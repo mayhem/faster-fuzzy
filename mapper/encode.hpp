@@ -100,13 +100,11 @@ class EncodeSearchData {
         void 
         encode_index_data(const vector<unsigned int>           &input_ids,
                           const vector<string>                 &input_texts,
-                          map<unsigned int, vector<string>>    &alias_map,
                           vector<unsigned int>                 &output_ids,
                           vector<string>                       &output_texts,
                           vector<unsigned int>                 &stupid_ids,
                           vector<string>                       &stupid_texts) {
             for(unsigned int i = 0; i < input_ids.size(); i++) {
-                printf("encode: %d: '%s'\n", input_ids[i], input_texts[i].c_str());
                 auto ret = encode_string(input_texts[i]);
                 if (ret.size() == 0) {
                     auto stupid = encode_string_for_stupid_artists(input_texts[i]);
@@ -118,14 +116,6 @@ class EncodeSearchData {
                 }
                 output_ids.push_back(input_ids[i]);
                 output_texts.push_back(ret);
-
-                auto reduced = reduce_aliases(alias_map[input_ids[i]], ret);
-                for(auto &it : reduced) {
-                    output_ids.push_back(input_ids[i]);
-                    output_texts.push_back(it);
-                    
-                    printf("   alias '%s'\n", it.c_str());
-                } 
             }
         }
 };

@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <sstream>
+#include <set>
+#include <map>
 
 #include "SQLiteCpp.h"
 
@@ -110,6 +112,42 @@ class MappingSearch {
             
             return false;
         }
+
+        map<unsigned int, vector<unsigned int>>
+        fetch_artist_credit_ids(const vector<IndexResult> &res) {
+            map<unsigned int, vector<unsigned int>> artist_credit_map;
+            string db_file = index_dir + string("/mapping.db");
+            
+            try {
+                SQLite::Database db(db_file);
+                
+                // Create a set of unique artist_ids to query
+                set<unsigned int> artist_ids;
+                for (const auto& result : res) {
+                    artist_ids.insert(result.id);
+                }
+                
+                // Query the artist_credit_mapping table for each artist_id
+                for (unsigned int artist_id : artist_ids) {
+                    SQLite::Statement query(db, "SELECT artist_credit_id FROM artist_credit_mapping WHERE artist_id = ?");
+                    query.bind(1, artist_id);
+                    
+                    vector<unsigned int> credit_ids;
+                    while (query.executeStep()) {
+                        credit_ids.push_back(query.getColumn(0).getInt());
+                    }
+                    
+                    if (!credit_ids.empty()) {
+                        artist_credit_map[artist_id] = credit_ids;
+                    }
+                }
+            }
+            catch (std::exception& e) {
+                printf("Error fetching artist credit IDs: %s\n", e.what());
+            }
+            
+            return artist_credit_map;
+        }
         
         SearchResult
         recording_release_search(unsigned int artist_credit_id, const string &release_name, const string &recording_name) {
@@ -214,15 +252,20 @@ class MappingSearch {
                     }
                 }
             }
+
+            // Fetch artist credit IDs for all artist results
+            map<unsigned int, vector<unsigned int>> artist_credit_ids = fetch_artist_credit_ids(res);
             
             for(auto &it : res) {
                 if (it.confidence >= artist_threshold) {
-                    SearchResult r = recording_release_search(it.id, release_name, recording_name); 
-                    if (r.confidence > .7) {
-                        if (!fetch_metadata(r))
-                            throw std::length_error("failed to load metadata from sqlite.");
-                        printf("\n");
-                        return new SearchResult(r);
+                    for (auto artist_credit_id : artist_credit_ids[it.id]) {
+                        SearchResult r = recording_release_search(artist_credit_id, release_name, recording_name); 
+                        if (r.confidence > .7) {
+                            if (!fetch_metadata(r))
+                                throw std::length_error("failed to load metadata from sqlite.");
+                            printf("\n");
+                            return new SearchResult(r);
+                        }
                     }
                 }
             }

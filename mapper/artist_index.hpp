@@ -16,29 +16,16 @@ using namespace std;
 const int ARTIST_INDEX_ENTITY_ID = -1;
 const int STUPID_ARTIST_INDEX_ENTITY_ID = -2;
 
-// TODO: Artist index results could give the same artist_credit_id twice -- don't carry out two searches!
 const char *fetch_artists_query = 
-    " WITH acs AS ( "
-    "       SELECT DISTINCT artist_credit AS artist_credit_id "
-    "         FROM recording "
-    ")"
-    "       SELECT a.id AS artist_id"
-    "            , a.name AS artist_name"
-    "            , ac.id AS artist_credit_id"
-    "            , ac.name AS artist_credit_name"
-    "            , ac.artist_count"
-    "         FROM musicbrainz.artist_credit ac"
-    "         JOIN musicbrainz.artist_credit_name acn"
-    "           ON acn.artist_credit = ac.id"
-    "         JOIN artist a"
-    "           ON acn.artist = a.id"
-    "         JOIN acs "
-    "           ON ac.id = acs.artist_credit_id "
-    "        WHERE a.id > 1" 
-//    "          AND a.id = 1053737"
-    "     ORDER BY artist_id, artist_credit_id";
-//    "          AND a.id > 1117030 AND a.id < 1117100"
-//    "          AND a.id < 1000"
+    "  SELECT artist AS artist_id "
+    "       , ac.id AS artist_credit_id"
+    "       , acn.name AS artist_name"
+    "    FROM artist_credit_name acn "
+    "    JOIN artist_credit ac "
+    "      ON acn.artist_credit = ac.id "
+    "     AND artist > 1 "
+    "     AND artist_count = 1 "
+    "ORDER BY artist, ac.id";
 
 const char *insert_blob_query = 
     "INSERT INTO index_cache (entity_id, index_data) VALUES (?, ?) "
@@ -77,12 +64,67 @@ class ArtistIndex {
             return stupid_artist_index;
         }
         
+        void
+        insert_artist_credit_mappping(const map<unsigned int, vector<unsigned int>> &artist_artist_credit_map) {
+            try {
+                SQLite::Database db(db_file, SQLite::OPEN_READWRITE);
+                
+                // Begin transaction for bulk insert
+                SQLite::Transaction transaction(db);
+                
+                // Prepare the insert statement
+                SQLite::Statement insert_stmt(db, "INSERT INTO artist_credit_mapping (artist_id, artist_credit_id) VALUES (?, ?)");
+                
+                log("Inserting artist credit mappings");
+                size_t total_mappings = 0;
+                
+                // Iterate through the map and insert all mappings
+                for (const auto& artist_entry : artist_artist_credit_map) {
+                    unsigned int artist_id = artist_entry.first;
+                    const vector<unsigned int>& artist_credit_ids = artist_entry.second;
+                    
+                    for (unsigned int artist_credit_id : artist_credit_ids) {
+                        insert_stmt.bind(1, artist_id);
+                        insert_stmt.bind(2, artist_credit_id);
+                        insert_stmt.exec();
+                        insert_stmt.reset();
+                        total_mappings++;
+                    }
+                }
+                
+                // Commit the transaction
+                transaction.commit();
+                log("Inserted %lu artist credit mappings", total_mappings);
+                
+                // Create index on artist_id column for better query performance
+                log("Creating index on artist_credit_mapping.artist_id");
+                db.exec("CREATE INDEX IF NOT EXISTS artist_id_ndx ON artist_credit_mapping(artist_id)");
+                log("Index created successfully");
+                
+            } catch (std::exception& e) {
+                printf("Error inserting artist credit mappings: %s\n", e.what());
+            }
+        }
+        
+        vector<string>
+        encode_and_dedup_artist_names(const vector<string> &artist_names) {
+            set<string> unique_artist_names;
+
+            for(auto name : artist_names) {
+                auto encoded = encode.encode_string(name);
+                unique_artist_names.insert(encoded);
+            }
+            
+            vector<string> result(unique_artist_names.begin(), unique_artist_names.end());
+            return result;
+        }
+        
         // 幾何学模様 a                  Kikagaku Moyo c
         void build() {
             
             vector<unsigned int>                               index_ids;
             vector<string>                                     index_texts;
-            map<unsigned int, vector<string>>                  alias_map;
+            map<unsigned int, vector<unsigned int>>            artist_artist_credit_map;
 
             try
             {
@@ -105,65 +147,33 @@ class ArtistIndex {
                 }
 
                 log("fetch rows");
-                unsigned int         last_id = 0;
-                unsigned int         saved_artist_credit_id = 0;
-                string               last_text;
-                vector<unsigned int> alias_ids;
-                vector<string>       alias_texts;
+                unsigned int         last_artist_id = 0;
+                vector<string>       artist_names;
                 for (int i = 0; i < PQntuples(res) + 1; i++) {
-                    int id, artist_credit_id, artist_count;
-                    string text, artist_credit_name;
+                    unsigned  artist_id, artist_credit_id;
+                    string artist_name;
 
-                    if (i < PQntuples(res)) {
-                        id = atoi(PQgetvalue(res, i, 0));
-                        text = PQgetvalue(res, i, 1);
-                        artist_credit_id = atoi(PQgetvalue(res, i, 2));
-                        artist_credit_name = PQgetvalue(res, i, 3);
-                        artist_count = atoi(PQgetvalue(res, i, 4));
-                        if (last_id == 0) {
-                            last_id = id;
-                            saved_artist_credit_id = artist_credit_id;
-                        }
-                    }
-                    else 
-                        id = 0;
+                    if (i >= PQntuples(res)) 
+                        break;
 
-                    if (id != last_id) {
-                        size_t i;
-                        for(i = 0; i < alias_ids.size(); i++) {
-                            alias_map[alias_ids[i]] = alias_texts;
-                            printf("aliases: %d -> ", alias_ids[i]);
-                            int j = 0;
-                            for(auto &meh : alias_texts) {
-                                printf("'%s' ", meh.c_str());
-                                j++;
-                            }
-                            if (j > 0)
-                                printf("\n");
-                        }
-                        if (i > 0)
-                            printf("\n");
-                        if (i == PQntuples(res) - 1) 
-                            break;
-                        alias_ids.clear();
-                        alias_texts.clear();
+                    artist_id = atoi(PQgetvalue(res, i, 0));
+                    artist_credit_id = atoi(PQgetvalue(res, i, 1));
+                    artist_name = PQgetvalue(res, i, 2);
+                    if (last_artist_id != 0 && last_artist_id != artist_id) {
                         
-                        // Now look at the first row of the next artist 
-                        saved_artist_credit_id = artist_credit_id; 
+                        auto dedup_names = encode_and_dedup_artist_names(artist_names);
+                        artist_names.clear();
+
+                        for(auto it : dedup_names) {
+                            index_ids.push_back(last_artist_id);
+                            index_texts.push_back(it);
+                        }
                     }
                     
-                    // Check to see why the other artsts are not here
+                    artist_names.push_back(artist_name);
+                    artist_artist_credit_map[artist_id].push_back(artist_credit_id);
                     
-                    printf("raw: %d '%s' -> %d '%s'\n", id, text.c_str(), artist_credit_id, artist_credit_name.c_str());
-                    if (artist_credit_id != id && artist_count == 1 && text != artist_credit_name) {
-                        alias_ids.push_back(artist_credit_id);
-                        alias_texts.push_back(artist_credit_name);
-                    }
-                    index_ids.push_back(artist_credit_id);
-                    index_texts.push_back(artist_credit_name);
-                    
-                    last_id = id;
-                    last_text = text;
+                    last_artist_id = artist_id;
                 }
             
                 // Clear the PGresult object to free memory
@@ -175,9 +185,11 @@ class ArtistIndex {
             }
             vector<unsigned int> output_ids, stupid_ids;
             vector<string>       output_texts, output_rems, stupid_texts, stupid_rems;
+
+            insert_artist_credit_mappping(artist_artist_credit_map);
                     
             log("encode data");
-            encode.encode_index_data(index_ids, index_texts, alias_map, output_ids, output_texts, stupid_ids, stupid_texts);
+            encode.encode_index_data(index_ids, index_texts, output_ids, output_texts, stupid_ids, stupid_texts);
             log("%lu items in index", output_ids.size());
             {
                 FuzzyIndex *index = new FuzzyIndex();
@@ -226,6 +238,8 @@ class ArtistIndex {
                     printf("save artist index db exception: %s\n", e.what());
                 }
             }
+            
+            
             log("done building artists indexes.");
         }
         

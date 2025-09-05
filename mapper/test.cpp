@@ -37,7 +37,6 @@ TestCase test_cases[] = {
     { "portished", "portishad", "western ey", "8f6bd1e4-fbe1-4f50-aa9b-94c450ec0f11", "10ac58ca-0655-4b16-a6cb-58fdc309de0a", "34745941-69c5-401a-bdb9-ae761a9b3562" },
     { "morcheeba","parts of the process","trigger hippie","067102ea-9519-4622-9077-57ca4164cfbb","1e5908d9-ffcd-3080-9920-ece4612a43c9","97e69767-5d34-4c97-b36a-f3b2b1ef9dae" },
     { "Billie Eilish","","COPYCAT","f4abc0b5-3f7a-4eff-8f78-ac078dbce533","37811723-1da9-404d-bd2c-a6a6352bdcc2", "ed3a357a-cd5c-4489-aeb3-25cc87bac005" },
-//    { "Benjamin Wallfisch, Lorne Balfe and Hans Zimmer","Dunkirk: Original Motion Picture Soundtrack","End Titles","9cba57da-0a50-48d0-8a7b-232e31e196a0,0529a9e0-befb-4d9f-b6f9-1ccd7c83053e,e6de1f3b-6484-491c-88dd-6d619f142abc", "4d4b8a77-6c2e-4e6f-bc12-e563e9efab91","94f64a3f-b7d8-472f-99bb-ca07afad55da" },
     { "Angelo Badalamenti","Music From Twin Peaks","Laura Palmer’s Theme","5894dac5-0260-4175-b36e-e34680a859d6","e441d678-b225-3ea1-808c-9c488fdc3ac6","4cc6e566-96c3-4709-9ec0-a9b39c115e2f" },
     { "Alicia Keys","Keys","Skydive (originals)","8ef1df30-ae4f-4dbd-9351-1a32b208a01e", "f7c03888-7c31-4416-a57c-f1686f59ac89","a7bae269-2dd6-4297-a4c7-36a472a2a8fc" },
     { "Godspeed You! Black Emperor","Lift Your Skinny Fists Like Antennas to Heaven","Like Antennas To Heaven…","3648db01-b29d-4ab9-835c-83f6a5068fe4","e51e1f8b-62ba-388f-8567-0c051b575351","5fb00c2b-5bc9-420a-882a-cc024d137a08" },
@@ -49,11 +48,10 @@ TestCase test_cases[] = {
     { "幾何学模様","masana temples","nana","3a605eba-b6a1-4298-855d-b3033df0bf8b","615b8e61-4be8-4385-a0d3-0894f91bfa6b","1bb37d6c-6eed-4294-8341-1efa4cdce0d8" },
     { "Kikagaku Moyo","masana temples","nana","3a605eba-b6a1-4298-855d-b3033df0bf8b","615b8e61-4be8-4385-a0d3-0894f91bfa6b","1bb37d6c-6eed-4294-8341-1efa4cdce0d8" },
     { "Celtic Woman","20th Anniversary","When You Believe","4d483147-c871-48c4-8470-85e5a66381c5","9659808f-3382-42be-8c5d-477d271f9791","376e5743-7bf5-49ee-9c7e-f00aa479882c" },
+    { "Yaakov Shwekey","גוף ונשמה 1/4","Galgalim","90820c40-dfee-4d31-9147-a56383df402b","59855bd1-9e13-4b55-9c77-c793c4dd8cc2" },
+    { "Hanan Ben Ari","לא לבד","רגע","299f4e4e-b553-44ba-8f8b-199a17eb9038","2ca43050-1bff-4cda-b07e-732d8f6727ba" },
+    { "Harry Nilsson","Nilsson Schmilsson","Without You","e5963d26-01fa-40f5-b200-e0127f410a45","9be5bdcb-692b-4d7e-8d16-6d5741539ade","fa2013f9-dca8-4c1c-9481-753ffcadbae3" },
 
-// Artist credit issues
-//    { "Yaakov Shwekey","גוף ונשמה 1/4","Galgalim","90820c40-dfee-4d31-9147-a56383df402b","59855bd1-9e13-4b55-9c77-c793c4dd8cc2" },
-//    { "Hanan Ben Ari","לא לבד","רגע","299f4e4e-b553-44ba-8f8b-199a17eb9038","2ca43050-1bff-4cda-b07e-732d8f6727ba" },
-//    { "Harry Nilsson","Nilsson Schmilsson","Without You","e5963d26-01fa-40f5-b200-e0127f410a45","9be5bdcb-692b-4d7e-8d16-6d5741539ade","fa2013f9-dca8-4c1c-9481-753ffcadbae3" },
 // Requires artist aliases
 //    { "xhashsymbolexclamationpointasteriskrightdoublevertical97","1 LP","untitled 1","78308fa1-b583-4b6c-a592-931df0126d29","3e7cb8db-6d89-4a54-8128-113f297fa83d","bc3c4795-e1bf-4350-b976-09be082bf077" },
 // This one requires Album + Soundtrack to be ranked higher than EP.

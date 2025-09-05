@@ -9,6 +9,7 @@ db = SqliteDatabase(None, pragmas=PRAGMAS)
 
 class Mapping(Model):
 
+    # Indexes are added after building
     class Meta:
         database = db
         table_name = "mapping"
@@ -28,6 +29,18 @@ class Mapping(Model):
     recording_name = TextField()
 
     score = IntegerField(null=False)
+    
+
+class ArtistCreditMapping(Model):
+
+    # Indexes are added after building
+    class Meta:
+        database = db
+        table_name = "artist_credit_mapping"
+        primary_key = False
+
+    artist_id = IntegerField(null=False)
+    artist_credit_id = IntegerField(null=False)
 
 class IndexCache(Model):
     class Meta:
@@ -46,7 +59,7 @@ def create_db(db_file):
 
     db.init(db_file)
     db.connect()
-    db.create_tables((Mapping,IndexCache))
+    db.create_tables((Mapping, ArtistCreditMapping, IndexCache))
 
 def open_db(db_file):
     db.init(db_file)
