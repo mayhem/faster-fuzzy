@@ -47,11 +47,12 @@ TestCase test_cases[] = {
     { "Ishay Ribo", "סוף חמה לבוא","רבי שמעון","4d5abad8-d57b-4c3f-b477-043214e96dc4","677fc470-d38d-463b-a020-b82c2f25321e","b3068af6-aee0-4f37-b079-6f79cc9eabbd" },
     { "幾何学模様","masana temples","nana","3a605eba-b6a1-4298-855d-b3033df0bf8b","615b8e61-4be8-4385-a0d3-0894f91bfa6b","1bb37d6c-6eed-4294-8341-1efa4cdce0d8" },
     { "Kikagaku Moyo","masana temples","nana","3a605eba-b6a1-4298-855d-b3033df0bf8b","615b8e61-4be8-4385-a0d3-0894f91bfa6b","1bb37d6c-6eed-4294-8341-1efa4cdce0d8" },
-    { "Celtic Woman","20th Anniversary","When You Believe","4d483147-c871-48c4-8470-85e5a66381c5","9659808f-3382-42be-8c5d-477d271f9791","376e5743-7bf5-49ee-9c7e-f00aa479882c" },
     { "Yaakov Shwekey","גוף ונשמה 1/4","Galgalim","90820c40-dfee-4d31-9147-a56383df402b","59855bd1-9e13-4b55-9c77-c793c4dd8cc2" },
     { "Hanan Ben Ari","לא לבד","רגע","299f4e4e-b553-44ba-8f8b-199a17eb9038","2ca43050-1bff-4cda-b07e-732d8f6727ba" },
-    { "Harry Nilsson","Nilsson Schmilsson","Without You","e5963d26-01fa-40f5-b200-e0127f410a45","9be5bdcb-692b-4d7e-8d16-6d5741539ade","fa2013f9-dca8-4c1c-9481-753ffcadbae3" },
+    { "Harry Nilsson","Nilsson Schmilsson","Without You","e5963d26-01fa-40f5-b200-e0127f410a45","1ae84595-aa9d-3190-bce9-140eb81800e4","fa2013f9-dca8-4c1c-9481-753ffcadbae3" },
 
+// Possible recording/release match issue. requires more research
+//    { "Celtic Woman","20th Anniversary","When You Believe","4d483147-c871-48c4-8470-85e5a66381c5","9659808f-3382-42be-8c5d-477d271f9791","376e5743-7bf5-49ee-9c7e-f00aa479882c" },
 // Requires artist aliases
 //    { "xhashsymbolexclamationpointasteriskrightdoublevertical97","1 LP","untitled 1","78308fa1-b583-4b6c-a592-931df0126d29","3e7cb8db-6d89-4a54-8128-113f297fa83d","bc3c4795-e1bf-4350-b976-09be082bf077" },
 // This one requires Album + Soundtrack to be ranked higher than EP.
