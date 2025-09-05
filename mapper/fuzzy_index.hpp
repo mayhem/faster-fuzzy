@@ -113,10 +113,12 @@ class FuzzyIndex {
         search(const string &query_string, float min_confidence, bool debug=false) {
             vector<string> text_data;
             similarity::ObjectVector data;
+            vector<IndexResult> results;
             
-            if (index == nullptr)
-                throw std::length_error("no index available.");
-
+            if (index == nullptr) {
+                printf("No index available.");
+                return results;
+            }
 
             text_data.push_back(query_string);
             arma::sp_mat matrix = vectorizer.transform(text_data);
@@ -128,7 +130,6 @@ class FuzzyIndex {
 
 
             bool has_long = false; 
-            vector<IndexResult> results;
             auto queue = knn.Result()->Clone();
             while (!queue->Empty()) {
                 auto dist = -queue->TopDistance();

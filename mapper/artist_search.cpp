@@ -2,7 +2,10 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <map>
+#include <set>
 
+#include "SQLiteCpp.h"
 #include "artist_index.hpp"
 #include "encode.hpp"
 #include "utils.hpp"
@@ -31,6 +34,42 @@ class ArtistSearch {
             }
         }
         
+        map<unsigned int, vector<unsigned int>>
+        fetch_artist_credit_ids(const vector<IndexResult> &res) {
+            map<unsigned int, vector<unsigned int>> artist_credit_map;
+            string db_file = index_dir + string("/mapping.db");
+            
+            try {
+                SQLite::Database db(db_file);
+                
+                // Create a set of unique artist_ids to query
+                set<unsigned int> artist_ids;
+                for (const auto& result : res) {
+                    artist_ids.insert(result.id);
+                }
+                
+                // Query the artist_credit_mapping table for each artist_id
+                for (unsigned int artist_id : artist_ids) {
+                    SQLite::Statement query(db, "SELECT artist_credit_id FROM artist_credit_mapping WHERE artist_id = ?");
+                    query.bind(1, artist_id);
+                    
+                    vector<unsigned int> credit_ids;
+                    while (query.executeStep()) {
+                        credit_ids.push_back(query.getColumn(0).getInt());
+                    }
+                    
+                    if (!credit_ids.empty()) {
+                        artist_credit_map[artist_id] = credit_ids;
+                    }
+                }
+            }
+            catch (std::exception& e) {
+                printf("Error fetching artist credit IDs: %s\n", e.what());
+            }
+            
+            return artist_credit_map;
+        }
+        
         void search_artist(const string &query) {
             vector<IndexResult> res;
             
@@ -57,9 +96,12 @@ class ArtistSearch {
                 return;
             }
             
+            // Fetch artist credit IDs for all results
+            map<unsigned int, vector<unsigned int>> artist_credit_ids = fetch_artist_credit_ids(res);
+            
             printf("\nResults:\n");
-            printf("%-10s %-8s %s\n", "Confidence", "ID", "Artist Name");
-            printf("------------------------------------------------------\n");
+            printf("%-40s %-10s %-8s %-15s\n", "name", "confidence", "artist_id", "artist_credit_ids");
+            printf("------------------------------------------------------------------------\n");
             
             for (auto &result : res) {
                 string text;
@@ -69,7 +111,22 @@ class ArtistSearch {
                     text = artist_index->stupid_artist_index->get_index_text(result.result_index);
                 }
                 
-                printf("%-10.2f %-8d %s\n", result.confidence, result.id, text.c_str());
+                // Limit artist name to 40 characters
+                string short_name = text.length() > 40 ? text.substr(0, 40) : text;
+                
+                // Format artist credit IDs
+                string credit_ids_str = "";
+                auto it = artist_credit_ids.find(result.id);
+                if (it != artist_credit_ids.end()) {
+                    for (size_t i = 0; i < it->second.size(); ++i) {
+                        if (i > 0) credit_ids_str += ",";
+                        credit_ids_str += to_string(it->second[i]);
+                    }
+                } else {
+                    credit_ids_str = "none";
+                }
+                
+                printf("%-40s %-10.2f %-8d %-15s\n", short_name.c_str(), result.confidence, result.id, credit_ids_str.c_str());
             }
             printf("\n");
         }
@@ -84,17 +141,15 @@ class ArtistSearch {
             while (true) {
                 printf("> ");
                 fflush(stdout);
-                getline(cin, query);
+                
+                if (!getline(cin, query))
+                    break;
                 
                 // Trim whitespace
                 query.erase(0, query.find_first_not_of(" \t\n\r\f\v"));
                 query.erase(query.find_last_not_of(" \t\n\r\f\v") + 1);
                 
-                if (query.empty()) {
-                    continue;
-                }
-                
-                if (query == "\\q") 
+                if (query.empty() || query == "\\q") 
                     break;
                 
                 search_artist(query);

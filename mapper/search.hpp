@@ -157,6 +157,7 @@ class MappingSearch {
             IndexResult                 rec_result = { 0, 0, 0.0 };
             
             // Add thresholding
+            printf("RECORDING RELEASE SEARCH for artist_credit_id %u\n", artist_credit_id);
 
             artist_data = index_cache->get(artist_credit_id);
             if (!artist_data) {
@@ -167,13 +168,13 @@ class MappingSearch {
                 
             auto recording_name_encoded = encode.encode_string(recording_name); 
             if (recording_name_encoded.size() == 0) {
-                printf("recording name contains no word characters.\n");
+                printf("  recording name contains no word characters.\n");
                 return no_result;
             }
 
             if (release_name.size()) {
                 auto release_name_encoded = encode.encode_string(release_name); 
-                printf("RELEASE SEARCH: '%s' (%s)\n", release_name.c_str(), release_name_encoded.c_str());
+                printf("  RELEASE SEARCH: '%s' (%s)\n", release_name.c_str(), release_name_encoded.c_str());
                 if (release_name_encoded.size()) {
                     vector<IndexResult> rel_results = artist_data->release_index->search(release_name_encoded, .7);
                     if (rel_results.size()) {
@@ -183,22 +184,22 @@ class MappingSearch {
                         rel_result.confidence = result.confidence;
 
                         string text = artist_data->release_index->get_index_text(rel_results[0].result_index);
-                        printf("  %s %.2f\n", text.c_str(), rel_results[0].confidence);
+                        printf("    %s %.2f\n", text.c_str(), rel_results[0].confidence);
                     } else
-                        printf("  no release matches, ignoring release.\n");
+                        printf("    no release matches, ignoring release.\n");
                 }
                 else
-                    printf("warning: release name contains no word characters, ignoring release.\n");
+                    printf("  warning: release name contains no word characters, ignoring release.\n");
             }
 
-            printf("RECORDING SEARCH: '%s' (%s)\n", recording_name.c_str(), recording_name_encoded.c_str());
+            printf("  RECORDING SEARCH: '%s' (%s)\n", recording_name.c_str(), recording_name_encoded.c_str());
             vector<IndexResult> rec_results = artist_data->recording_index->search(recording_name_encoded, .7);
             if (rec_results.size()) {
                 rec_result = rec_results[0];
                 string text = artist_data->recording_index->get_index_text(rec_results[0].result_index);
-                printf("  %s %.2f\n", text.c_str(), rec_results[0].confidence);
+                printf("    %s %.2f\n", text.c_str(), rec_results[0].confidence);
             } else {
-                printf("No recording results.\n");
+                printf("    No recording results.\n");
                 return no_result;
             }
             
@@ -223,6 +224,7 @@ class MappingSearch {
             SearchResult         output;
             vector<IndexResult>  res;
 
+            // TODO: Make sure that we don't process an artist_id more than once!
             auto artist_name = encode.encode_string(artist_credit_name); 
             if (artist_name.size()) {
                 printf("ARTIST SEARCH: '%s' (%s)\n", artist_credit_name.c_str(), artist_name.c_str());

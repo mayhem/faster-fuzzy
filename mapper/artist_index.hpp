@@ -16,6 +16,7 @@ using namespace std;
 const int ARTIST_INDEX_ENTITY_ID = -1;
 const int STUPID_ARTIST_INDEX_ENTITY_ID = -2;
 
+// this query can include artist_credit_ids that have no recordings!
 const char *fetch_artists_query = 
     "  SELECT artist AS artist_id "
     "       , ac.id AS artist_credit_id"
@@ -63,7 +64,14 @@ class ArtistIndex {
         stupid() {
             return stupid_artist_index;
         }
-        
+       
+        // This mapping can create duplicate rows
+        // sqlite> select * from artist_credit_mapping where artist_credit_id = 3262360;
+        // artist_id|artist_credit_id
+        // 698756|3262360
+        // 698756|3262360
+        // 
+
         void
         insert_artist_credit_mappping(const map<unsigned int, vector<unsigned int>> &artist_artist_credit_map) {
             try {
