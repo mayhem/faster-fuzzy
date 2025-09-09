@@ -18,15 +18,21 @@ const int STUPID_ARTIST_INDEX_ENTITY_ID = -2;
 
 // this query can include artist_credit_ids that have no recordings!
 const char *fetch_artists_query = 
-    "  SELECT artist AS artist_id "
-    "       , ac.id AS artist_credit_id"
-    "       , acn.name AS artist_name"
-    "    FROM artist_credit_name acn "
-    "    JOIN artist_credit ac "
-    "      ON acn.artist_credit = ac.id "
-    "     AND artist > 1 "
-    "     AND artist_count = 1 "
-    "ORDER BY artist, ac.id";
+  "   SELECT acn.artist AS artist_id "
+  "        , ac.id AS artist_credit_id"
+  "        , acn.name AS artist_name"
+  "     FROM artist_credit_name acn "
+  "     JOIN artist_credit ac "
+  "       ON acn.artist_credit = ac.id "
+  "      AND artist > 1 "
+  "      AND artist_count = 1 "
+  "UNION"
+  "   SELECT aa.artist AS artist_id"
+  "        , 0 AS artist_credit_id"
+  "        , aa.name AS artist_alias    "
+  "     FROM artist_alias aa"
+  "    WHERE aa.artist > 1 "
+  " ORDER BY artist_id, artist_credit_id   ";
 
 const char *insert_blob_query = 
     "INSERT INTO index_cache (entity_id, index_data) VALUES (?, ?) "
@@ -179,7 +185,9 @@ class ArtistIndex {
                     }
                     
                     artist_names.push_back(artist_name);
-                    artist_artist_credit_map[artist_id].push_back(artist_credit_id);
+                    // artist_credit_ids are true artist aliases.
+                    if (artist_credit_id)
+                        artist_artist_credit_map[artist_id].push_back(artist_credit_id);
                     
                     last_artist_id = artist_id;
                 }

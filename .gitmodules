@@ -25,3 +25,9 @@
 [submodule "mapper/deps/Catch2"]
 	path = mapper/deps/Catch2
 	url = https://github.com/catchorg/Catch2.git
+[submodule "mapper/deps/taopq"]
+	path = mapper/deps/taopq
+	url = https://github.com/taocpp/taopq.git
+[submodule "mapper/deps/postgresql"]
+	path = mapper/deps/postgresql
+	url = https://git.postgresql.org/git/postgresql.git
