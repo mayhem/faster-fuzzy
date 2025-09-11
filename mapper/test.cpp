@@ -51,7 +51,7 @@ TestCase test_cases[] = {
     { "Enya Patricia Brennan", "watermark", "watermark", "4967c0a1-b9f3-465e-8440-4598fd9fc33c", "f65cccba-f726-445c-8d1f-e324e5ab779f", "6e686d11-0191-4021-9bb7-a46535709ca4"},
     { "Hanan Ben Ari","לא לבד","רגע","eced93df-6c3d-4f44-81a1-b7768bdaecf9","299f4e4e-b553-44ba-8f8b-199a17eb9038","2ca43050-1bff-4cda-b07e-732d8f6727ba" },
     { "!!!","As If","Ooo","f26c72d3-e52c-467b-b651-679c73d8e1a7","a8d39759-5f8f-4e64-bf53-93e11af9d159","f2233161-cf68-421e-bc97-de8dbec3fc3c" },
-    { "Yaakov Shwekey","גוף ונשמה 1/4","Galgalim","b5792b6a-1561-4499-a9d3-82fa7f40b33f", "90820c40-dfee-4d31-9147-a56383df402b","59855bd1-9e13-4b55-9c77-c793c4dd8cc2" },
+    { "Yaakov Shwekey","גוף ונשמה 1/4","גלגלים","b5792b6a-1561-4499-a9d3-82fa7f40b33f", "90820c40-dfee-4d31-9147-a56383df402b","59855bd1-9e13-4b55-9c77-c793c4dd8cc2" },
 
 // Possible recording/release match issue. requires more research
 //    { "Celtic Woman","20th Anniversary","When You Believe","4d483147-c871-48c4-8470-85e5a66381c5","9659808f-3382-42be-8c5d-477d271f9791","376e5743-7bf5-49ee-9c7e-f00aa479882c" },
@@ -66,8 +66,11 @@ TestCase test_cases[] = {
 //    { "Eve","pray - Single","pray","66bdd1c9-d1c5-40b7-a487-5061fffbd87d","9117d976-7283-4517-b5ac-513e62009613","f8c50031-b2e0-4b60-b8f6-38215271092c" },
 // Detune, Artist credit for track is quite different. Rmoving all after "," will get the right match
 //    { "Hans Zimmer, Lorne Balfe & Benjamin Wallfisch","Dunkirk: Original Motion Picture Soundtrack","End Titles","9cba57da-0a50-48d0-8a7b-232e31e196a0", "4d4b8a77-6c2e-4e6f-bc12-e563e9efab91","94f64a3f-b7d8-472f-99bb-ca07afad55da" },
-// Data issue -- Ornette is not album by her, but her quartet. No aliases exist. Probably consider this a data issue.
+// Data issues
+//    -- Ornette is not album by her, but her quartet. No aliases exist. Probably consider this a data issue.
 //    { "Ornette Coleman","Ornette!","W.R.U.","31ea99e3-c222-4809-8912-95678314beec","4c7b347e-16b2-41eb-b56e-97edb77ee961","43065996-51e7-4942-8803-aa2a0249b8a6" },
+//    -- Galgalim is the translation of the hebrew word, we're only searching for transliterations.
+//    { "Yaakov Shwekey","גוף ונשמה 1/4","Galgalim","b5792b6a-1561-4499-a9d3-82fa7f40b33f", "90820c40-dfee-4d31-9147-a56383df402b","59855bd1-9e13-4b55-9c77-c793c4dd8cc2" },
 };
 
 string

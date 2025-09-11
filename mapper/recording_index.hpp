@@ -56,7 +56,6 @@ class RecordingIndex {
                     if (ret.size() == 0)
                         continue;
 
-                    //printf("%d '%s' '%s'\n", recording_id, ret.c_str(), recording_name.c_str());
                     
                     EntityRef ref(release_id, rank);
                     auto iter = recording_ref.find(ret);
