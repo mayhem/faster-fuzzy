@@ -132,7 +132,10 @@ class ArtistIndex {
 
             for(auto name : artist_names) {
                 auto encoded = encode.encode_string(name);
-                unique_artist_names.insert(encoded);
+                if (encoded.length() == 0)
+                    unique_artist_names.insert(name);
+                else
+                    unique_artist_names.insert(encoded);
             }
             
             vector<string> result(unique_artist_names.begin(), unique_artist_names.end());
