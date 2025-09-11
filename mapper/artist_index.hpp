@@ -3,6 +3,7 @@
 #include <ctime>
 #include <set>
 #include <cassert>
+#include <vector>
 
 #include <cereal/archives/binary.hpp>
 #include "libpq-fe.h"
@@ -77,12 +78,12 @@ class ArtistIndex {
             return stupid_artist_index;
         }
        
-        // This mapping can create duplicate rows
-        // sqlite> select * from artist_credit_mapping where artist_credit_id = 3262360;
-        // artist_id|artist_credit_id
-        // 698756|3262360
-        // 698756|3262360
-        // 
+        // WTF ac 0?
+        //Results:
+        //name                                     confidence artist_id artist_credit_ids
+        //------------------------------------------------------------------------
+        //q                                        1.00       107966   107966,107966,107966,107966,107966,107966,107966,107966,107966
+        //q                                        1.00       2207032  none           
 
         void
         insert_artist_credit_mappping(const map<unsigned int, vector<unsigned int>> &artist_artist_credit_map) {
@@ -103,13 +104,19 @@ class ArtistIndex {
                     unsigned int artist_id = artist_entry.first;
                     const vector<unsigned int>& artist_credit_ids = artist_entry.second;
                     
-                    for (unsigned int artist_credit_id : artist_credit_ids) {
+                    // Remove duplicates from artist_credit_ids
+                    set<unsigned int> unique_credit_ids(artist_credit_ids.begin(), artist_credit_ids.end());
+                   
+                    //printf("%u: ", artist_id);
+                    for (unsigned int artist_credit_id : unique_credit_ids) {
+                        //printf("%u ", artist_credit_id);
                         insert_stmt.bind(1, artist_id);
                         insert_stmt.bind(2, artist_credit_id);
                         insert_stmt.exec();
                         insert_stmt.reset();
                         total_mappings++;
                     }
+                    //printf("\n");
                 }
                 
                 // Commit the transaction
