@@ -18,12 +18,18 @@ const int STUPID_ARTIST_INDEX_ENTITY_ID = -2;
 
 // this query can include artist_credit_ids that have no recordings!
 const char *fetch_artists_query = 
+  "WITH acs AS ( "
+  "   SELECT DISTINCT artist_credit AS artist_credit_id  "
+  "     FROM recording "
+  ") "
   "   SELECT acn.artist AS artist_id "
   "        , ac.id AS artist_credit_id"
   "        , acn.name AS artist_name"
   "     FROM artist_credit_name acn "
   "     JOIN artist_credit ac "
   "       ON acn.artist_credit = ac.id "
+  "     JOIN acs "
+  "       ON ac.id = acs.artist_credit_id "
   "      AND artist > 1 "
   "      AND artist_count = 1 "
   "UNION"
@@ -186,7 +192,7 @@ class ArtistIndex {
                     
                     artist_names.push_back(artist_name);
                     // artist_credit_ids are true artist aliases.
-                    if (artist_credit_id)
+                    if (artist_credit_id) 
                         artist_artist_credit_map[artist_id].push_back(artist_credit_id);
                     
                     last_artist_id = artist_id;
