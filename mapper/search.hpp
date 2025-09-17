@@ -34,10 +34,11 @@ const char *fetch_metadata_query_without_release =
 
 class MappingSearch {
     private:
-        string              index_dir;
-        ArtistIndex        *artist_index;
-        IndexCache         *index_cache;
-        EncodeSearchData    encode;
+        string                                   index_dir;
+        ArtistIndex                             *artist_index;
+        IndexCache                              *index_cache;
+        EncodeSearchData                         encode;
+        map<unsigned int, vector<unsigned int>>  artist_credit_map;
 
     public:
 
@@ -115,40 +116,26 @@ class MappingSearch {
             return false;
         }
 
-        map<unsigned int, vector<unsigned int>>
-        fetch_artist_credit_ids(const vector<IndexResult> &res) {
-            map<unsigned int, vector<unsigned int>> artist_credit_map;
+        void
+        fetch_artist_credit_map() {
             string db_file = index_dir + string("/mapping.db");
             
             try {
                 SQLite::Database db(db_file);
                 
-                // Create a set of unique artist_ids to query
-                set<unsigned int> artist_ids;
-                for (const auto& result : res) {
-                    artist_ids.insert(result.id);
-                }
+                // Load the entire artist_credit_mapping table
+                SQLite::Statement query(db, "SELECT artist_id, artist_credit_id FROM artist_credit_mapping");
                 
-                // Query the artist_credit_mapping table for each artist_id
-                for (unsigned int artist_id : artist_ids) {
-                    SQLite::Statement query(db, "SELECT artist_credit_id FROM artist_credit_mapping WHERE artist_id = ?");
-                    query.bind(1, artist_id);
+                while (query.executeStep()) {
+                    unsigned int artist_id = query.getColumn(0).getInt();
+                    unsigned int artist_credit_id = query.getColumn(1).getInt();
                     
-                    vector<unsigned int> credit_ids;
-                    while (query.executeStep()) {
-                        credit_ids.push_back(query.getColumn(0).getInt());
-                    }
-                    
-                    if (!credit_ids.empty()) {
-                        artist_credit_map[artist_id] = credit_ids;
-                    }
+                    artist_credit_map[artist_id].push_back(artist_credit_id);
                 }
             }
             catch (std::exception& e) {
                 printf("Error fetching artist credit IDs: %s\n", e.what());
             }
-            
-            return artist_credit_map;
         }
         
         SearchResult
@@ -159,7 +146,7 @@ class MappingSearch {
             IndexResult                 rec_result = { 0, 0, 0.0 };
             
             // Add thresholding
-            printf("RECORDING RELEASE SEARCH for artist_credit_id %u\n", artist_credit_id);
+            printf("  RECORDING RELEASE SEARCH for artist_credit_id %u\n", artist_credit_id);
 
             artist_data = index_cache->get(artist_credit_id);
             if (!artist_data) {
@@ -170,13 +157,13 @@ class MappingSearch {
                 
             auto recording_name_encoded = encode.encode_string(recording_name); 
             if (recording_name_encoded.size() == 0) {
-                printf("  recording name contains no word characters.\n");
+                printf("    recording name contains no word characters.\n");
                 return no_result;
             }
 
             if (release_name.size()) {
                 auto release_name_encoded = encode.encode_string(release_name); 
-                printf("  RELEASE SEARCH: '%s' (%s)\n", release_name.c_str(), release_name_encoded.c_str());
+                printf("    RELEASE SEARCH: '%s' (%s)\n", release_name.c_str(), release_name_encoded.c_str());
                 if (release_name_encoded.size()) {
                     vector<IndexResult> rel_results = artist_data->release_index->search(release_name_encoded, .7);
                     if (rel_results.size()) {
@@ -186,22 +173,22 @@ class MappingSearch {
                         rel_result.confidence = result.confidence;
 
                         string text = artist_data->release_index->get_index_text(rel_results[0].result_index);
-                        printf("    %s %.2f\n", text.c_str(), rel_results[0].confidence);
+                        printf("      %s %.2f\n", text.c_str(), rel_results[0].confidence);
                     } else
-                        printf("    no release matches, ignoring release.\n");
+                        printf("      no release matches, ignoring release.\n");
                 }
                 else
-                    printf("  warning: release name contains no word characters, ignoring release.\n");
+                    printf("    warning: release name contains no word characters, ignoring release.\n");
             }
 
-            printf("  RECORDING SEARCH: '%s' (%s)\n", recording_name.c_str(), recording_name_encoded.c_str());
+            printf("    RECORDING SEARCH: '%s' (%s)\n", recording_name.c_str(), recording_name_encoded.c_str());
             vector<IndexResult> rec_results = artist_data->recording_index->search(recording_name_encoded, .7);
             if (rec_results.size()) {
                 rec_result = rec_results[0];
                 string text = artist_data->recording_index->get_index_text(rec_results[0].result_index);
-                printf("    %s %.2f\n", text.c_str(), rec_results[0].confidence);
+                printf("      %s %.2f\n", text.c_str(), rec_results[0].confidence);
             } else {
-                printf("    No recording results.\n");
+                printf("      No recording results.\n");
                 return no_result;
             }
             
@@ -221,8 +208,14 @@ class MappingSearch {
         
         SearchResult *
         search(const string &artist_credit_name, const string &release_name, const string &recording_name) {
-            SearchResult         output;
-            vector<IndexResult>  res;
+            SearchResult            output;
+            vector<IndexResult>     res;
+            map<unsigned int, int>  ac_history;
+            
+            if (artist_credit_map.empty()) {
+                printf("load artist credit map\n");
+                fetch_artist_credit_map();
+            }
 
             // TODO: Make sure that we don't process an artist_id more than once!
             auto artist_name = encode.encode_string(artist_credit_name); 
@@ -250,24 +243,29 @@ class MappingSearch {
                             text = artist_index->artist_index->get_index_text(it.result_index);
                         else
                             text = artist_index->stupid_artist_index->get_index_text(it.result_index);
-                        printf("  %s %d %.2f\n", text.c_str(), it.id, it.confidence);
+                        printf("  %-9d %.2f %-40s ", it.id, it.confidence, text.c_str());
+
+                        for(auto it : artist_credit_map[it.id]) 
+                            printf("%u ", it);
+                        printf("\n");
                     }
                 }
+                printf("\n");
             }
-
-            // Fetch artist credit IDs for all artist results
-            map<unsigned int, vector<unsigned int>> artist_credit_ids = fetch_artist_credit_ids(res);
             
             for(auto &it : res) {
-                if (it.confidence >= artist_threshold) {
-                    for (auto artist_credit_id : artist_credit_ids[it.id]) {
+                if (it.confidence < artist_threshold) 
+                    continue;
+
+                for (auto artist_credit_id : artist_credit_map[it.id]) {
+                    if (!ac_history.contains(artist_credit_id)) {
                         SearchResult r = recording_release_search(artist_credit_id, release_name, recording_name); 
                         if (r.confidence > .7) {
                             if (!fetch_metadata(r))
                                 throw std::length_error("failed to load metadata from sqlite.");
-                            printf("\n");
                             return new SearchResult(r);
                         }
+                        ac_history[artist_credit_id] = 1;
                     }
                 }
             }

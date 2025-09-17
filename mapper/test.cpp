@@ -40,25 +40,23 @@ TestCase test_cases[] = {
     { "Angelo Badalamenti","Music From Twin Peaks","Laura Palmer’s Theme","5894dac5-0260-4175-b36e-e34680a859d6","e441d678-b225-3ea1-808c-9c488fdc3ac6","4cc6e566-96c3-4709-9ec0-a9b39c115e2f" },
     { "Alicia Keys","Keys","Skydive (originals)","8ef1df30-ae4f-4dbd-9351-1a32b208a01e", "f7c03888-7c31-4416-a57c-f1686f59ac89","a7bae269-2dd6-4297-a4c7-36a472a2a8fc" },
     { "Godspeed You! Black Emperor","Lift Your Skinny Fists Like Antennas to Heaven","Like Antennas To Heaven…","3648db01-b29d-4ab9-835c-83f6a5068fe4","e51e1f8b-62ba-388f-8567-0c051b575351","5fb00c2b-5bc9-420a-882a-cc024d137a08" },
-    { "!!!","As If","Ooo","f26c72d3-e52c-467b-b651-679c73d8e1a7","a8d39759-5f8f-4e64-bf53-93e11af9d159","f2233161-cf68-421e-bc97-de8dbec3fc3c" },
     { "Charli xcx","BRAT","365","260b6184-8828-48eb-945c-bc4cb6fc34ca","82082eb8-19a0-4957-9a99-e8fda1bb6b88","bd9fd6a1-d41b-4b82-9ead-a4f958749a77" },
     { "Milana","MALLORCA STONER VOL.1","Forest Tale","3ac26f6c-0370-4451-a321-0880849257f9", "60422eb6-5d26-4e8e-801a-ab0d30d787e4","3c532ced-12af-44f8-85d8-7e88302e4bbe" },
     { "x#!*┦97","1 LP","untitled 1","78308fa1-b583-4b6c-a592-931df0126d29","3e7cb8db-6d89-4a54-8128-113f297fa83d","bc3c4795-e1bf-4350-b976-09be082bf077" },
     { "Ishay Ribo", "סוף חמה לבוא","רבי שמעון","4d5abad8-d57b-4c3f-b477-043214e96dc4","677fc470-d38d-463b-a020-b82c2f25321e","b3068af6-aee0-4f37-b079-6f79cc9eabbd" },
     { "幾何学模様","masana temples","nana","3a605eba-b6a1-4298-855d-b3033df0bf8b","615b8e61-4be8-4385-a0d3-0894f91bfa6b","1bb37d6c-6eed-4294-8341-1efa4cdce0d8" },
     { "Kikagaku Moyo","masana temples","nana","3a605eba-b6a1-4298-855d-b3033df0bf8b","615b8e61-4be8-4385-a0d3-0894f91bfa6b","1bb37d6c-6eed-4294-8341-1efa4cdce0d8" },
-    { "Yaakov Shwekey","גוף ונשמה 1/4","Galgalim","90820c40-dfee-4d31-9147-a56383df402b","59855bd1-9e13-4b55-9c77-c793c4dd8cc2" },
-    { "Hanan Ben Ari","לא לבד","רגע","299f4e4e-b553-44ba-8f8b-199a17eb9038","2ca43050-1bff-4cda-b07e-732d8f6727ba" },
     { "Harry Nilsson","Nilsson Schmilsson","Without You","e5963d26-01fa-40f5-b200-e0127f410a45","1ae84595-aa9d-3190-bce9-140eb81800e4","fa2013f9-dca8-4c1c-9481-753ffcadbae3" },
     { "xhashsymbolexclamationpointasteriskrightdoublevertical97","1 LP","untitled 1","78308fa1-b583-4b6c-a592-931df0126d29","3e7cb8db-6d89-4a54-8128-113f297fa83d","bc3c4795-e1bf-4350-b976-09be082bf077" },
     { "Enya Patricia Brennan", "watermark", "watermark", "4967c0a1-b9f3-465e-8440-4598fd9fc33c", "f65cccba-f726-445c-8d1f-e324e5ab779f", "6e686d11-0191-4021-9bb7-a46535709ca4"},
+    { "Hanan Ben Ari","לא לבד","רגע","eced93df-6c3d-4f44-81a1-b7768bdaecf9","299f4e4e-b553-44ba-8f8b-199a17eb9038","2ca43050-1bff-4cda-b07e-732d8f6727ba" },
+    { "!!!","As If","Ooo","f26c72d3-e52c-467b-b651-679c73d8e1a7","a8d39759-5f8f-4e64-bf53-93e11af9d159","f2233161-cf68-421e-bc97-de8dbec3fc3c" },
+    { "Yaakov Shwekey","גוף ונשמה 1/4","גלגלים","b5792b6a-1561-4499-a9d3-82fa7f40b33f", "90820c40-dfee-4d31-9147-a56383df402b","59855bd1-9e13-4b55-9c77-c793c4dd8cc2" },
     
 // https://musicbrainz.org/artist/3fdaac99-0261-49a7-92b3-5a909cba187d
 // †††
 // '鬱P' 'ガ' 'HAPPYPILLS'
 // 'mynoise' 'primeval forest' 'Springtime Birds'
-
-
 
 // Possible recording/release match issue. requires more research
 //    { "Celtic Woman","20th Anniversary","When You Believe","4d483147-c871-48c4-8470-85e5a66381c5","9659808f-3382-42be-8c5d-477d271f9791","376e5743-7bf5-49ee-9c7e-f00aa479882c" },
@@ -73,8 +71,11 @@ TestCase test_cases[] = {
 //    { "Eve","pray - Single","pray","66bdd1c9-d1c5-40b7-a487-5061fffbd87d","9117d976-7283-4517-b5ac-513e62009613","f8c50031-b2e0-4b60-b8f6-38215271092c" },
 // Detune, Artist credit for track is quite different. Rmoving all after "," will get the right match
 //    { "Hans Zimmer, Lorne Balfe & Benjamin Wallfisch","Dunkirk: Original Motion Picture Soundtrack","End Titles","9cba57da-0a50-48d0-8a7b-232e31e196a0", "4d4b8a77-6c2e-4e6f-bc12-e563e9efab91","94f64a3f-b7d8-472f-99bb-ca07afad55da" },
-// Data issue -- Ornette is not album by her, but her quartet. No aliases exist. Probably consider this a data issue.
+// Data issues
+//    -- Ornette is not album by her, but her quartet. No aliases exist. Probably consider this a data issue.
 //    { "Ornette Coleman","Ornette!","W.R.U.","31ea99e3-c222-4809-8912-95678314beec","4c7b347e-16b2-41eb-b56e-97edb77ee961","43065996-51e7-4942-8803-aa2a0249b8a6" },
+//    -- Galgalim is the translation of the hebrew word, we're only searching for transliterations.
+//    { "Yaakov Shwekey","גוף ונשמה 1/4","Galgalim","b5792b6a-1561-4499-a9d3-82fa7f40b33f", "90820c40-dfee-4d31-9147-a56383df402b","59855bd1-9e13-4b55-9c77-c793c4dd8cc2" },
 };
 
 string
