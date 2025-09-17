@@ -258,7 +258,7 @@ class MappingSearch {
                     continue;
 
                 for (auto artist_credit_id : artist_credit_map[it.id]) {
-                    if (!ac_history.contains(artist_credit_id)) {
+                    if (ac_history.find(artist_credit_id) == ac_history.end()) {
                         SearchResult r = recording_release_search(artist_credit_id, release_name, recording_name); 
                         if (r.confidence > .7) {
                             if (!fetch_metadata(r))

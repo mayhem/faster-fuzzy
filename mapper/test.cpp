@@ -2,6 +2,7 @@
 #include <tuple>
 #include <sstream>
 #include <algorithm>
+#include <iterator>
 #include "search.hpp"
 
 #ifdef INFO
@@ -54,7 +55,6 @@ TestCase test_cases[] = {
     { "Yaakov Shwekey","גוף ונשמה 1/4","גלגלים","b5792b6a-1561-4499-a9d3-82fa7f40b33f", "90820c40-dfee-4d31-9147-a56383df402b","59855bd1-9e13-4b55-9c77-c793c4dd8cc2" },
     
 // https://musicbrainz.org/artist/3fdaac99-0261-49a7-92b3-5a909cba187d
-// †††
 // '鬱P' 'ガ' 'HAPPYPILLS'
 // 'mynoise' 'primeval forest' 'Springtime Birds'
 
@@ -139,7 +139,7 @@ lookup(const string &artist_credit_name, const string &release_name, const strin
 }
 
 vector<TestCase> get_test_cases() {
-    vector<TestCase> vec(begin(test_cases), end(test_cases));
+    vector<TestCase> vec(std::begin(test_cases), std::end(test_cases));
     return vec;
 }
 

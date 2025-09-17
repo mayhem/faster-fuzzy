@@ -5,6 +5,7 @@
 #include "fuzzy_index.hpp"
 #include "encode.hpp"
 #include "utils.hpp"
+#include "artist_index.hpp"
 
 using namespace std;
 
