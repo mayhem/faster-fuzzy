@@ -52,6 +52,13 @@ TestCase test_cases[] = {
     { "Harry Nilsson","Nilsson Schmilsson","Without You","e5963d26-01fa-40f5-b200-e0127f410a45","1ae84595-aa9d-3190-bce9-140eb81800e4","fa2013f9-dca8-4c1c-9481-753ffcadbae3" },
     { "xhashsymbolexclamationpointasteriskrightdoublevertical97","1 LP","untitled 1","78308fa1-b583-4b6c-a592-931df0126d29","3e7cb8db-6d89-4a54-8128-113f297fa83d","bc3c4795-e1bf-4350-b976-09be082bf077" },
     { "Enya Patricia Brennan", "watermark", "watermark", "4967c0a1-b9f3-465e-8440-4598fd9fc33c", "f65cccba-f726-445c-8d1f-e324e5ab779f", "6e686d11-0191-4021-9bb7-a46535709ca4"},
+    
+// https://musicbrainz.org/artist/3fdaac99-0261-49a7-92b3-5a909cba187d
+// †††
+// '鬱P' 'ガ' 'HAPPYPILLS'
+// 'mynoise' 'primeval forest' 'Springtime Birds'
+
+
 
 // Possible recording/release match issue. requires more research
 //    { "Celtic Woman","20th Anniversary","When You Believe","4d483147-c871-48c4-8470-85e5a66381c5","9659808f-3382-42be-8c5d-477d271f9791","376e5743-7bf5-49ee-9c7e-f00aa479882c" },

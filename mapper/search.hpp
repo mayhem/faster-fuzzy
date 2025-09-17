@@ -14,6 +14,8 @@
 #include "levenshtein.hpp"
 
 // TODO: Implement DB connection re-use
+// TODO: Create dynamic thresholds based on length. Shorter artists will need more checks.
+const float artist_threshold = .6;
 
 const char *fetch_metadata_query = 
     "  SELECT artist_mbids, artist_credit_name, release_mbid, release_name, recording_mbid, recording_name "
@@ -216,8 +218,6 @@ class MappingSearch {
                 
         }
        
-        // TODO: Create dynamic thresholds based on length. Shorter artists will need more checks.
-        const float artist_threshold = .5;
         
         SearchResult *
         search(const string &artist_credit_name, const string &release_name, const string &recording_name) {
