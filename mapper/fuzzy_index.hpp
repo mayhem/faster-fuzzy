@@ -155,7 +155,6 @@ class FuzzyIndex {
         post_process_long_query(const string &query, vector<IndexResult> &results, float min_confidence) {
             vector<IndexResult> updated;
           
-            printf("-- post process results --\n");
             for(int i = results.size() - 1; i >= 0; i--) {
                 unsigned int id = results[i].id;
                 unsigned int index = results[i].result_index;

@@ -34,8 +34,7 @@ FetchContent_MakeAvailable(libpq)
 add_executable(mapping_server server.cpp tfidf_vectorizer.cpp levenshtein.cpp)
 add_executable(mapping_creator mapping.cpp tfidf_vectorizer.cpp)
 add_executable(mapping_test test.cpp tfidf_vectorizer.cpp levenshtein.cpp)
-add_executable(artist_search artist_search.cpp tfidf_vectorizer.cpp levenshtein.cpp)
-add_executable(dump_recordings dump_recordings.cpp tfidf_vectorizer.cpp levenshtein.cpp)
+add_executable(explore explore.cpp tfidf_vectorizer.cpp levenshtein.cpp)
 
 include_directories(deps/nmslib/similarity_search/include
                     deps/unidecode/include
@@ -76,17 +75,7 @@ target_link_libraries(mapping_test NonMetricSpaceLib
                                    Catch2::Catch2
 )
 
-target_link_libraries(artist_search NonMetricSpaceLib
-                                    unidecode
-                                    libpcre2-8.a
-                                    armadillo
-                                    SQLiteCpp
-                                    pthread
-                                    cereal
-                                    Catch2::Catch2
-)
-
-target_link_libraries(dump_recordings NonMetricSpaceLib
+target_link_libraries(explore NonMetricSpaceLib
                                     unidecode
                                     libpcre2-8.a
                                     armadillo
