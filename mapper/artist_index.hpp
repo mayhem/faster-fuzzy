@@ -78,15 +78,8 @@ class ArtistIndex {
             return stupid_artist_index;
         }
        
-        // WTF ac 0?
-        //Results:
-        //name                                     confidence artist_id artist_credit_ids
-        //------------------------------------------------------------------------
-        //q                                        1.00       107966   107966,107966,107966,107966,107966,107966,107966,107966,107966
-        //q                                        1.00       2207032  none           
-
         void
-        insert_artist_credit_mappping(const map<unsigned int, vector<unsigned int>> &artist_artist_credit_map) {
+        insert_artist_credit_mapping(const map<unsigned int, vector<unsigned int>> &artist_artist_credit_map) {
             try {
                 SQLite::Database db(db_file, SQLite::OPEN_READWRITE);
                 
@@ -218,7 +211,7 @@ class ArtistIndex {
             vector<unsigned int> output_ids, stupid_ids;
             vector<string>       output_texts, output_rems, stupid_texts, stupid_rems;
 
-            insert_artist_credit_mappping(artist_artist_credit_map);
+            insert_artist_credit_mapping(artist_artist_credit_map);
                     
             log("encode data");
             encode.encode_index_data(index_ids, index_texts, output_ids, output_texts, stupid_ids, stupid_texts);
