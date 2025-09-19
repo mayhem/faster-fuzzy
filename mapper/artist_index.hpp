@@ -79,37 +79,58 @@ class ArtistIndex {
         }
        
         void
-        insert_artist_credit_mapping(const map<unsigned int, vector<unsigned int>> &artist_artist_credit_map) {
+        insert_artist_credit_mapping(const map<unsigned int, set<unsigned int>> &artist_artist_credit_map) {
             try {
                 SQLite::Database db(db_file, SQLite::OPEN_READWRITE);
                 
                 // Begin transaction for bulk insert
                 SQLite::Transaction transaction(db);
                 
-                // Prepare the insert statement
-                SQLite::Statement insert_stmt(db, "INSERT INTO artist_credit_mapping (artist_id, artist_credit_id) VALUES (?, ?)");
+                // Remove all existing artist credit mappings
+                log("Clearing existing artist credit mappings");
+                SQLite::Statement delete_stmt(db, "DELETE FROM artist_credit_mapping");
+                delete_stmt.exec();
                 
                 log("Inserting artist credit mappings");
                 size_t total_mappings = 0;
+                const size_t BATCH_SIZE = 1000;
                 
-                // Iterate through the map and insert all mappings
+                // Collect all mappings first for batch processing
+                vector<pair<unsigned int, unsigned int>> all_mappings;
                 for (const auto& artist_entry : artist_artist_credit_map) {
                     unsigned int artist_id = artist_entry.first;
-                    const vector<unsigned int>& artist_credit_ids = artist_entry.second;
                     
-                    // Remove duplicates from artist_credit_ids
-                    set<unsigned int> unique_credit_ids(artist_credit_ids.begin(), artist_credit_ids.end());
-                   
-                    //printf("%u: ", artist_id);
-                    for (unsigned int artist_credit_id : unique_credit_ids) {
-                        //printf("%u ", artist_credit_id);
-                        insert_stmt.bind(1, artist_id);
-                        insert_stmt.bind(2, artist_credit_id);
-                        insert_stmt.exec();
-                        insert_stmt.reset();
-                        total_mappings++;
+                    // Convert the set to a sorted list
+                    list<unsigned int> sorted_artist_credit_ids(artist_entry.second.begin(), artist_entry.second.end());
+                    
+                    for (unsigned int artist_credit_id : sorted_artist_credit_ids) {
+                        all_mappings.push_back({artist_id, artist_credit_id});
                     }
-                    //printf("\n");
+                }
+                
+                // Process mappings in batches
+                for (size_t i = 0; i < all_mappings.size(); i += BATCH_SIZE) {
+                    size_t batch_end = min(i + BATCH_SIZE, all_mappings.size());
+                    size_t batch_size = batch_end - i;
+                    
+                    // Build batch INSERT statement
+                    string batch_sql = "INSERT INTO artist_credit_mapping (artist_id, artist_credit_id) VALUES ";
+                    for (size_t j = 0; j < batch_size; j++) {
+                        if (j > 0) batch_sql += ", ";
+                        batch_sql += "(?, ?)";
+                    }
+                    
+                    SQLite::Statement batch_stmt(db, batch_sql);
+                    
+                    // Bind parameters for the batch
+                    int param_index = 1;
+                    for (size_t j = i; j < batch_end; j++) {
+                        batch_stmt.bind(param_index++, all_mappings[j].first);   // artist_id
+                        batch_stmt.bind(param_index++, all_mappings[j].second);  // artist_credit_id
+                    }
+                    
+                    batch_stmt.exec();
+                    total_mappings += batch_size;
                 }
                 
                 // Commit the transaction
@@ -147,7 +168,7 @@ class ArtistIndex {
             
             vector<unsigned int>                               index_ids;
             vector<string>                                     index_texts;
-            map<unsigned int, vector<unsigned int>>            artist_artist_credit_map;
+            map<unsigned int, set<unsigned int>>               artist_artist_credit_map;
 
             try
             {
@@ -196,7 +217,7 @@ class ArtistIndex {
                     artist_names.push_back(artist_name);
                     // artist_credit_ids are true artist aliases.
                     if (artist_credit_id) 
-                        artist_artist_credit_map[artist_id].push_back(artist_credit_id);
+                        artist_artist_credit_map[artist_id].insert(artist_credit_id);
                     
                     last_artist_id = artist_id;
                 }

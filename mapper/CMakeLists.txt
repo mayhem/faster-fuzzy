@@ -83,4 +83,5 @@ target_link_libraries(explore NonMetricSpaceLib
                                     pthread
                                     cereal
                                     Catch2::Catch2
+                                    readline
 )

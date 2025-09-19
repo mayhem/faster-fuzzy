@@ -109,7 +109,6 @@ class EncodeSearchData {
                 if (ret.size() == 0) {
                     auto stupid = encode_string_for_stupid_artists(input_texts[i]);
                     if (stupid.size()) {
-                        printf("%u: %s\n", input_ids[i], stupid.c_str());
                         stupid_ids.push_back(input_ids[i]);
                         stupid_texts.push_back(stupid);
                         continue;

@@ -5,8 +5,8 @@
 #include <map>
 #include <set>
 #include <sstream>
-#include <termios.h>
-#include <unistd.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 
 #include "SQLiteCpp.h"
 #include "artist_index.hpp"
@@ -25,8 +25,6 @@ class Explorer {
         MappingSearch      *mapping_search;
         EncodeSearchData    encode;
         map<unsigned int, vector<unsigned int>> artist_credit_map;
-        vector<string>      command_history;
-        int                 history_index;
 
     public:
         Explorer(const string &_index_dir) {
@@ -34,7 +32,6 @@ class Explorer {
             artist_index = new ArtistIndex(index_dir);
             recording_index = new RecordingIndex(index_dir);
             mapping_search = new MappingSearch(index_dir, 25); // 25MB cache
-            history_index = 0;
         }
         
         ~Explorer() {
@@ -300,119 +297,24 @@ class Explorer {
             }
         }
         
-        void add_to_history(const string& command) {
-            if (!command.empty() && (command_history.empty() || command_history.back() != command)) {
-                command_history.push_back(command);
-                if (command_history.size() > 100) { // Keep only last 100 commands
-                    command_history.erase(command_history.begin());
-                }
-            }
-            history_index = command_history.size();
-        }
-        
         string get_line_with_history() {
-            struct termios old_termios, new_termios;
-            string input;
-            int ch;
-            int cursor_pos = 0;
-            int temp_history_index = history_index;
+            char* input = readline("> ");
             
-            // Get current terminal settings
-            tcgetattr(STDIN_FILENO, &old_termios);
-            new_termios = old_termios;
-            
-            // Set terminal to raw mode
-            new_termios.c_lflag &= ~(ICANON | ECHO);
-            tcsetattr(STDIN_FILENO, TCSANOW, &new_termios);
-            
-            printf("> ");
-            fflush(stdout);
-            
-            while ((ch = getchar()) != '\n' && ch != EOF) {
-                if (ch == '\033') { // Escape sequence
-                    ch = getchar();
-                    if (ch == '[') {
-                        ch = getchar();
-                        if (ch == 'A' && !command_history.empty()) { // Up arrow
-                            if (temp_history_index > 0) {
-                                temp_history_index--;
-                                // Clear current line
-                                printf("\r> ");
-                                for (int i = 0; i < (int)input.length(); i++) printf(" ");
-                                printf("\r> ");
-                                
-                                input = command_history[temp_history_index];
-                                printf("%s", input.c_str());
-                                cursor_pos = input.length();
-                                fflush(stdout);
-                            }
-                        } else if (ch == 'B' && !command_history.empty()) { // Down arrow
-                            if (temp_history_index < (int)command_history.size() - 1) {
-                                temp_history_index++;
-                                // Clear current line
-                                printf("\r> ");
-                                for (int i = 0; i < (int)input.length(); i++) printf(" ");
-                                printf("\r> ");
-                                
-                                input = command_history[temp_history_index];
-                                printf("%s", input.c_str());
-                                cursor_pos = input.length();
-                                fflush(stdout);
-                            } else if (temp_history_index == (int)command_history.size() - 1) {
-                                temp_history_index = command_history.size();
-                                // Clear current line
-                                printf("\r> ");
-                                for (int i = 0; i < (int)input.length(); i++) printf(" ");
-                                printf("\r> ");
-                                
-                                input = "";
-                                cursor_pos = 0;
-                                fflush(stdout);
-                            }
-                        }
-                        // Ignore left/right arrows for now
-                    }
-                } else if (ch == 127 || ch == '\b') { // Backspace
-                    if (!input.empty() && cursor_pos > 0) {
-                        input.erase(cursor_pos - 1, 1);
-                        cursor_pos--;
-                        
-                        // Redraw line
-                        printf("\r> %s ", input.c_str());
-                        printf("\r> %s", input.c_str());
-                        
-                        // Move cursor to correct position
-                        for (int i = cursor_pos; i < (int)input.length(); i++) {
-                            printf("\b");
-                        }
-                        fflush(stdout);
-                    }
-                } else if (ch >= 32 && ch <= 126) { // Printable characters
-                    input.insert(cursor_pos, 1, ch);
-                    cursor_pos++;
-                    
-                    // Redraw from cursor position
-                    printf("%c", ch);
-                    if (cursor_pos < (int)input.length()) {
-                        printf("%s", input.c_str() + cursor_pos);
-                        for (int i = cursor_pos; i < (int)input.length(); i++) {
-                            printf("\b");
-                        }
-                    }
-                    fflush(stdout);
-                }
-            }
-            
-            // Restore terminal settings
-            tcsetattr(STDIN_FILENO, TCSANOW, &old_termios);
-            
-            if (ch == EOF) {
+            if (input == nullptr) {
+                // EOF (Ctrl-D)
                 printf("\nGoodbye!\n");
                 return "EOF";
             }
             
-            printf("\n");
-            return input;
+            string line(input);
+            
+            // Add to history if not empty
+            if (!line.empty()) {
+                add_history(input);
+            }
+            
+            free(input);
+            return line;
         }
         
         void run_interactive() {
@@ -427,7 +329,8 @@ class Explorer {
             printf("  s <artist>, <release>        - Full search: artist + release\n");
             printf("  s <artist>, <release>, <rec> - Full search: artist + release + recording\n");
             printf("  \\q, quit, exit               - Quit the program\n");
-            printf("\nUse Up/Down arrow keys to navigate command history.\n\n");
+            printf("\nUse Up/Down arrow keys for command history, Left/Right/Home/End for editing.\n");
+            printf("Ctrl+A (beginning), Ctrl+E (end), Ctrl+K (kill to end), Ctrl+U (kill to beginning)\n\n");
             
             while (true) {
                 input = get_line_with_history();
@@ -448,9 +351,6 @@ class Explorer {
                     printf("Goodbye!\n");
                     break;
                 }
-                
-                // Add to history before processing
-                add_to_history(input);
                 
                 // Parse commands
                 if (input.substr(0, 2) == "a ") {
