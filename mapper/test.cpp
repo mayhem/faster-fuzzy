@@ -53,10 +53,10 @@ TestCase test_cases[] = {
     { "Hanan Ben Ari","לא לבד","רגע","eced93df-6c3d-4f44-81a1-b7768bdaecf9","299f4e4e-b553-44ba-8f8b-199a17eb9038","2ca43050-1bff-4cda-b07e-732d8f6727ba" },
     { "!!!","As If","Ooo","f26c72d3-e52c-467b-b651-679c73d8e1a7","a8d39759-5f8f-4e64-bf53-93e11af9d159","f2233161-cf68-421e-bc97-de8dbec3fc3c" },
     { "Yaakov Shwekey","גוף ונשמה 1/4","גלגלים","b5792b6a-1561-4499-a9d3-82fa7f40b33f", "90820c40-dfee-4d31-9147-a56383df402b","59855bd1-9e13-4b55-9c77-c793c4dd8cc2" },
+    { "mynoise", "primeval forest", "springtime birds", "d6ecdfbe-aaa7-48b5-925c-87f066376eaa", "00d9a760-bf8a-4c9e-b310-f7e00b7ed701", "057c48e8-754c-487e-b46b-f55a76498ccd"},
     
 // https://musicbrainz.org/artist/3fdaac99-0261-49a7-92b3-5a909cba187d
 // '鬱P' 'ガ' 'HAPPYPILLS'
-// 'mynoise' 'primeval forest' 'Springtime Birds'
 
 // Possible recording/release match issue. requires more research
 //    { "Celtic Woman","20th Anniversary","When You Believe","4d483147-c871-48c4-8470-85e5a66381c5","9659808f-3382-42be-8c5d-477d271f9791","376e5743-7bf5-49ee-9c7e-f00aa479882c" },

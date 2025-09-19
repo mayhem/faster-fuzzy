@@ -22,6 +22,7 @@ class Explorer {
         RecordingIndex     *recording_index;
         MappingSearch      *mapping_search;
         EncodeSearchData    encode;
+        map<unsigned int, vector<unsigned int>> artist_credit_map;
 
     public:
         Explorer(const string &_index_dir) {
@@ -42,42 +43,48 @@ class Explorer {
                 throw std::runtime_error("Failed to load artist index");
             }
             mapping_search->load();
+            load_artist_credit_map();
         }
         
-        map<unsigned int, vector<unsigned int>>
-        fetch_artist_credit_ids(const vector<IndexResult> &res) {
-            map<unsigned int, vector<unsigned int>> artist_credit_map;
+        void load_artist_credit_map() {
             string db_file = index_dir + string("/mapping.db");
             
             try {
                 SQLite::Database db(db_file);
+                SQLite::Statement query(db, "SELECT artist_id, artist_credit_id FROM artist_credit_mapping");
                 
-                // Create a set of unique artist_ids to query
-                set<unsigned int> artist_ids;
-                for (const auto& result : res) {
-                    artist_ids.insert(result.id);
+                printf("Loading artist credit mappings...");
+                fflush(stdout);
+                
+                int count = 0;
+                while (query.executeStep()) {
+                    unsigned int artist_id = query.getColumn(0).getInt();
+                    unsigned int artist_credit_id = query.getColumn(1).getInt();
+                    
+                    artist_credit_map[artist_id].push_back(artist_credit_id);
+                    count++;
                 }
                 
-                // Query the artist_credit_mapping table for each artist_id
-                for (unsigned int artist_id : artist_ids) {
-                    SQLite::Statement query(db, "SELECT artist_credit_id FROM artist_credit_mapping WHERE artist_id = ?");
-                    query.bind(1, artist_id);
-                    
-                    vector<unsigned int> credit_ids;
-                    while (query.executeStep()) {
-                        credit_ids.push_back(query.getColumn(0).getInt());
-                    }
-                    
-                    if (!credit_ids.empty()) {
-                        artist_credit_map[artist_id] = credit_ids;
-                    }
-                }
+                printf(" loaded %d mappings.\n", count);
             }
             catch (std::exception& e) {
-                printf("Error fetching artist credit IDs: %s\n", e.what());
+                throw std::runtime_error("Failed to load artist credit mappings: " + string(e.what()));
+            }
+        }
+        
+        map<unsigned int, vector<unsigned int>>
+        fetch_artist_credit_ids(const vector<IndexResult> &res) {
+            map<unsigned int, vector<unsigned int>> result_map;
+            
+            // Use the preloaded artist credit map instead of querying database
+            for (const auto& result : res) {
+                auto it = artist_credit_map.find(result.id);
+                if (it != artist_credit_map.end()) {
+                    result_map[result.id] = it->second;
+                }
             }
             
-            return artist_credit_map;
+            return result_map;
         }
         
         string make_comma_sep_string(const vector<string> &str_array) {
@@ -189,7 +196,7 @@ class Explorer {
             map<unsigned int, vector<unsigned int>> artist_credit_ids = fetch_artist_credit_ids(res);
             
             printf("\nResults:\n");
-            printf("%-4s %-10s %-8s %-15s\n", "Name", "Confidence", "ID", "Artist Credits");
+            printf("%-40s %-10s %-8s %-15s\n", "Name", "Confidence", "ID", "Artist Credits");
             printf("------------------------------------------------------------------------\n");
             
             for (auto &result : res) {
@@ -201,7 +208,7 @@ class Explorer {
                 }
                 
                 // Limit artist name to 4 characters
-                string short_name = text.length() > 4 ? text.substr(0, 4) : text;
+                string short_name = text.length() > 40 ? text.substr(0, 40) : text;
                 
                 // Format artist credit IDs
                 string credit_ids_str = "";
@@ -215,7 +222,7 @@ class Explorer {
                     credit_ids_str = "none";
                 }
                 
-                printf("%-4s %-10.2f %-8d %-15s\n", short_name.c_str(), result.confidence, result.id, credit_ids_str.c_str());
+                printf("%-40s %-10.2f %-8d %-15s\n", short_name.c_str(), result.confidence, result.id, credit_ids_str.c_str());
             }
             printf("\n");
         }
