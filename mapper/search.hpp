@@ -221,7 +221,7 @@ class MappingSearch {
             auto artist_name = encode.encode_string(artist_credit_name); 
             if (artist_name.size()) {
                 printf("ARTIST SEARCH: '%s' (%s)\n", artist_credit_name.c_str(), artist_name.c_str());
-                res = artist_index->artist_index->search(artist_name, .5);
+                res = artist_index->single_artist_index->search(artist_name, .5);
             }
             else {
                 auto stupid_name = encode.encode_string_for_stupid_artists(artist_credit_name); 
@@ -240,7 +240,7 @@ class MappingSearch {
                 for(auto &it : res) {
                     if (it.confidence >= artist_threshold) {
                         if (artist_name.size()) 
-                            text = artist_index->artist_index->get_index_text(it.result_index);
+                            text = artist_index->single_artist_index->get_index_text(it.result_index);
                         else
                             text = artist_index->stupid_artist_index->get_index_text(it.result_index);
                         printf("  %-9d %.2f %-40s ", it.id, it.confidence, text.c_str());

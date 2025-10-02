@@ -97,25 +97,4 @@ class EncodeSearchData {
             return result;
         }
 
-        void 
-        encode_index_data(const vector<unsigned int>           &input_ids,
-                          const vector<string>                 &input_texts,
-                          vector<unsigned int>                 &output_ids,
-                          vector<string>                       &output_texts,
-                          vector<unsigned int>                 &stupid_ids,
-                          vector<string>                       &stupid_texts) {
-            for(unsigned int i = 0; i < input_ids.size(); i++) {
-                auto ret = encode_string(input_texts[i]);
-                if (ret.size() == 0) {
-                    auto stupid = encode_string_for_stupid_artists(input_texts[i]);
-                    if (stupid.size()) {
-                        stupid_ids.push_back(input_ids[i]);
-                        stupid_texts.push_back(stupid);
-                        continue;
-                    }
-                }
-                output_ids.push_back(input_ids[i]);
-                output_texts.push_back(ret);
-            }
-        }
 };

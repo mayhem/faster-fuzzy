@@ -14,10 +14,11 @@
 
 using namespace std;
 
-const int ARTIST_INDEX_ENTITY_ID = -1;
-const int STUPID_ARTIST_INDEX_ENTITY_ID = -2;
+const int SINGLE_ARTIST_INDEX_ENTITY_ID = -1;
+const int MULTIPLE_ARTIST_INDEX_ENTITY_ID = -2;
+const int STUPID_ARTIST_INDEX_ENTITY_ID = -3;
 
-// this query can include artist_credit_ids that have no recordings!
+// Fetch artist names and aliases via the artist_credits and artist aliases for artist credits with artist_count = 1
 const char *fetch_artists_query = 
   "WITH acs AS ( "
   "   SELECT DISTINCT artist_credit AS artist_credit_id  "
@@ -41,6 +42,23 @@ const char *fetch_artists_query =
   "    WHERE aa.artist > 1 "
   " ORDER BY artist_id, artist_credit_id   ";
 
+// Fetch artist names for artist credits with artist_count > 1
+const char *fetch_multiple_artists_query = 
+  "WITH acs AS ( "
+  "   SELECT DISTINCT artist_credit AS artist_credit_id  "
+  "     FROM recording "
+  ") "
+  "   SELECT ac.id AS artist_credit_id"
+  "        , acn.name AS artist_name"
+  "     FROM artist_credit_name acn "
+  "     JOIN artist_credit ac "
+  "       ON acn.artist_credit = ac.id "
+  "     JOIN acs "
+  "       ON ac.id = acs.artist_credit_id "
+  "      AND artist > 1 "
+  "      AND artist_count > 1 "
+  " ORDER BY artist_credit_id   ";
+
 const char *insert_blob_query = 
     "INSERT INTO index_cache (entity_id, index_data) VALUES (?, ?) "
     "         ON CONFLICT(entity_id) DO UPDATE SET index_data=excluded.index_data";
@@ -50,36 +68,37 @@ const char *fetch_blob_query =
 
 class ArtistIndex {
     private:
-        string                         index_dir, db_file; 
-        EncodeSearchData               encode;
+        string                                    index_dir, db_file; 
+        EncodeSearchData                          encode;
+
+        // Single artist index
+        vector<unsigned int>                      single_artist_ids;
+        vector<string>                            single_artist_texts;
+        map<unsigned int, set<unsigned int>>      artist_artist_credit_map;
+
+        // Multiple artist index
+        vector<unsigned int>                      multiple_artist_credit_ids;
+        vector<string>                            multiple_artist_credit_texts;
 
     public:
-        FuzzyIndex                     *artist_index, *stupid_artist_index;
+        FuzzyIndex                               *single_artist_index, *multiple_artist_index, *stupid_artist_index;
 
         ArtistIndex(const string &_index_dir) {
             index_dir = _index_dir;
             db_file = _index_dir + string("/mapping.db");
-            artist_index = nullptr;
+            single_artist_index = nullptr;
+            multiple_artist_index = nullptr;
             stupid_artist_index = nullptr;
         }
         
         ~ArtistIndex() {
-            delete artist_index;
+            delete single_artist_index;
             delete stupid_artist_index;
+            delete multiple_artist_index;
         }
         
-        FuzzyIndex *
-        index() {
-            return artist_index;
-        }
-
-        FuzzyIndex *
-        stupid() {
-            return stupid_artist_index;
-        }
-       
         void
-        insert_artist_credit_mapping(const map<unsigned int, set<unsigned int>> &artist_artist_credit_map) {
+        insert_artist_credit_mapping() {
             try {
                 SQLite::Database db(db_file, SQLite::OPEN_READWRITE);
                 
@@ -87,11 +106,9 @@ class ArtistIndex {
                 SQLite::Transaction transaction(db);
                 
                 // Remove all existing artist credit mappings
-                log("Clearing existing artist credit mappings");
                 SQLite::Statement delete_stmt(db, "DELETE FROM artist_credit_mapping");
                 delete_stmt.exec();
                 
-                log("Inserting artist credit mappings");
                 size_t total_mappings = 0;
                 const size_t BATCH_SIZE = 1000;
                 
@@ -132,15 +149,14 @@ class ArtistIndex {
                     batch_stmt.exec();
                     total_mappings += batch_size;
                 }
+                all_mappings.clear();
+                all_mappings.shrink_to_fit();
                 
                 // Commit the transaction
                 transaction.commit();
-                log("Inserted %lu artist credit mappings", total_mappings);
                 
                 // Create index on artist_id column for better query performance
-                log("Creating index on artist_credit_mapping.artist_id");
                 db.exec("CREATE INDEX IF NOT EXISTS artist_id_ndx ON artist_credit_mapping(artist_id)");
-                log("Index created successfully");
                 
             } catch (std::exception& e) {
                 printf("Error inserting artist credit mappings: %s\n", e.what());
@@ -163,13 +179,8 @@ class ArtistIndex {
             return result;
         }
         
-        // 幾何学模様 a                  Kikagaku Moyo c
-        void build() {
-            
-            vector<unsigned int>                               index_ids;
-            vector<string>                                     index_texts;
-            map<unsigned int, set<unsigned int>>               artist_artist_credit_map;
-
+        void
+        build_single_artist_index() {
             try
             {
                 PGconn     *conn;
@@ -190,7 +201,6 @@ class ArtistIndex {
                     return;
                 }
 
-                log("fetch rows");
                 unsigned int         last_artist_id = 0;
                 vector<string>       artist_names;
                 for (int i = 0; i < PQntuples(res) + 1; i++) {
@@ -207,10 +217,11 @@ class ArtistIndex {
                         
                         auto dedup_names = encode_and_dedup_artist_names(artist_names);
                         artist_names.clear();
+                        artist_names.shrink_to_fit();
 
                         for(auto it : dedup_names) {
-                            index_ids.push_back(last_artist_id);
-                            index_texts.push_back(it);
+                            single_artist_ids.push_back(last_artist_id);
+                            single_artist_texts.push_back(it);
                         }
                     }
                     
@@ -221,6 +232,8 @@ class ArtistIndex {
                     
                     last_artist_id = artist_id;
                 }
+                artist_names.clear();
+                artist_names.shrink_to_fit();
             
                 // Clear the PGresult object to free memory
                 PQclear(res);
@@ -229,62 +242,203 @@ class ArtistIndex {
             {
                 printf("build artist db exception: %s\n", e.what());
             }
-            vector<unsigned int> output_ids, stupid_ids;
-            vector<string>       output_texts, output_rems, stupid_texts, stupid_rems;
+        }
+        
+        void
+        build_multiple_artist_index() {
+            try
+            {
+                PGconn     *conn;
+                PGresult   *res;
+                
+                conn = PQconnectdb("dbname=musicbrainz_db user=musicbrainz password=musicbrainz host=127.0.0.1 port=5432");
+                if (PQstatus(conn) != CONNECTION_OK) {
+                    printf("Connection to database failed: %s\n", PQerrorMessage(conn));
+                    PQfinish(conn);
+                    return;
+                }
+               
+                res = PQexec(conn, fetch_multiple_artists_query);
+                if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+                    printf("Query failed: %s\n", PQerrorMessage(conn));
+                    PQclear(res);
+                    PQfinish(conn);
+                    return;
+                }
 
-            insert_artist_credit_mapping(artist_artist_credit_map);
+                for (int i = 0; i < PQntuples(res) + 1; i++) {
+                    if (i >= PQntuples(res)) 
+                        break;
+
+                    multiple_artist_credit_ids.push_back(atoi(PQgetvalue(res, i, 0)));
+                    multiple_artist_credit_texts.push_back(PQgetvalue(res, i, 1));
+                }
+            
+                // Clear the PGresult object to free memory
+                PQclear(res);
+            }
+            catch (std::exception& e)
+            {
+                printf("build artist db exception: %s\n", e.what());
+            }
+        }
+        
+        void build() {
+            
+
+            log("load multiple artist data");
+            build_multiple_artist_index();
+
+            log("load single artist data");
+            build_single_artist_index();
+
+            log("insert artist credit mappings");
+            insert_artist_credit_mapping();
                     
             log("encode data");
-            encode.encode_index_data(index_ids, index_texts, output_ids, output_texts, stupid_ids, stupid_texts);
-            log("%lu items in index", output_ids.size());
-            {
-                FuzzyIndex *index = new FuzzyIndex();
-                log("build artist index");
-                index->build(output_ids, output_texts);
-                
-                log("serialize artist index");
-                std::stringstream ss;
-                {
-                    cereal::BinaryOutputArchive oarchive(ss);
-                    oarchive(*index);
-                }
-                log("artist index size: %lu bytes", ss.str().length());
-           
-                std::stringstream sss;
-                if (stupid_ids.size()) {
-                    FuzzyIndex *stupid_index = new FuzzyIndex();
-                    stupid_index->build(stupid_ids, stupid_texts);
-                    {
-                        cereal::BinaryOutputArchive oarchive(sss);
-                        oarchive(*stupid_index);
-                    }
-                    log("stupid artist index size: %lu", sss.str().length());
-                }
+            vector<unsigned int> single_ids, multiple_ids, stupid_ids;
+            vector<string>       single_texts, multiple_texts, stupid_texts; 
+            
+            // TESTING:
+            // - Leave out stupid artists for now.
+            // - Check: why are we doing the artist -> artist_credit_id conversation at run-time. Can we do it now?
 
+            // Encode the single artists
+            for(unsigned int i = 0; i < single_artist_ids.size(); i++) {
+                auto ret = encode.encode_string(single_artist_texts[i]);
+                if (ret.size() == 0) {
+                    auto stupid = encode.encode_string_for_stupid_artists(single_artist_texts[i]);
+                    if (stupid.size()) {
+                        stupid_ids.push_back(single_artist_ids[i]);
+                        stupid_texts.push_back(stupid);
+                        continue;
+                    }
+                }
+                single_ids.push_back(single_artist_ids[i]);
+                single_texts.push_back(ret);
+            }
+            single_artist_ids.clear();
+            single_artist_ids.shrink_to_fit();
+            single_artist_texts.clear();
+            single_artist_texts.shrink_to_fit();
+
+            // Encode the multiple artists
+            for(unsigned int i = 0; i < multiple_artist_credit_ids.size(); i++) {
+                auto ret = encode.encode_string(multiple_artist_credit_texts[i]);
+                if (ret.size() == 0) {
+                }
+                else
+                {
+                    multiple_ids.push_back(multiple_artist_credit_ids[i]);
+                    multiple_texts.push_back(ret);
+                }
+            }
+            multiple_artist_credit_ids.clear();
+            multiple_artist_credit_ids.shrink_to_fit();
+            multiple_artist_credit_texts.clear();
+            multiple_artist_credit_texts.shrink_to_fit();
+
+            // The extra contexts are so that the stringstreams go out of scope ASAP
+            {
+                FuzzyIndex *single_artist_index = new FuzzyIndex();
+                log("build single artist index");
+                single_artist_index->build(single_ids, single_texts);
+                std::stringstream ss_single;
+                {
+                    cereal::BinaryOutputArchive oarchive(ss_single);
+                    oarchive(*single_artist_index);
+                }
+                delete single_artist_index;
+                single_ids.clear();
+                single_ids.shrink_to_fit();
+                single_texts.clear();
+                single_texts.shrink_to_fit();
+                log("artist index size: %lu bytes", ss_single.str().length());
                 try
                 {
                     SQLite::Database    db(db_file, SQLite::OPEN_READWRITE);
                     SQLite::Statement   query(db, insert_blob_query);
                 
-                    log("save artist index");
-                    query.bind(1, ARTIST_INDEX_ENTITY_ID);
-                    query.bind(2, (const char *)ss.str().c_str(), (int32_t)ss.str().length());
+                    log("save single artist index");
+                    query.bind(1, SINGLE_ARTIST_INDEX_ENTITY_ID);
+                    query.bind(2, (const char *)ss_single.str().c_str(), (int32_t)ss_single.str().length());
                     query.exec();
-
-                    SQLite::Statement   query2(db, insert_blob_query);
-                    if (stupid_ids.size()) {
-                        log("save stupid artist index");
-                        query2.bind(1, STUPID_ARTIST_INDEX_ENTITY_ID);
-                        query2.bind(2, (const char *)sss.str().c_str(), (int32_t)sss.str().length());
-                        query2.exec();
-                    }
                 }
                 catch (std::exception& e)
                 {
-                    printf("save artist index db exception: %s\n", e.what());
+                    printf("save single artist index db exception: %s\n", e.what());
                 }
             }
-            
+      
+            {
+                FuzzyIndex *multiple_artist_index = new FuzzyIndex();
+                log("build multiple artist index");
+                multiple_artist_index->build(multiple_ids, multiple_texts);
+
+                std::stringstream ss_multiple;
+                {
+                    cereal::BinaryOutputArchive oarchive(ss_multiple);
+                    oarchive(*multiple_artist_index);
+                }
+                log("multiple artist index size: %lu bytes", ss_multiple.str().length());
+                delete multiple_artist_index;
+                multiple_ids.clear();
+                multiple_ids.shrink_to_fit();
+                multiple_texts.clear();
+                multiple_texts.shrink_to_fit();
+                
+                try
+                {
+                    SQLite::Database    db(db_file, SQLite::OPEN_READWRITE);
+                    SQLite::Statement   query(db, insert_blob_query);
+                
+                    log("save multiple artist index");
+                    query.bind(1, MULTIPLE_ARTIST_INDEX_ENTITY_ID);
+                    query.bind(2, (const char *)ss_multiple.str().c_str(), (int32_t)ss_multiple.str().length());
+                    query.exec();
+                }
+                catch (std::exception& e)
+                {
+                    printf("save multiple artist index db exception: %s\n", e.what());
+                }
+            }
+
+            {
+                std::stringstream ss_stupid;
+                if (stupid_ids.size()) {
+                    FuzzyIndex *stupid_artist_index = new FuzzyIndex();
+                    log("build stupid artist index");
+                    stupid_artist_index->build(stupid_ids, stupid_texts);
+                    {
+                        cereal::BinaryOutputArchive oarchive(ss_stupid);
+                        oarchive(*stupid_artist_index);
+                    }
+                    log("stupid artist index size: %lu bytes", ss_stupid.str().length());
+                    delete stupid_artist_index;
+
+                    if (stupid_ids.size()) {
+                        try
+                        {
+                            SQLite::Database    db(db_file, SQLite::OPEN_READWRITE);
+                            SQLite::Statement   query(db, insert_blob_query);
+                        
+                            SQLite::Statement   query2(db, insert_blob_query);
+                            log("save stupid artist index");
+                            query2.bind(1, STUPID_ARTIST_INDEX_ENTITY_ID);
+                            query2.bind(2, (const char *)ss_stupid.str().c_str(), (int32_t)ss_stupid.str().length());
+                            query2.exec();
+                        }
+                        catch (std::exception& e)
+                        {
+                            printf("save stupid artist index db exception: %s\n", e.what());
+                        }
+                    }
+                    stupid_ids.clear();
+                    stupid_ids.shrink_to_fit();
+                    stupid_texts.clear();
+                    stupid_texts.shrink_to_fit();
+                }
+            }
             
             log("done building artists indexes.");
         }
@@ -319,16 +473,38 @@ class ArtistIndex {
             return false;
         }
 
-        bool load() {
-            artist_index = new FuzzyIndex();
-            bool ret = load_index(ARTIST_INDEX_ENTITY_ID, artist_index);
+        void load() {
+            if (single_artist_index != nullptr)
+                delete single_artist_index;
+            single_artist_index = new FuzzyIndex();
+            bool ret = load_index(SINGLE_ARTIST_INDEX_ENTITY_ID, single_artist_index);
             if (!ret) {
-                throw length_error("failed to load artist index");
-                delete artist_index;
-                artist_index = nullptr;
-                return false;
+                throw length_error("failed to load single artist index");
+                delete single_artist_index;
+                single_artist_index = nullptr;
+                return;
             }
+
+            if (multiple_artist_index != nullptr)
+                delete multiple_artist_index;
+            multiple_artist_index = new FuzzyIndex();
+            ret = load_index(MULTIPLE_ARTIST_INDEX_ENTITY_ID, multiple_artist_index);
+            if (!ret) {
+                throw length_error("failed to load multiple artist index");
+                delete multiple_artist_index;
+                multiple_artist_index = nullptr;
+                return;
+            }
+
+            if (stupid_artist_index != nullptr)
+                delete stupid_artist_index;
             stupid_artist_index = new FuzzyIndex();
-            return load_index(STUPID_ARTIST_INDEX_ENTITY_ID, stupid_artist_index);
+            ret = load_index(STUPID_ARTIST_INDEX_ENTITY_ID, stupid_artist_index);
+            if (!ret) {
+                throw length_error("failed to load stupid artist index");
+                delete single_artist_index;
+                single_artist_index = nullptr;
+                return;
+            }
         }
 };

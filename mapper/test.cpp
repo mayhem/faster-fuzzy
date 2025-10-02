@@ -62,13 +62,14 @@ TestCase test_cases[] = {
 
 // Possible recording/release match issue. requires more research
 //    { "Celtic Woman","20th Anniversary","When You Believe","4d483147-c871-48c4-8470-85e5a66381c5","9659808f-3382-42be-8c5d-477d271f9791","376e5743-7bf5-49ee-9c7e-f00aa479882c" },
+// Album/recording matching bug . nor research
+//    { "Alicia Keys","Keys","Skydive","8ef1df30-ae4f-4dbd-9351-1a32b208a01e","f7c03888-7c31-4416-a57c-f1686f59ac89","a7bae269-2dd6-4297-a4c7-36a472a2a8fc" },
+//
 // This one requires Album + Soundtrack to be ranked higher than EP.
 //    { "Angelo Badalamenti","","Laura Palmer’s Theme","e441d678-b225-3ea1-808c-9c488fdc3ac6","5894dac5-0260-4175-b36e-e34680a859d6","4cc6e566-96c3-4709-9ec0-a9b39c115e2f" },
 //    { "The Beach Boys","The Smile Sessions","Child Is Father of the Man","ebfc1398-8d96-47e3-82c3-f782abcdb13d","581db767-5221-424b-b6a0-d5db2ff707a1","710ef859-ad3e-4e0e-981b-cecad50e41f4" },
 // Needs stupid indexes for release and recordings!
 //    { "!!!","!!!","KooKooKa Fuk‐U","f26c72d3-e52c-467b-b651-679c73d8e1a7","c4d9a024-c5d7-40c4-928d-0e3873cc7228","5c811d80-2743-461a-a163-82e14382aad7" },
-// Album/recording matching bug 
-//    { "Alicia Keys","Keys","Skydive","8ef1df30-ae4f-4dbd-9351-1a32b208a01e","f7c03888-7c31-4416-a57c-f1686f59ac89","a7bae269-2dd6-4297-a4c7-36a472a2a8fc" },
 // Detune -- single
 //    { "Eve","pray - Single","pray","66bdd1c9-d1c5-40b7-a487-5061fffbd87d","9117d976-7283-4517-b5ac-513e62009613","f8c50031-b2e0-4b60-b8f6-38215271092c" },
 // Detune, Artist credit for track is quite different. Rmoving all after "," will get the right match

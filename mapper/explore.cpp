@@ -41,9 +41,7 @@ class Explorer {
         }
         
         void load() {
-            if (!artist_index->load()) {
-                throw std::runtime_error("Failed to load artist index");
-            }
+            artist_index->load();
             mapping_search->load();
             load_artist_credit_map();
         }
@@ -175,7 +173,7 @@ class Explorer {
             auto artist_name = encode.encode_string(query);
             if (artist_name.size()) {
                 printf("ARTIST SEARCH: '%s' (%s)\n", query.c_str(), artist_name.c_str());
-                res = artist_index->artist_index->search(artist_name, 0.5);
+                res = artist_index->single_artist_index->search(artist_name, 0.5);
             }
             else {
                 // Try encoding for "stupid artists" (non-Latin characters, etc.)
@@ -204,7 +202,7 @@ class Explorer {
             for (auto &result : res) {
                 string text;
                 if (artist_name.size()) {
-                    text = artist_index->artist_index->get_index_text(result.result_index);
+                    text = artist_index->single_artist_index->get_index_text(result.result_index);
                 } else {
                     text = artist_index->stupid_artist_index->get_index_text(result.result_index);
                 }
