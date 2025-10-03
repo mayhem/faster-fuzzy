@@ -220,8 +220,8 @@ class MappingSearch {
             // TODO: Make sure that we don't process an artist_id more than once!
             auto artist_name = encode.encode_string(artist_credit_name); 
             if (artist_name.size()) {
-                printf("ARTIST SEARCH: '%s' (%s)\n", artist_credit_name.c_str(), artist_name.c_str());
-                res = artist_index->single_artist_index->search(artist_name, .5);
+                printf("SINGLE ARTIST SEARCH: '%s' (%s)\n", artist_credit_name.c_str(), artist_name.c_str());
+                res = artist_index->single_artist_index->search(artist_name, .7);
             }
             else {
                 auto stupid_name = encode.encode_string_for_stupid_artists(artist_credit_name); 
@@ -229,8 +229,16 @@ class MappingSearch {
                     return nullptr;
 
                 printf("STUPID ARTIST SEARCH: '%s' (%s)\n", artist_credit_name.c_str(), stupid_name.c_str());
-                res = artist_index->stupid_artist_index->search(stupid_name, .5);
+                res = artist_index->stupid_artist_index->search(stupid_name, .7);
             }
+           
+            // TODO: maybe better? If the top hit is not 90% or better, do a multiple artist search and merge the results
+            printf("conf %.3f\n", res[0].confidence);
+            if (!res.size() || res[0].confidence < .9) {
+                printf("MULTIPLE ARTIST SEARCH: '%s' (%s)\n", artist_credit_name.c_str(), artist_name.c_str());
+                res = artist_index->multiple_artist_index->search(artist_name, .7);
+            }
+
             if (!res.size()) {
                 printf("  no results\n");
                 return nullptr;

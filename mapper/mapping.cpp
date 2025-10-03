@@ -13,8 +13,10 @@ int main(int argc, char *argv[])
     string index_dir(argv[1]);
    
     log("build artist indexes");
-    ArtistIndex artist_index(index_dir);
-    artist_index.build();
+    ArtistIndex *artist_index = new ArtistIndex(index_dir);
+    artist_index->build();
+    // clean up to free memory
+    delete artist_index;
 
     log("build recording indexes");
     MBIDMapping mapping(index_dir);

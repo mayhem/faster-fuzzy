@@ -226,6 +226,37 @@ class Explorer {
             }
             printf("\n");
         }
+
+        void search_multiple_artist(const string &query) {
+            vector<IndexResult> res;
+            
+            // Try to encode the string normally first
+            auto artist_name = encode.encode_string(query);
+            if (artist_name.size()) {
+                printf("MULTIPLE ARTIST SEARCH: '%s' (%s)\n", query.c_str(), artist_name.c_str());
+                res = artist_index->multiple_artist_index->search(artist_name, 0.5);
+            }
+            if (!res.size()) {
+                printf("  No results found.\n");
+                return;
+            }
+            
+            printf("\nResults:\n");
+            printf("%-40s %-10s %-8s\n", "Name", "Confidence", "Artist Credit");
+            printf("------------------------------------------------------------------------\n");
+            
+            for (auto &result : res) {
+                string text;
+                if (artist_name.size()) {
+                    text = artist_index->multiple_artist_index->get_index_text(result.result_index);
+                } else {
+                    text = artist_index->multiple_artist_index->get_index_text(result.result_index);
+                }
+                string short_name = text.length() > 40 ? text.substr(0, 40) : text;
+                printf("%-40s %-10.2f %-8d\n", short_name.c_str(), result.confidence, result.id);
+            }
+            printf("\n");
+        }
         
         void dump_recordings_for_artist_credit(unsigned int artist_credit_id) {
             try {
@@ -321,7 +352,8 @@ class Explorer {
             printf("Music Explorer Interactive Mode\n");
             printf("Index Directory: %s\n", index_dir.c_str());
             printf("\nCommands:\n");
-            printf("  a <artist name>              - Search for artists\n");
+            printf("  a <artist name>              - Search in single artist index\n");
+            printf("  m <artist name>              - Search in multiple artist index\n");
             printf("  rec <artist_credit_id>       - Show recordings for artist credit\n");
             printf("  rel <artist_credit_id>       - Show releases for artist credit\n");
             printf("  s <artist>, <release>        - Full search: artist + release\n");
@@ -357,6 +389,13 @@ class Explorer {
                         search_artist(artist_query);
                     } else {
                         printf("Usage: a <artist name>\n");
+                    }
+                } else if (input.substr(0, 2) == "m ") {
+                    string artist_query = input.substr(2);
+                    if (!artist_query.empty()) {
+                        search_multiple_artist(artist_query);
+                    } else {
+                        printf("Usage: m <artist name>\n");
                     }
                 } else if (input.substr(0, 4) == "rec ") {
                     string id_str = input.substr(4);
