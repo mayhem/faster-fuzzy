@@ -13,13 +13,14 @@ from psycopg2.extras import DictCursor, execute_values
 from database import Mapping, create_db, open_db, db
 
 # TODO: Remove the combined field of canonical data dump. Done, but make PR
+DB_CONNECT = "dbname=musicbrainz_db user=musicbrainz host=localhost port=5432 password=musicbrainz"
 
 # For wolf
-
 #DB_CONNECT = "dbname=musicbrainz_db user=musicbrainz host=localhost port=5432 password=musicbrainz"
 
 # For wolf/SSH
-DB_CONNECT = "dbname=musicbrainz_db user=musicbrainz host=localhost port=5432 password=musicbrainz"
+#DB_CONNECT = "dbname=musicbrainz_db user=musicbrainz host=localhost port=5432 password=musicbrainz"
+
 
 # For wolf/docker
 #DB_CONNECT = "dbname=musicbrainz_db user=musicbrainz host=musicbrainz-docker_db_1 port=5432 password=musicbrainz"
@@ -45,6 +46,7 @@ class MappingLookupIndex:
                                   , COALESCE(array_agg(a.sort_name ORDER BY acn.position)) as artist_credit_sortname
                                   , rel.id AS release_id
                                   , rel.gid::TEXT AS release_mbid
+                                  , rel.artist_credit AS release_artist_credit_id
                                   , release_name
                                   , rec.id AS recording_id
                                   , rec.gid::TEXT AS recording_mbid
@@ -65,6 +67,7 @@ class MappingLookupIndex:
                                   , artist_credit_name
                                   , release_name
                                   , rel.id
+                                  , rel.artist_credit
                                   , recording_name
                                   , rec.id
                                   , score
@@ -82,6 +85,7 @@ class MappingLookupIndex:
                               "artist_credit_sortname", 
                               "release_id", 
                               "release_mbid", 
+                              "release_artist_credit_id",
                               "release_name", 
                               "recording_id", 
                               "recording_mbid", 
@@ -117,6 +121,7 @@ class MappingLookupIndex:
                 print('.separator ","', file=sql.stdin, flush=True)
                 print(".import '%s' mapping" % import_file, file=sql.stdin, flush=True)
                 print("create index artist_credit_id_ndx on mapping(artist_credit_id);", file=sql.stdin, flush=True)
+                print("create index release_artist_credit_id_ndx on mapping(release_artist_credit_id);", file=sql.stdin, flush=True)
                 print("create index release_id_ndx on mapping(release_id);", file=sql.stdin, flush=True)
                 print("create index recording_id_ndx on mapping(recording_id);", file=sql.stdin, flush=True)
                 print("create index release_id_recording_id_ndx on mapping(release_id, recording_id);", file=sql.stdin, flush=True)

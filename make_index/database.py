@@ -22,6 +22,7 @@ class Mapping(Model):
 
     release_id = IntegerField(null=False)
     release_mbid = TextField(null=False)
+    release_artist_credit_id = IntegerField(null=False)
     release_name = TextField()
 
     recording_id = IntegerField(null=False)
