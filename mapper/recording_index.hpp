@@ -19,37 +19,15 @@ const char *fetch_query_old =
     "ORDER BY score";
     
 const char *fetch_query = 
-"    WITH racs AS ( "
-"      SELECT DISTINCT m.release_artist_credit_id "
+"      SELECT artist_credit_id   "
+"           , release_id  "
+"           , m.release_artist_credit_id   "
+"           , release_name   "
+"           , recording_id  "
+"           , recording_name   "
 "        FROM mapping m  "
-") "
-"      SELECT artist_credit_id  "
-"           , release_id "
-"           , m.release_artist_credit_id  "
-"           , release_name  "
-"           , recording_id "
-"           , recording_name  "
-"        FROM mapping m "
-"        JOIN racs "
-"          ON racs.release_artist_credit_id = m.release_artist_credit_id  "
-"    ORDER BY m.release_id "; 
-    
-#if 0
-    select r.artist_credit as release_artist_credit
-         , r.name
-         , rec.artist_credit 
-         , rec.name
-      from release r
-      join medium m
-        on m.release = r.id
-      join track t
-        on t.medium = m.id
-      join recording rec   
-        on t.recording = rec.id
-     where r.artist_credit = 192
-  order by r.artist_credit, r.id, t.position
-;
-#endif
+"       WHERE release_artist_credit_id != 1 "
+"    ORDER BY m.release_id" ;
     
 class RecordingIndex {
     private:
@@ -68,8 +46,14 @@ class RecordingIndex {
        
         ArtistReleaseRecordingData
         build_recording_release_indexes(unsigned int artist_credit_id) {
+            // Which recordings appear on which releases?
             map<unsigned int, vector<unsigned int>>            recording_releases;
+           
+            // Map release name to the given rank from the mbid mapping
             map<string, unsigned int>                          release_name_rank;
+           
+            // Map which recording name appears on which recording_id, list of release ids
+            // map<recording_name , pair<recording_id, vec<release_id, rank>>>.
             map<string, pair<unsigned int, vector<EntityRef>>> recording_ref;
 
             try
@@ -90,7 +74,7 @@ class RecordingIndex {
                     if (ret.size() == 0)
                         continue;
 
-                    
+                    // Build the recording name -> releases reference 
                     EntityRef ref(release_id, rank);
                     auto iter = recording_ref.find(ret);
                     if (iter == recording_ref.end()) {
@@ -101,23 +85,26 @@ class RecordingIndex {
                     }
                     else 
                         iter->second.second.push_back(ref);
-                        
-                    auto iter2 = recording_releases.find(recording_id);
-                    if (iter2 == recording_releases.end()) {
-                        vector<unsigned int> release_ids;
-                        release_ids.push_back(release_id);
-                        recording_releases[recording_id] = release_ids;
-                    }
-                    else
-                        recording_releases[recording_id].push_back(release_id);
+                           
+                    if (release_id != 0) {
+                        // Create the recording id -> release list reference
+                        auto iter2 = recording_releases.find(recording_id);
+                        if (iter2 == recording_releases.end()) {
+                            vector<unsigned int> release_ids;
+                            release_ids.push_back(release_id);
+                            recording_releases[recording_id] = release_ids;
+                        }
+                        else
+                            recording_releases[recording_id].push_back(release_id);
 
-                    ret = encode.encode_string(release_name);
-                    if (ret.size()) {
-                        string k = to_string(release_id) + string("-") + ret;
-                        release_name_rank[k] = rank;
+                        // Create the release name -> rank mapping
+                        ret = encode.encode_string(release_name);
+                        if (ret.size()) {
+                            string k = to_string(release_id) + string("-") + ret;
+                            release_name_rank[k] = rank;
+                        }
                     }
                 }
-                //printf("===================================\n\n");
             }
             catch (std::exception& e)
             {
@@ -133,6 +120,7 @@ class RecordingIndex {
                 t_release_data.push_back(rel);
             }
             release_name_rank.clear();
+            
             vector<string> recording_texts;
             vector<unsigned int> recording_ids;
             for(auto &itr : recording_ref) {

@@ -51,6 +51,7 @@ class MappingLookupIndex:
                                           , rec.id AS recording_id
                                           , rec.gid::TEXT AS recording_mbid
                                           , recording_name
+                                          , score
                                        FROM mapping.canonical_musicbrainz_data_release_support
                                        JOIN recording rec
                                          ON rec.gid = recording_mbid
@@ -69,6 +70,7 @@ class MappingLookupIndex:
                                           , rel.artist_credit
                                           , recording_name
                                           , rec.id
+                                          , score
                               UNION
                                    SELECT r.artist_credit as artist_credit_id
                                         , array_agg(a.gid::TEXT) as artist_mbids
@@ -81,6 +83,7 @@ class MappingLookupIndex:
                                         , r.id AS recording_id
                                         , r.gid::TEXT AS recording_mbid
                                         , r.name
+                                        , 0
                                      FROM recording r
                                 LEFT JOIN track t
                                        ON t.recording = r.id
@@ -103,8 +106,8 @@ class MappingLookupIndex:
             import_file = os.path.join(index_dir, "import.csv")
             with open(import_file, 'w', newline='') as csvfile:
                 fieldnames = [
-                    "artist_credit_id", "artist_mbids", "artist_credit_name", "artist_credit_sortname", "release_id",
-                    "release_mbid", "release_artist_credit_id", "release_name", "recording_id", "recording_mbid", "recording_name"
+                    "artist_credit_id", "artist_mbids", "artist_credit_name", "artist_credit_sortname", "release_id", "release_mbid",
+                    "release_artist_credit_id", "release_name", "recording_id", "recording_mbid", "recording_name", "score"
                 ]
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames, dialect="unix")
                 for i, row in enumerate(curs):
