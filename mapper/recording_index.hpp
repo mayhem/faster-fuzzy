@@ -62,12 +62,12 @@ class RecordingIndex {
                     string       recording_name = query.getColumn(5);
                     unsigned int rank  = query.getColumn(6);
 
-                    string ret = encode.encode_string(recording_name);
-                    if (ret.size() == 0)
+                    string encoded_recording_name = encode.encode_string(recording_name);
+                    if (encoded_recording_name.size() == 0)
                         continue;
 
                     recording_ids.push_back(recording_id);
-                    recording_texts.push_back(recording_name);
+                    recording_texts.push_back(encoded_recording_name);
 
                     if (release_id != 0) {
                         // Create the recording id -> release list reference
@@ -81,9 +81,9 @@ class RecordingIndex {
                             recording_releases[recording_id].push_back(release_id);
 
                         // Create the release name -> rank mapping
-                        ret = encode.encode_string(release_name);
-                        if (ret.size()) {
-                            string k = to_string(release_id) + string("-") + ret;
+                        string encoded_release_name = encode.encode_string(release_name);
+                        if (encoded_release_name.size()) {
+                            string k = to_string(release_id) + string("-") + encoded_release_name;
                             release_name_rank[k] = rank;
                         }
                     }
