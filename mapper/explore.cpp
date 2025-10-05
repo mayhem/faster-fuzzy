@@ -5,6 +5,7 @@
 #include <map>
 #include <set>
 #include <sstream>
+#include <algorithm>
 #include <readline/readline.h>
 #include <readline/history.h>
 
@@ -360,42 +361,84 @@ class Explorer {
                     return;
                 }
                 
-                printf("\n=== RELEASE INDEX CONTENTS ===\n");
-                if (data->release_index) {
-                    printf("Release Index:\n");
-                    printf("%-8s %s\n", "Index", "Release Text");
-                    printf("----------------------------------------------------\n");
-                    
-                    // Dump all release entries from the index
-                    for (size_t i = 0; i < data->release_index->index_texts.size(); i++) {
-                        string text = data->release_index->index_texts[i];
-                        printf("%-8zu %s\n", i, text.c_str());
-                    }
-                    printf("Total releases in index: %zu\n", data->release_index->index_texts.size());
-                } else {
-                    printf("No release index found.\n");
-                }
-                
                 printf("\n=== RELEASE DATA ===\n");
-                if (data->release_data && !data->release_data->empty()) {
-                    printf("Release Data:\n");
-                    printf("%-8s %-8s %s\n", "Index", "Refs", "Release References");
-                    printf("----------------------------------------------------\n");
+                if (data->release_index && data->release_data && !data->release_data->empty()) {
+                    printf("%-8s %-50s %s\n", "ID", "Release Text", "Recording References [(id,rank)]");
+                    printf("---------------------------------------------------------------------------------------------\n");
                     
-                    for (size_t i = 0; i < data->release_data->size(); i++) {
+                    // Combine release index and release data into one display
+                    size_t max_entries = min(data->release_index->index_texts.size(), data->release_data->size());
+                    for (size_t i = 0; i < max_entries; i++) {
+                        string text = data->release_index->index_texts[i];
                         const auto& release_info = (*data->release_data)[i];
-                        printf("%-8zu %-8zu ", i, release_info.release_refs.size());
                         
-                        // Display the EntityRefs
+                        printf("%-8zu %-50s ", i, text.c_str());
+                        
+                        // Display the EntityRefs (recording IDs and ranks) as pairs
+                        printf("[");
                         for (size_t j = 0; j < release_info.release_refs.size(); j++) {
                             if (j > 0) printf(", ");
-                            printf("id:%u,rank:%u", release_info.release_refs[j].id, release_info.release_refs[j].rank);
+                            printf("(%u,%u)", release_info.release_refs[j].id, release_info.release_refs[j].rank);
                         }
-                        printf("\n");
+                        printf("]\n");
                     }
-                    printf("Total release data entries: %zu\n", data->release_data->size());
+                    printf("Total release entries: %zu\n", max_entries);
                 } else {
                     printf("No release data found.\n");
+                }
+                
+                printf("\n");
+                
+                // Clean up
+                delete data->recording_index;
+                delete data->release_index;
+                delete data->release_data;
+                delete data;
+                
+            } catch (const std::exception& e) {
+                printf("Error loading recording index for artist_credit_id %u: %s\n", artist_credit_id, e.what());
+            }
+        }
+        
+        void dump_index_recording_data(unsigned int artist_credit_id) {
+            try {
+                printf("\nLoading recording index for artist_credit_id: %u\n", artist_credit_id);
+                
+                // Load the recording index for this artist credit
+                ArtistReleaseRecordingData* data = recording_index->load(artist_credit_id);
+                
+                if (!data) {
+                    printf("Failed to load recording index for artist_credit_id: %u\n", artist_credit_id);
+                    return;
+                }
+                
+                printf("\n=== RECORDING INDEX CONTENTS ===\n");
+                if (data->recording_index) {
+                    printf("Recording Index:\n");
+                    printf("%-8s %s\n", "Rec ID", "Recording Text");
+                    printf("----------------------------------------------------\n");
+                    
+                    // Collect all recording entries and sort by text
+                    vector<pair<unsigned int, string>> recordings;
+                    for (size_t i = 0; i < data->recording_index->index_ids.size(); i++) {
+                        unsigned int id = data->recording_index->index_ids[i];
+                        string text = data->recording_index->index_texts[i];
+                        recordings.push_back(make_pair(id, text));
+                    }
+                    
+                    // Sort by text value (second element of pair)
+                    sort(recordings.begin(), recordings.end(), 
+                         [](const pair<unsigned int, string>& a, const pair<unsigned int, string>& b) {
+                             return a.second < b.second;
+                         });
+                    
+                    // Print sorted entries
+                    for (const auto& recording : recordings) {
+                        printf("%-8u %s\n", recording.first, recording.second.c_str());
+                    }
+                    printf("Total recordings in index: %zu\n", recordings.size());
+                } else {
+                    printf("No recording index found.\n");
                 }
                 
                 printf("\n");
@@ -442,6 +485,7 @@ class Explorer {
             printf("  rec <artist_credit_id>       - Show recordings for artist credit from SQLite\n");
             printf("  rel <artist_credit_id>       - Show releases for artist credit from SQLite\n");
             printf("  irel <artist_credit_id>      - Show recording index contents and release data\n");
+            printf("  irec <artist_credit_id>      - Show recording index IDs and strings\n");
             printf("  s <artist>, <release>, <rec> - Full search: artist + release + recording\n");
             printf("  rs <artist>, <recording>     - Recording search: artist + recording (no release)\n");
             printf("  \\q, quit, exit               - Quit the program\n");
@@ -504,6 +548,14 @@ class Explorer {
                     try {
                         unsigned int artist_credit_id = stoul(id_str);
                         dump_index_release_data(artist_credit_id);
+                    } catch (const std::exception& e) {
+                        printf("Invalid artist_credit_id: '%s'. Please enter a valid number.\n", id_str.c_str());
+                    }
+                } else if (input.substr(0, 5) == "irec ") {
+                    string id_str = input.substr(5);
+                    try {
+                        unsigned int artist_credit_id = stoul(id_str);
+                        dump_index_recording_data(artist_credit_id);
                     } catch (const std::exception& e) {
                         printf("Invalid artist_credit_id: '%s'. Please enter a valid number.\n", id_str.c_str());
                     }
