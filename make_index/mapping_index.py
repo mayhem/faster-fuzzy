@@ -98,9 +98,6 @@ class MappingLookupIndex:
                                         , r.name
                                         , r.id""")
 
-            #                              WHERE a.id < 1000
-            #                              WHERE artist_credit_id > 3734610 and artist_credit_id < 3734620
-
             print("load data")
             mapping_data = []
             import_file = os.path.join(index_dir, "import.csv")
@@ -147,7 +144,7 @@ class MappingLookupIndex:
             return
 
         # Get rid of the CSV files now that we've imported it
-        #os.unlink(import_file)
+        os.unlink(import_file)
 
         t1 = monotonic()
         print("loaded data and saved artist index data in %.1f seconds." % (t1 - t0))

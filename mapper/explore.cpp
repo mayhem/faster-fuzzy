@@ -348,6 +348,69 @@ class Explorer {
             }
         }
         
+        void dump_index_release_data(unsigned int artist_credit_id) {
+            try {
+                printf("\nLoading recording index for artist_credit_id: %u\n", artist_credit_id);
+                
+                // Load the recording index for this artist credit
+                ArtistReleaseRecordingData* data = recording_index->load(artist_credit_id);
+                
+                if (!data) {
+                    printf("Failed to load recording index for artist_credit_id: %u\n", artist_credit_id);
+                    return;
+                }
+                
+                printf("\n=== RELEASE INDEX CONTENTS ===\n");
+                if (data->release_index) {
+                    printf("Release Index:\n");
+                    printf("%-8s %s\n", "Index", "Release Text");
+                    printf("----------------------------------------------------\n");
+                    
+                    // Dump all release entries from the index
+                    for (size_t i = 0; i < data->release_index->index_texts.size(); i++) {
+                        string text = data->release_index->index_texts[i];
+                        printf("%-8zu %s\n", i, text.c_str());
+                    }
+                    printf("Total releases in index: %zu\n", data->release_index->index_texts.size());
+                } else {
+                    printf("No release index found.\n");
+                }
+                
+                printf("\n=== RELEASE DATA ===\n");
+                if (data->release_data && !data->release_data->empty()) {
+                    printf("Release Data:\n");
+                    printf("%-8s %-8s %s\n", "Index", "Refs", "Release References");
+                    printf("----------------------------------------------------\n");
+                    
+                    for (size_t i = 0; i < data->release_data->size(); i++) {
+                        const auto& release_info = (*data->release_data)[i];
+                        printf("%-8zu %-8zu ", i, release_info.release_refs.size());
+                        
+                        // Display the EntityRefs
+                        for (size_t j = 0; j < release_info.release_refs.size(); j++) {
+                            if (j > 0) printf(", ");
+                            printf("id:%u,rank:%u", release_info.release_refs[j].id, release_info.release_refs[j].rank);
+                        }
+                        printf("\n");
+                    }
+                    printf("Total release data entries: %zu\n", data->release_data->size());
+                } else {
+                    printf("No release data found.\n");
+                }
+                
+                printf("\n");
+                
+                // Clean up
+                delete data->recording_index;
+                delete data->release_index;
+                delete data->release_data;
+                delete data;
+                
+            } catch (const std::exception& e) {
+                printf("Error loading recording index for artist_credit_id %u: %s\n", artist_credit_id, e.what());
+            }
+        }
+        
         string get_line_with_history() {
             char* input = readline("> ");
             
@@ -376,8 +439,9 @@ class Explorer {
             printf("\nCommands:\n");
             printf("  a <artist name>              - Search in single artist index\n");
             printf("  m <artist name>              - Search in multiple artist index\n");
-            printf("  rec <artist_credit_id>       - Show recordings for artist credit\n");
-            printf("  rel <artist_credit_id>       - Show releases for artist credit\n");
+            printf("  rec <artist_credit_id>       - Show recordings for artist credit from SQLite\n");
+            printf("  rel <artist_credit_id>       - Show releases for artist credit from SQLite\n");
+            printf("  irel <artist_credit_id>      - Show recording index contents and release data\n");
             printf("  s <artist>, <release>, <rec> - Full search: artist + release + recording\n");
             printf("  rs <artist>, <recording>     - Recording search: artist + recording (no release)\n");
             printf("  \\q, quit, exit               - Quit the program\n");
@@ -435,6 +499,14 @@ class Explorer {
                     } catch (const std::exception& e) {
                         printf("Invalid artist_credit_id: '%s'. Please enter a valid number.\n", id_str.c_str());
                     }
+                } else if (input.substr(0, 5) == "irel ") {
+                    string id_str = input.substr(5);
+                    try {
+                        unsigned int artist_credit_id = stoul(id_str);
+                        dump_index_release_data(artist_credit_id);
+                    } catch (const std::exception& e) {
+                        printf("Invalid artist_credit_id: '%s'. Please enter a valid number.\n", id_str.c_str());
+                    }
                 } else if (input.substr(0, 2) == "s ") {
                     string search_query = input.substr(2);
                     if (!search_query.empty()) {
@@ -451,7 +523,7 @@ class Explorer {
                     }
                 } else {
                     printf("Unknown command: '%s'\n", input.c_str());
-                    printf("Available commands: a <artist>, rec <id>, rel <id>, s <artist>,<release>[,<recording>], rs <artist>,<recording>, quit\n");
+                    printf("Available commands: a <artist>, rec <id>, rel <id>, irel <id>, s <artist>,<release>[,<recording>], rs <artist>,<recording>, quit\n");
                 }
             }
         }

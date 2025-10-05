@@ -9,24 +9,16 @@
 
 using namespace std;
 
-const char *fetch_query_old = 
-    "  SELECT artist_credit_id "
-    "       , release_id, release_name "
-    "       , recording_id, recording_name "
-    "       , score "
-    "    FROM mapping "
-    "   WHERE artist_credit_id = ?"
-    "ORDER BY score";
-    
 const char *fetch_query = 
 "      SELECT artist_credit_id   "
 "           , release_id  "
 "           , m.release_artist_credit_id   "
 "           , release_name   "
 "           , recording_id  "
-"           , recording_name   "
+"           , recording_name "
+"           , score AS rank  "
 "        FROM mapping m  "
-"       WHERE release_artist_credit_id != 1 "
+"       WHERE release_artist_credit_id = ? "
 "    ORDER BY m.release_id" ;
     
 class RecordingIndex {
@@ -52,40 +44,31 @@ class RecordingIndex {
             // Map release name to the given rank from the mbid mapping
             map<string, unsigned int>                          release_name_rank;
            
-            // Map which recording name appears on which recording_id, list of release ids
-            // map<recording_name , pair<recording_id, vec<release_id, rank>>>.
-            map<string, pair<unsigned int, vector<EntityRef>>> recording_ref;
-
+            vector<unsigned int>                               recording_ids;
+            vector<string>                                     recording_texts;
+          
             try
             {
                 SQLite::Database    db(db_file);
                 SQLite::Statement   query(db, fetch_query);
-            
+          
                 query.bind(1, artist_credit_id);
                 while (query.executeStep()) {
                     unsigned int artist_credit_id = query.getColumn(0);
                     unsigned int release_id = query.getColumn(1);
-                    string       release_name = query.getColumn(2);
-                    unsigned int recording_id = query.getColumn(3);
-                    string       recording_name = query.getColumn(4);
-                    unsigned int rank  = query.getColumn(5);
+                    unsigned int release_artist_credit_id = query.getColumn(2);
+                    string       release_name = query.getColumn(3);
+                    unsigned int recording_id = query.getColumn(4);
+                    string       recording_name = query.getColumn(5);
+                    unsigned int rank  = query.getColumn(6);
 
                     string ret = encode.encode_string(recording_name);
                     if (ret.size() == 0)
                         continue;
 
-                    // Build the recording name -> releases reference 
-                    EntityRef ref(release_id, rank);
-                    auto iter = recording_ref.find(ret);
-                    if (iter == recording_ref.end()) {
-                        vector<EntityRef> vec_ref;
-                        vec_ref.push_back(ref);
-                        pair<unsigned int, vector<EntityRef>> temp = { recording_id, vec_ref };
-                        recording_ref[ret] = temp;
-                    }
-                    else 
-                        iter->second.second.push_back(ref);
-                           
+                    recording_ids.push_back(recording_id);
+                    recording_texts.push_back(recording_name);
+
                     if (release_id != 0) {
                         // Create the recording id -> release list reference
                         auto iter2 = recording_releases.find(recording_id);
@@ -120,13 +103,6 @@ class RecordingIndex {
                 t_release_data.push_back(rel);
             }
             release_name_rank.clear();
-            
-            vector<string> recording_texts;
-            vector<unsigned int> recording_ids;
-            for(auto &itr : recording_ref) {
-                recording_texts.push_back(itr.first);
-                recording_ids.push_back(itr.second.first);
-            }
             
             map<string, vector<EntityRef>> release_ref;
             for(auto &data : t_release_data) {

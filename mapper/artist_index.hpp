@@ -146,8 +146,7 @@ class ArtistIndex {
                     batch_stmt.exec();
                     total_mappings += batch_size;
                 }
-                all_mappings.clear();
-                all_mappings.shrink_to_fit();
+                vector<pair<unsigned int, unsigned int>>().swap(all_mappings);
                 
                 // Commit the transaction
                 transaction.commit();
@@ -285,8 +284,6 @@ class ArtistIndex {
             log("load single artist data");
             build_single_artist_index();
 
-
-            log("encode data");
             vector<unsigned int> single_ids, multiple_ids, stupid_ids;
             vector<string>       single_texts, multiple_texts, stupid_texts; 
             
@@ -308,11 +305,8 @@ class ArtistIndex {
                 single_ids.push_back(single_artist_ids[i]);
                 single_texts.push_back(ret);
             }
-            single_artist_ids.clear();
-            single_artist_ids.shrink_to_fit();
-            single_artist_texts.clear();
-            single_artist_texts.shrink_to_fit();
-
+            vector<unsigned int>().swap(single_artist_ids);
+            vector<string>().swap(single_artist_texts);
 
             // The extra contexts are so that the stringstreams go out of scope ASAP
             {
@@ -325,10 +319,9 @@ class ArtistIndex {
                     oarchive(*single_artist_index);
                 }
                 delete single_artist_index;
-                single_ids.clear();
-                single_ids.shrink_to_fit();
-                single_texts.clear();
-                single_texts.shrink_to_fit();
+                vector<unsigned int>().swap(single_ids);
+                vector<string>().swap(single_texts);
+
                 log("artist index size: %lu bytes", ss_single.str().length());
                 try
                 {
@@ -376,10 +369,8 @@ class ArtistIndex {
                             printf("save stupid artist index db exception: %s\n", e.what());
                         }
                     }
-                    stupid_ids.clear();
-                    stupid_ids.shrink_to_fit();
-                    stupid_texts.clear();
-                    stupid_texts.shrink_to_fit();
+                    vector<unsigned int>().swap(stupid_ids);
+                    vector<string>().swap(stupid_texts);
                 }
             }
 
@@ -397,10 +388,8 @@ class ArtistIndex {
                     multiple_texts.push_back(ret);
                 }
             }
-            multiple_artist_credit_ids.clear();
-            multiple_artist_credit_ids.shrink_to_fit();
-            multiple_artist_credit_texts.clear();
-            multiple_artist_credit_texts.shrink_to_fit();
+            vector<unsigned int>().swap(multiple_artist_credit_ids);
+            vector<string>().swap(multiple_artist_credit_texts);
 
             {
                 FuzzyIndex *multiple_artist_index = new FuzzyIndex();
@@ -414,10 +403,8 @@ class ArtistIndex {
                 }
                 log("multiple artist index size: %lu bytes", ss_multiple.str().length());
                 delete multiple_artist_index;
-                multiple_ids.clear();
-                multiple_ids.shrink_to_fit();
-                multiple_texts.clear();
-                multiple_texts.shrink_to_fit();
+                vector<unsigned int>().swap(multiple_ids);
+                vector<string>().swap(multiple_texts);
                 
                 try
                 {

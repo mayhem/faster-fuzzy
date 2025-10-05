@@ -24,6 +24,7 @@ const char *fetch_pending_artists_query =
     ")"
     "        SELECT artist_credit_id, count(*) as cnt "
     "          FROM artist_ids "
+    "       WHERE artist_credit_id > 1 "
     "      GROUP BY artist_credit_id order by cnt desc";
     
 

@@ -35,14 +35,15 @@ const auto NUM_FUZZY_SEARCH_RESULTS = 10;
 
 class FuzzyIndex {
     private:
-        vector<unsigned int>      index_ids; 
-        vector<string>            index_texts;   // the full text field, needed for matching long query strings
         similarity::Index<float> *index = nullptr;
         similarity::Space<float> *space = nullptr;
      	TfIdfVectorizer           vectorizer;
         similarity::ObjectVector  vectorized_data;
 
     public:
+
+        vector<unsigned int>      index_ids; 
+        vector<string>            index_texts;   // the full text field, needed for matching long query strings
 
         FuzzyIndex() :
      	    vectorizer(false, false) {
