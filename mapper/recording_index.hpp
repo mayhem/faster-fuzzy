@@ -9,7 +9,7 @@
 
 using namespace std;
 
-const char *fetch_query = 
+const char *fetch_query_old = 
     "  SELECT artist_credit_id "
     "       , release_id, release_name "
     "       , recording_id, recording_name "
@@ -17,6 +17,22 @@ const char *fetch_query =
     "    FROM mapping "
     "   WHERE artist_credit_id = ?"
     "ORDER BY score";
+    
+const char *fetch_query = 
+"    WITH racs AS ( "
+"      SELECT DISTINCT m.release_artist_credit_id "
+"        FROM mapping m  "
+") "
+"      SELECT artist_credit_id  "
+"           , release_id "
+"           , m.release_artist_credit_id  "
+"           , release_name  "
+"           , recording_id "
+"           , recording_name  "
+"        FROM mapping m "
+"        JOIN racs "
+"          ON racs.release_artist_credit_id = m.release_artist_credit_id  "
+"    ORDER BY m.release_id "; 
     
 #if 0
     select r.artist_credit as release_artist_credit

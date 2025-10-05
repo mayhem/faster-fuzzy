@@ -21,7 +21,6 @@ DB_CONNECT = "dbname=musicbrainz_db user=musicbrainz host=localhost port=5432 pa
 # For wolf/SSH
 #DB_CONNECT = "dbname=musicbrainz_db user=musicbrainz host=localhost port=5432 password=musicbrainz"
 
-
 # For wolf/docker
 #DB_CONNECT = "dbname=musicbrainz_db user=musicbrainz host=musicbrainz-docker_db_1 port=5432 password=musicbrainz"
 
@@ -29,68 +28,84 @@ ARTIST_CONFIDENCE_THRESHOLD = .45
 NUM_ROWS_PER_COMMIT = 25000
 MAX_THREADS = 8
 
+
 class MappingLookupIndex:
-    
+
     def create(self, conn, index_dir):
         t0 = monotonic()
-        with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as curs:
-
+        with conn.cursor(name="big_ass_cursor", cursor_factory=psycopg2.extras.DictCursor) as curs:
+            curs.itersize = NUM_ROWS_PER_COMMIT
             db_file = os.path.join(index_dir, "mapping.db")
             create_db(db_file)
             db.close()
 
             print("execute query")
-            curs.execute(""" SELECT artist_credit_id
-                                  , artist_mbids::TEXT[]
-                                  , artist_credit_name
-                                  , COALESCE(array_agg(a.sort_name ORDER BY acn.position)) as artist_credit_sortname
-                                  , rel.id AS release_id
-                                  , rel.gid::TEXT AS release_mbid
-                                  , rel.artist_credit AS release_artist_credit_id
-                                  , release_name
-                                  , rec.id AS recording_id
-                                  , rec.gid::TEXT AS recording_mbid
-                                  , recording_name
-                                  , score
-                               FROM mapping.canonical_musicbrainz_data_release_support
-                               JOIN recording rec
-                                 ON rec.gid = recording_mbid
-                               JOIN release rel
-                                 ON rel.gid = release_mbid
-                               JOIN artist_credit_name acn
-                                 ON artist_credit_id = acn.artist_credit
-                               JOIN artist a
-                                 ON acn.artist = a.id
-                              WHERE artist_credit_id > 1
-                           GROUP BY artist_credit_id
-                                  , artist_mbids
-                                  , artist_credit_name
-                                  , release_name
-                                  , rel.id
-                                  , rel.artist_credit
-                                  , recording_name
-                                  , rec.id
-                                  , score
-                           ORDER BY artist_credit_id""")
-#                              WHERE a.id < 1000
-#                              WHERE artist_credit_id > 3734610 and artist_credit_id < 3734620
+            curs.execute("""         SELECT rec.artist_credit AS artist_credit_id
+                                          , artist_mbids::TEXT[]
+                                          , artist_credit_name
+                                          , COALESCE(array_agg(a.sort_name ORDER BY acn.position)) as artist_credit_sortname
+                                          , rel.id AS release_id
+                                          , rel.gid::TEXT AS release_mbid
+                                          , rel.artist_credit AS release_artist_credit_id
+                                          , release_name
+                                          , rec.id AS recording_id
+                                          , rec.gid::TEXT AS recording_mbid
+                                          , recording_name
+                                       FROM mapping.canonical_musicbrainz_data_release_support
+                                       JOIN recording rec
+                                         ON rec.gid = recording_mbid
+                                       JOIN release rel
+                                         ON rel.gid = release_mbid
+                                       JOIN artist_credit_name acn
+                                         ON artist_credit_id = acn.artist_credit
+                                       JOIN artist a
+                                         ON acn.artist = a.id
+                                      WHERE artist_credit_id > 1
+                                   GROUP BY artist_credit_id
+                                          , artist_mbids
+                                          , artist_credit_name
+                                          , release_name
+                                          , rel.id
+                                          , rel.artist_credit
+                                          , recording_name
+                                          , rec.id
+                              UNION
+                                   SELECT r.artist_credit as artist_credit_id
+                                        , array_agg(a.gid::TEXT) as artist_mbids
+                                        , acn."name" as artist_credit_name
+                                        , COALESCE(array_agg(a.sort_name ORDER BY acn.position)) as artist_credit_sortname
+                                        , 0 AS release_id
+                                        , '' AS release_mbid
+                                        , 0 AS release_artist_credit_id
+                                        , '' AS release_name
+                                        , r.id AS recording_id
+                                        , r.gid::TEXT AS recording_mbid
+                                        , r.name
+                                     FROM recording r
+                                LEFT JOIN track t
+                                       ON t.recording = r.id
+                                     JOIN artist_credit_name acn
+                                       ON r.artist_credit = acn.artist_credit
+                                     JOIN artist a
+                                       ON acn.artist = a.id
+                                    WHERE t.id IS null
+                                 GROUP BY r.artist_credit
+                                        , artist_credit_name
+                                        , release_name
+                                        , r.name
+                                        , r.id""")
+
+            #                              WHERE a.id < 1000
+            #                              WHERE artist_credit_id > 3734610 and artist_credit_id < 3734620
 
             print("load data")
             mapping_data = []
             import_file = os.path.join(index_dir, "import.csv")
             with open(import_file, 'w', newline='') as csvfile:
-                fieldnames = ["artist_credit_id", 
-                              "artist_mbids", 
-                              "artist_credit_name", 
-                              "artist_credit_sortname", 
-                              "release_id", 
-                              "release_mbid", 
-                              "release_artist_credit_id",
-                              "release_name", 
-                              "recording_id", 
-                              "recording_mbid", 
-                              "recording_name", 
-                              "score"]
+                fieldnames = [
+                    "artist_credit_id", "artist_mbids", "artist_credit_name", "artist_credit_sortname", "release_id",
+                    "release_mbid", "release_artist_credit_id", "release_name", "recording_id", "recording_mbid", "recording_name"
+                ]
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames, dialect="unix")
                 for i, row in enumerate(curs):
                     if i == 0:
@@ -113,7 +128,6 @@ class MappingLookupIndex:
                 if mapping_data:
                     for mrow in mapping_data:
                         writer.writerow(mrow)
-
 
         print("Import data into SQLite")
         try:

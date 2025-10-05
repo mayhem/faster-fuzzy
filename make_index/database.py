@@ -29,8 +29,6 @@ class Mapping(Model):
     recording_mbid = TextField(null=False)
     recording_name = TextField()
 
-    score = IntegerField(null=False)
-    
 
 class ArtistCreditMapping(Model):
 
