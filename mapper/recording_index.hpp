@@ -18,6 +18,23 @@ const char *fetch_query =
     "   WHERE artist_credit_id = ?"
     "ORDER BY score";
     
+#if 0
+    select r.artist_credit as release_artist_credit
+         , r.name
+         , rec.artist_credit 
+         , rec.name
+      from release r
+      join medium m
+        on m.release = r.id
+      join track t
+        on t.medium = m.id
+      join recording rec   
+        on t.recording = rec.id
+     where r.artist_credit = 192
+  order by r.artist_credit, r.id, t.position
+;
+#endif
+    
 class RecordingIndex {
     private:
         string           index_dir, db_file; 

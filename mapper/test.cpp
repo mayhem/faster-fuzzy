@@ -56,6 +56,8 @@ TestCase test_cases[] = {
     { "!!!","As If","Ooo","f26c72d3-e52c-467b-b651-679c73d8e1a7","a8d39759-5f8f-4e64-bf53-93e11af9d159","f2233161-cf68-421e-bc97-de8dbec3fc3c" },
     { "Yaakov Shwekey","גוף ונשמה 1/4","גלגלים","b5792b6a-1561-4499-a9d3-82fa7f40b33f", "90820c40-dfee-4d31-9147-a56383df402b","59855bd1-9e13-4b55-9c77-c793c4dd8cc2" },
     { "mynoise", "primeval forest", "springtime birds", "d6ecdfbe-aaa7-48b5-925c-87f066376eaa", "00d9a760-bf8a-4c9e-b310-f7e00b7ed701", "057c48e8-754c-487e-b46b-f55a76498ccd"},
+    { "queen & david bowie","Hot Space","under pressure","0383dadf-2a4e-4d10-a46a-e9e041da8eb3,5441c29d-3602-4898-b1a1-b77fa23b8e50","b4f42dd2-c6cc-449d-84ee-de581dcf120e","32c7e292-14f1-4080-bddf-ef852e0a4c59" },
+    { "queen","Hot Space","under pressure","0383dadf-2a4e-4d10-a46a-e9e041da8eb3,5441c29d-3602-4898-b1a1-b77fa23b8e50","b4f42dd2-c6cc-449d-84ee-de581dcf120e","32c7e292-14f1-4080-bddf-ef852e0a4c59" },
     
 // https://musicbrainz.org/artist/3fdaac99-0261-49a7-92b3-5a909cba187d
 // '鬱P' 'ガ' 'HAPPYPILLS'

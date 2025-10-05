@@ -72,7 +72,6 @@ class ArtistIndex {
         // Single artist index
         vector<unsigned int>                      single_artist_ids;
         vector<string>                            single_artist_texts;
-        map<unsigned int, set<unsigned int>>      artist_artist_credit_map;
 
         // Multiple artist index
         vector<unsigned int>                      multiple_artist_credit_ids;
@@ -96,7 +95,7 @@ class ArtistIndex {
         }
         
         void
-        insert_artist_credit_mapping() {
+        insert_artist_credit_mapping(map<unsigned int, set<unsigned int>> &artist_credit_map) {
             try {
                 SQLite::Database db(db_file, SQLite::OPEN_READWRITE);
                 
@@ -112,7 +111,7 @@ class ArtistIndex {
                 
                 // Collect all mappings first for batch processing
                 vector<pair<unsigned int, unsigned int>> all_mappings;
-                for (const auto& artist_entry : artist_artist_credit_map) {
+                for (const auto& artist_entry : artist_credit_map) {
                     unsigned int artist_id = artist_entry.first;
                     
                     // Convert the set to a sorted list
@@ -179,6 +178,7 @@ class ArtistIndex {
         
         void
         build_single_artist_index() {
+            map<unsigned int, set<unsigned int>> artist_artist_credit_map;
             try
             {
                 PGconn     *conn;
@@ -215,7 +215,6 @@ class ArtistIndex {
                         
                         auto dedup_names = encode_and_dedup_artist_names(artist_names);
                         artist_names.clear();
-                        artist_names.shrink_to_fit();
 
                         for(auto it : dedup_names) {
                             single_artist_ids.push_back(last_artist_id);
@@ -230,10 +229,9 @@ class ArtistIndex {
                     
                     last_artist_id = artist_id;
                 }
-                artist_names.clear();
-                artist_names.shrink_to_fit();
-                map<unsigned int, set<unsigned int>>().swap(artist_artist_credit_map);
             
+                insert_artist_credit_mapping(artist_artist_credit_map);
+
                 // Clear the PGresult object to free memory
                 PQclear(res);
             }
@@ -287,9 +285,7 @@ class ArtistIndex {
             log("load single artist data");
             build_single_artist_index();
 
-            log("insert artist credit mappings");
-            insert_artist_credit_mapping();
-                    
+
             log("encode data");
             vector<unsigned int> single_ids, multiple_ids, stupid_ids;
             vector<string>       single_texts, multiple_texts, stupid_texts; 

@@ -2,6 +2,7 @@
 #include <sstream>
 #include <set>
 #include <map>
+#include <algorithm>
 
 #include "SQLiteCpp.h"
 
@@ -57,6 +58,7 @@ class MappingSearch {
         void
         load() {
             artist_index->load();
+            fetch_artist_credit_map();
             // TODO: Enable this when we start running a server
             //index_cache.start();
         }
@@ -119,7 +121,8 @@ class MappingSearch {
         void
         fetch_artist_credit_map() {
             string db_file = index_dir + string("/mapping.db");
-            
+           
+            printf("Load artist credit map!\n");
             try {
                 SQLite::Database db(db_file);
                 
@@ -136,6 +139,7 @@ class MappingSearch {
             catch (std::exception& e) {
                 printf("Error fetching artist credit IDs: %s\n", e.what());
             }
+            printf("%lu items\n", artist_credit_map.size());
         }
         
         SearchResult
@@ -209,13 +213,10 @@ class MappingSearch {
         SearchResult *
         search(const string &artist_credit_name, const string &release_name, const string &recording_name) {
             SearchResult            output;
-            vector<IndexResult>     res;
+            vector<IndexResult>     res, mres;
             map<unsigned int, int>  ac_history;
             
-            if (artist_credit_map.empty()) {
-                printf("load artist credit map\n");
-                fetch_artist_credit_map();
-            }
+            assert(!artist_credit_map.empty());
 
             // TODO: Make sure that we don't process an artist_id more than once!
             auto artist_name = encode.encode_string(artist_credit_name); 
@@ -232,49 +233,112 @@ class MappingSearch {
                 res = artist_index->stupid_artist_index->search(stupid_name, .7);
             }
            
-            // TODO: maybe better? If the top hit is not 90% or better, do a multiple artist search and merge the results
-            printf("conf %.3f\n", res[0].confidence);
-            if (!res.size() || res[0].confidence < .9) {
-                printf("MULTIPLE ARTIST SEARCH: '%s' (%s)\n", artist_credit_name.c_str(), artist_name.c_str());
-                res = artist_index->multiple_artist_index->search(artist_name, .7);
-            }
+            printf("   MULTIPLE ARTIST SEARCH also\n");
+            mres = artist_index->multiple_artist_index->search(artist_name, .7);
 
-            if (!res.size()) {
-                printf("  no results\n");
-                return nullptr;
-            }
-            else {
-                string text;
-                for(auto &it : res) {
-                    if (it.confidence >= artist_threshold) {
+            // Display results interleaved by confidence using two pointers
+            size_t res_idx = 0, mres_idx = 0;
+            string text;
+            
+            while (res_idx < res.size() || mres_idx < mres.size()) {
+                bool use_res = false;
+                
+                // Determine which result to use next
+                if (res_idx >= res.size()) {
+                    // No more single results, use multiple
+                    use_res = false;
+                } else if (mres_idx >= mres.size()) {
+                    // No more multiple results, use single
+                    use_res = true;
+                } else {
+                    // Both have results, pick the higher confidence
+                    use_res = res[res_idx].confidence >= mres[mres_idx].confidence;
+                }
+                
+                if (use_res) {
+                    // Display single/stupid artist result - need to resolve artist_id to artist_credit_ids
+                    IndexResult& result = res[res_idx];
+                    if (result.confidence >= artist_threshold) {
                         if (artist_name.size()) 
-                            text = artist_index->single_artist_index->get_index_text(it.result_index);
+                            text = artist_index->single_artist_index->get_index_text(result.result_index);
                         else
-                            text = artist_index->stupid_artist_index->get_index_text(it.result_index);
-                        printf("  %-9d %.2f %-40s ", it.id, it.confidence, text.c_str());
+                            text = artist_index->stupid_artist_index->get_index_text(result.result_index);
+                        printf("S  %-9d %.2f %-40s ", result.id, result.confidence, text.c_str());
 
-                        for(auto it : artist_credit_map[it.id]) 
-                            printf("%u ", it);
+                        // Look up artist_credit_ids for this artist_id
+                        auto it = artist_credit_map.find(result.id);
+                        if (it != artist_credit_map.end()) {
+                            for (size_t i = 0; i < it->second.size(); ++i) {
+                                if (i > 0) printf(",");
+                                printf("%u", it->second[i]);
+                            }
+                        } else {
+                            printf("none");
+                        }
                         printf("\n");
                     }
-                }
-                printf("\n");
-            }
-            
-            for(auto &it : res) {
-                if (it.confidence < artist_threshold) 
-                    continue;
-
-                for (auto artist_credit_id : artist_credit_map[it.id]) {
-                    if (ac_history.find(artist_credit_id) == ac_history.end()) {
-                        SearchResult r = recording_release_search(artist_credit_id, release_name, recording_name); 
-                        if (r.confidence > .7) {
-                            if (!fetch_metadata(r))
-                                throw std::length_error("failed to load metadata from sqlite.");
-                            return new SearchResult(r);
-                        }
-                        ac_history[artist_credit_id] = 1;
+                    res_idx++;
+                } else {
+                    // Display multiple artist result - id is already an artist_credit_id
+                    IndexResult& result = mres[mres_idx];
+                    if (result.confidence >= artist_threshold) {
+                        text = artist_index->multiple_artist_index->get_index_text(result.result_index);
+                        printf("M  %-9d %.2f %-40s %u\n", result.id, result.confidence, text.c_str(), result.id);
                     }
+                    mres_idx++;
+                }
+            }
+            printf("\n");
+            
+            // Process results for recording/release search using same interleaved order
+            res_idx = 0; 
+            mres_idx = 0;
+            
+            while (res_idx < res.size() || mres_idx < mres.size()) {
+                bool use_res = false;
+                
+                // Determine which result to process next
+                if (res_idx >= res.size()) {
+                    use_res = false;
+                } else if (mres_idx >= mres.size()) {
+                    use_res = true;
+                } else {
+                    use_res = res[res_idx].confidence >= mres[mres_idx].confidence;
+                }
+                
+                if (use_res) {
+                    // Process single/stupid artist result
+                    IndexResult& result = res[res_idx];
+                    if (result.confidence >= artist_threshold) {
+                        for (auto artist_credit_id : artist_credit_map[result.id]) {
+                            if (ac_history.find(artist_credit_id) == ac_history.end()) {
+                                SearchResult r = recording_release_search(artist_credit_id, release_name, recording_name); 
+                                if (r.confidence > .7) {
+                                    if (!fetch_metadata(r))
+                                        throw std::length_error("failed to load metadata from sqlite.");
+                                    return new SearchResult(r);
+                                }
+                                ac_history[artist_credit_id] = 1;
+                            }
+                        }
+                    }
+                    res_idx++;
+                } else {
+                    // Process multiple artist result
+                    IndexResult& result = mres[mres_idx];
+                    if (result.confidence >= artist_threshold) {
+                        unsigned int artist_credit_id = result.id;
+                        if (ac_history.find(artist_credit_id) == ac_history.end()) {
+                            SearchResult r = recording_release_search(artist_credit_id, release_name, recording_name); 
+                            if (r.confidence > .7) {
+                                if (!fetch_metadata(r))
+                                    throw std::length_error("failed to load metadata from sqlite.");
+                                return new SearchResult(r);
+                            }
+                            ac_history[artist_credit_id] = 1;
+                        }
+                    }
+                    mres_idx++;
                 }
             }
             printf("No matches found.\n");

@@ -43,35 +43,8 @@ class Explorer {
         void load() {
             artist_index->load();
             mapping_search->load();
-            load_artist_credit_map();
         }
-        
-        void load_artist_credit_map() {
-            string db_file = index_dir + string("/mapping.db");
-            
-            try {
-                SQLite::Database db(db_file);
-                SQLite::Statement query(db, "SELECT artist_id, artist_credit_id FROM artist_credit_mapping");
-                
-                printf("Loading artist credit mappings...");
-                fflush(stdout);
-                
-                int count = 0;
-                while (query.executeStep()) {
-                    unsigned int artist_id = query.getColumn(0).getInt();
-                    unsigned int artist_credit_id = query.getColumn(1).getInt();
-                    
-                    artist_credit_map[artist_id].push_back(artist_credit_id);
-                    count++;
-                }
-                
-                printf(" loaded %d mappings.\n", count);
-            }
-            catch (std::exception& e) {
-                throw std::runtime_error("Failed to load artist credit mappings: " + string(e.what()));
-            }
-        }
-        
+       
         map<unsigned int, vector<unsigned int>>
         fetch_artist_credit_ids(const vector<IndexResult> &res) {
             map<unsigned int, vector<unsigned int>> result_map;
@@ -157,6 +130,55 @@ class Explorer {
                 printf("\nFormatted output:\n");
                 printf("{ \"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\" }\n", 
                     artist_name.c_str(), release_name.c_str(), recording_name.c_str(),
+                    mbids.c_str(), result->release_mbid.c_str(), result->recording_mbid.c_str());
+                
+                delete result;
+            } else {
+                printf("No match found.\n");
+            }
+            printf("\n");
+        }
+        
+        void recording_search(const string& query) {
+            vector<string> parts = split_comma_separated(query);
+            
+            if (parts.size() != 2) {
+                printf("Usage: rs <artist>, <recording>\n");
+                printf("Examples:\n");
+                printf("  rs portishead, teardrop\n");
+                printf("  rs radiohead, creep\n");
+                return;
+            }
+            
+            string artist_name = parts[0];
+            string recording_name = parts[1];
+            string release_name = ""; // Empty release name for recording-only search
+            
+            printf("\nRecording search: Artist='%s', Recording='%s'\n\n", 
+                   artist_name.c_str(), recording_name.c_str());
+            
+            SearchResult* result = mapping_search->search(artist_name, release_name, recording_name);
+            
+            if (result) {
+                printf("Search Result:\n");
+                printf("-------------\n");
+                printf("Artist Credit: %-8d %s %s\n", 
+                    result->artist_credit_id,
+                    result->artist_credit_mbids.empty() ? "N/A" : result->artist_credit_mbids[0].c_str(),
+                    result->artist_credit_name.c_str());
+                printf("Release:       %-8d %s %s\n", 
+                    result->release_id,
+                    result->release_mbid.c_str(),
+                    result->release_name.c_str());
+                printf("Recording:     %-8d %s %s\n", 
+                    result->recording_id,
+                    result->recording_mbid.c_str(),
+                    result->recording_name.c_str());
+                
+                string mbids = make_comma_sep_string(result->artist_credit_mbids);
+                printf("\nFormatted output:\n");
+                printf("{ \"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\" }\n", 
+                    artist_name.c_str(), result->release_name.c_str(), recording_name.c_str(),
                     mbids.c_str(), result->release_mbid.c_str(), result->recording_mbid.c_str());
                 
                 delete result;
@@ -356,8 +378,8 @@ class Explorer {
             printf("  m <artist name>              - Search in multiple artist index\n");
             printf("  rec <artist_credit_id>       - Show recordings for artist credit\n");
             printf("  rel <artist_credit_id>       - Show releases for artist credit\n");
-            printf("  s <artist>, <release>        - Full search: artist + release\n");
             printf("  s <artist>, <release>, <rec> - Full search: artist + release + recording\n");
+            printf("  rs <artist>, <recording>     - Recording search: artist + recording (no release)\n");
             printf("  \\q, quit, exit               - Quit the program\n");
             printf("\nUse Up/Down arrow keys for command history, Left/Right/Home/End for editing.\n");
             printf("Ctrl+A (beginning), Ctrl+E (end), Ctrl+K (kill to end), Ctrl+U (kill to beginning)\n\n");
@@ -418,11 +440,18 @@ class Explorer {
                     if (!search_query.empty()) {
                         full_search(search_query);
                     } else {
-                        printf("Usage: s <artist>, <release> [recording]\n");
+                        printf("Usage: s <artist>, <release>, recording\n");
+                    }
+                } else if (input.substr(0, 3) == "rs ") {
+                    string search_query = input.substr(3);
+                    if (!search_query.empty()) {
+                        recording_search(search_query);
+                    } else {
+                        printf("Usage: rs <artist>, <recording>\n");
                     }
                 } else {
                     printf("Unknown command: '%s'\n", input.c_str());
-                    printf("Available commands: a <artist>, rec <id>, rel <id>, s <artist>,<release>[,<recording>], quit\n");
+                    printf("Available commands: a <artist>, rec <id>, rel <id>, s <artist>,<release>[,<recording>], rs <artist>,<recording>, quit\n");
                 }
             }
         }
