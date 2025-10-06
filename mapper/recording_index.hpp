@@ -19,7 +19,7 @@ const char *fetch_query =
 "           , score AS rank  "
 "        FROM mapping m  "
 "       WHERE release_artist_credit_id = ? "
-"    ORDER BY m.release_id" ;
+"    ORDER BY score, m.release_id" ;
     
 class RecordingIndex {
     private:
@@ -44,8 +44,9 @@ class RecordingIndex {
             // Map release name to the given rank from the mbid mapping
             map<string, unsigned int>                          release_name_rank;
            
-            vector<unsigned int>                               recording_ids;
-            vector<string>                                     recording_texts;
+            // Map which recording name appears on which recording_id, list of release ids
+            // map<recording_name , pair<recording_id, vec<release_id, rank>>>.
+            map<string, pair<unsigned int, vector<EntityRef>>> recording_ref;
           
             try
             {
@@ -66,8 +67,17 @@ class RecordingIndex {
                     if (encoded_recording_name.size() == 0)
                         continue;
 
-                    recording_ids.push_back(recording_id);
-                    recording_texts.push_back(encoded_recording_name);
+                    // Build the recording name -> releases reference 
+                    EntityRef ref(release_id, rank);
+                    auto iter = recording_ref.find(encoded_recording_name);
+                    if (iter == recording_ref.end()) {
+                        vector<EntityRef> vec_ref;
+                        vec_ref.push_back(ref);
+                        pair<unsigned int, vector<EntityRef>> temp = { recording_id, vec_ref };
+                        recording_ref[encoded_recording_name] = temp;
+                    }
+                    else 
+                        iter->second.second.push_back(ref);
 
                     if (release_id != 0) {
                         // Create the recording id -> release list reference
@@ -103,6 +113,13 @@ class RecordingIndex {
                 t_release_data.push_back(rel);
             }
             release_name_rank.clear();
+            
+            vector<string> recording_texts;
+            vector<unsigned int> recording_ids;
+            for(auto &itr : recording_ref) {
+                recording_texts.push_back(itr.first);
+                recording_ids.push_back(itr.second.first);
+            }
             
             map<string, vector<EntityRef>> release_ref;
             for(auto &data : t_release_data) {
