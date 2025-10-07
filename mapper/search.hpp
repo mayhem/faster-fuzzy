@@ -13,6 +13,7 @@
 #include "utils.hpp"
 #include "encode.hpp"
 #include "levenshtein.hpp"
+#include <lb_matching_tools/cleaner.hpp>
 
 // TODO: Implement DB connection re-use
 // TODO: Create dynamic thresholds based on length. Shorter artists will need more checks.
@@ -40,6 +41,7 @@ class MappingSearch {
         IndexCache                              *index_cache;
         EncodeSearchData                         encode;
         map<unsigned int, vector<unsigned int>>  artist_credit_map;
+        lb_matching_tools::MetadataCleaner       metadata_cleaner;
 
     public:
 
@@ -152,6 +154,9 @@ class MappingSearch {
             // Add thresholding
             printf("  RECORDING RELEASE SEARCH for artist_credit_id %u\n", artist_credit_id);
 
+            auto cleaned_release_name = metadata_cleaner.clean_recording(release_name); 
+            printf("cleaned release: '%s'\n", cleaned_release_name.c_str());
+
             artist_data = index_cache->get(artist_credit_id);
             if (!artist_data) {
                 RecordingIndex rec_index(index_dir);
@@ -217,6 +222,9 @@ class MappingSearch {
             map<unsigned int, int>  ac_history;
             
             assert(!artist_credit_map.empty());
+            
+            auto cleaned_artist_credit_name = metadata_cleaner.clean_artist(artist_credit_name); 
+            printf("cleaned artist: '%s'\n", cleaned_artist_credit_name.c_str());
 
             // TODO: Make sure that we don't process an artist_id more than once!
             auto artist_name = encode.encode_string(artist_credit_name); 

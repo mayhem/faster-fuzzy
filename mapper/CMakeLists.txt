@@ -44,6 +44,7 @@ include_directories(deps/nmslib/similarity_search/include
                     deps/Catch2/src
                     ${libpq_SOURCE_DIR}/libpq/interfaces/libpq
                     ${libpq_SOURCE_DIR}/libpq/include
+                    deps/listenbrainz-matching-tools/cpp/include
 )
 
 target_link_libraries(mapping_creator NonMetricSpaceLib

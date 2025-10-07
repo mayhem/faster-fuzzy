@@ -31,3 +31,7 @@
 [submodule "mapper/deps/postgresql"]
 	path = mapper/deps/postgresql
 	url = https://git.postgresql.org/git/postgresql.git
+[submodule "mapper/deps/listenbrainz-matching-tools"]
+	path = mapper/deps/listenbrainz-matching-tools
+	url = https://github.com/metabrainz/listenbrainz-matching-tools.git
+	branch = add-cpp-port

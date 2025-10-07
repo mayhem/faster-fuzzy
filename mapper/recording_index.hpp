@@ -19,7 +19,10 @@ const char *fetch_query =
 "           , score AS rank  "
 "        FROM mapping m  "
 "       WHERE release_artist_credit_id = ? "
+"          OR artist_credit_id = ?"
 "    ORDER BY score, m.release_id" ;
+
+// TODO: darkseed, Entre dos tierras
     
 class RecordingIndex {
     private:
@@ -54,6 +57,7 @@ class RecordingIndex {
                 SQLite::Statement   query(db, fetch_query);
           
                 query.bind(1, artist_credit_id);
+                query.bind(2, artist_credit_id);
                 while (query.executeStep()) {
                     unsigned int artist_credit_id = query.getColumn(0);
                     unsigned int release_id = query.getColumn(1);
@@ -103,7 +107,9 @@ class RecordingIndex {
             {
                 printf("build rec index db exception: %s\n", e.what());
             }
-        
+       
+            // Create an intermediate data structure for working out
+            // which recordings appear on which releases
             vector<TempReleaseData> t_release_data;
             for(auto &data : release_name_rank) {
                 size_t split_pos = data.first.find('-');
@@ -113,14 +119,16 @@ class RecordingIndex {
                 t_release_data.push_back(rel);
             }
             release_name_rank.clear();
-            
+           
+            // Now distill out the texts/ids needed for the index
             vector<string> recording_texts;
             vector<unsigned int> recording_ids;
             for(auto &itr : recording_ref) {
                 recording_texts.push_back(itr.first);
                 recording_ids.push_back(itr.second.first);
             }
-            
+           
+            // Now finally assemble the release lists
             map<string, vector<EntityRef>> release_ref;
             for(auto &data : t_release_data) {
                 EntityRef ref(data.id, data.rank);

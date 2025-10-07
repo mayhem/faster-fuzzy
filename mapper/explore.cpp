@@ -363,7 +363,7 @@ class Explorer {
                 
                 printf("\n=== RELEASE DATA ===\n");
                 if (data->release_index && data->release_data && !data->release_data->empty()) {
-                    printf("%-8s %-50s %s\n", "ID", "Release Text", "Recording References [(id,rank)]");
+                    printf("%-8s %-50s %s\n", "ID", "Release Text", "Releases (id,rank)");
                     printf("---------------------------------------------------------------------------------------------\n");
                     
                     // Combine release index and release data into one display
@@ -482,10 +482,10 @@ class Explorer {
             printf("\nCommands:\n");
             printf("  a <artist name>              - Search in single artist index\n");
             printf("  m <artist name>              - Search in multiple artist index\n");
-            printf("  rec <artist_credit_id>       - Show recordings for artist credit from SQLite\n");
-            printf("  rel <artist_credit_id>       - Show releases for artist credit from SQLite\n");
-            printf("  irel <artist_credit_id>      - Show recording index contents and release data\n");
-            printf("  irec <artist_credit_id>      - Show recording index IDs and strings\n");
+            printf("  drec <artist_credit_id>      - Dump recordings for artist credit from SQLite\n");
+            printf("  drel <artist_credit_id>      - Dump releases for artist credit from SQLite\n");
+            printf("  rel <artist_credit_id>       - Dump recording index contents and release data\n");
+            printf("  rec <artist_credit_id>       - Dump recording index IDs and strings\n");
             printf("  s <artist>, <release>, <rec> - Full search: artist + release + recording\n");
             printf("  rs <artist>, <recording>     - Recording search: artist + recording (no release)\n");
             printf("  \\q, quit, exit               - Quit the program\n");
@@ -527,11 +527,19 @@ class Explorer {
                     } else {
                         printf("Usage: m <artist name>\n");
                     }
-                } else if (input.substr(0, 4) == "rec ") {
-                    string id_str = input.substr(4);
+                } else if (input.substr(0, 5) == "drec ") {
+                    string id_str = input.substr(5);
                     try {
                         unsigned int artist_credit_id = stoul(id_str);
                         dump_recordings_for_artist_credit(artist_credit_id);
+                    } catch (const std::exception& e) {
+                        printf("Invalid artist_credit_id: '%s'. Please enter a valid number.\n", id_str.c_str());
+                    }
+                } else if (input.substr(0, 5) == "drel ") {
+                    string id_str = input.substr(5);
+                    try {
+                        unsigned int artist_credit_id = stoul(id_str);
+                        dump_releases_for_artist_credit(artist_credit_id);
                     } catch (const std::exception& e) {
                         printf("Invalid artist_credit_id: '%s'. Please enter a valid number.\n", id_str.c_str());
                     }
@@ -539,20 +547,12 @@ class Explorer {
                     string id_str = input.substr(4);
                     try {
                         unsigned int artist_credit_id = stoul(id_str);
-                        dump_releases_for_artist_credit(artist_credit_id);
-                    } catch (const std::exception& e) {
-                        printf("Invalid artist_credit_id: '%s'. Please enter a valid number.\n", id_str.c_str());
-                    }
-                } else if (input.substr(0, 5) == "irel ") {
-                    string id_str = input.substr(5);
-                    try {
-                        unsigned int artist_credit_id = stoul(id_str);
                         dump_index_release_data(artist_credit_id);
                     } catch (const std::exception& e) {
                         printf("Invalid artist_credit_id: '%s'. Please enter a valid number.\n", id_str.c_str());
                     }
-                } else if (input.substr(0, 5) == "irec ") {
-                    string id_str = input.substr(5);
+                } else if (input.substr(0, 4) == "rec ") {
+                    string id_str = input.substr(4);
                     try {
                         unsigned int artist_credit_id = stoul(id_str);
                         dump_index_recording_data(artist_credit_id);
