@@ -559,6 +559,14 @@ class Explorer {
                     } catch (const std::exception& e) {
                         printf("Invalid artist_credit_id: '%s'. Please enter a valid number.\n", id_str.c_str());
                     }
+                } else if (input.substr(0, 5) == "irec ") {
+                    string id_str = input.substr(5);
+                    try {
+                        unsigned int artist_credit_id = stoul(id_str);
+                        dump_index_recording_data(artist_credit_id);
+                    } catch (const std::exception& e) {
+                        printf("Invalid artist_credit_id: '%s'. Please enter a valid number.\n", id_str.c_str());
+                    }
                 } else if (input.substr(0, 2) == "s ") {
                     string search_query = input.substr(2);
                     if (!search_query.empty()) {
