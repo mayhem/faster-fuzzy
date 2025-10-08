@@ -109,7 +109,13 @@ class Explorer {
             }
             printf("\n\n");
             
-            SearchResult* result = mapping_search->search(artist_name, release_name, recording_name);
+            SearchResult* result = nullptr;
+            try {
+                result = mapping_search->search(artist_name, release_name, recording_name);
+            }
+            catch (std::exception& e) {
+                printf("error: %s\n", e.what());
+            }
             
             if (result) {
                 printf("Search Result:\n");

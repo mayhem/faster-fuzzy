@@ -42,7 +42,7 @@ TestCase test_cases[] = {
     { "Billie Eilish","","COPYCAT","f4abc0b5-3f7a-4eff-8f78-ac078dbce533","37811723-1da9-404d-bd2c-a6a6352bdcc2", "ed3a357a-cd5c-4489-aeb3-25cc87bac005" },
     { "Angelo Badalamenti","Music From Twin Peaks","Laura Palmer’s Theme","5894dac5-0260-4175-b36e-e34680a859d6","e441d678-b225-3ea1-808c-9c488fdc3ac6","4cc6e566-96c3-4709-9ec0-a9b39c115e2f" },
     { "Alicia Keys","Keys","Skydive (originals)","8ef1df30-ae4f-4dbd-9351-1a32b208a01e", "f7c03888-7c31-4416-a57c-f1686f59ac89","a7bae269-2dd6-4297-a4c7-36a472a2a8fc" },
-    { "Godspeed You! Black Emperor","Lift Your Skinny Fists Like Antennas to Heaven","Like Antennas To Heaven…","3648db01-b29d-4ab9-835c-83f6a5068fe4","e51e1f8b-62ba-388f-8567-0c051b575351","5fb00c2b-5bc9-420a-882a-cc024d137a08" },
+    { "Godspeed You! Black Emperor","Lift Your Skinny Fists Like Antennas to Heaven","Like Antennas To Heaven…","3648db01-b29d-4ab9-835c-83f6a5068fe4", "f77eeaef-878e-4db3-ae65-5161cf929f14", "5fb00c2b-5bc9-420a-882a-cc024d137a08" },
     { "Charli xcx","BRAT","365","260b6184-8828-48eb-945c-bc4cb6fc34ca","82082eb8-19a0-4957-9a99-e8fda1bb6b88","bd9fd6a1-d41b-4b82-9ead-a4f958749a77" },
     { "Milana","MALLORCA STONER VOL.1","Forest Tale","3ac26f6c-0370-4451-a321-0880849257f9", "60422eb6-5d26-4e8e-801a-ab0d30d787e4","3c532ced-12af-44f8-85d8-7e88302e4bbe" },
     { "x#!*┦97","1 LP","untitled 1","78308fa1-b583-4b6c-a592-931df0126d29","3e7cb8db-6d89-4a54-8128-113f297fa83d","bc3c4795-e1bf-4350-b976-09be082bf077" },
@@ -58,9 +58,9 @@ TestCase test_cases[] = {
     { "mynoise", "primeval forest", "springtime birds", "d6ecdfbe-aaa7-48b5-925c-87f066376eaa", "00d9a760-bf8a-4c9e-b310-f7e00b7ed701", "057c48e8-754c-487e-b46b-f55a76498ccd"},
     { "queen & david bowie","Hot Space","under pressure","0383dadf-2a4e-4d10-a46a-e9e041da8eb3,5441c29d-3602-4898-b1a1-b77fa23b8e50","b4f42dd2-c6cc-449d-84ee-de581dcf120e","32c7e292-14f1-4080-bddf-ef852e0a4c59" },
     { "queen","Hot Space","under pressure","0383dadf-2a4e-4d10-a46a-e9e041da8eb3,5441c29d-3602-4898-b1a1-b77fa23b8e50","b4f42dd2-c6cc-449d-84ee-de581dcf120e","32c7e292-14f1-4080-bddf-ef852e0a4c59" },
-    
-// https://musicbrainz.org/artist/3fdaac99-0261-49a7-92b3-5a909cba187d
-// '鬱P' 'ガ' 'HAPPYPILLS'
+    { "darkseed","","entre dos tierras","8b0ab1c4-ffe4-491e-adda-037c744d1b00","","c7ba26e3-66c9-40a7-af72-cd27cdeed09c" }
+
+// s 鬱P, happypills, ガ
 
 // Possible recording/release match issue. requires more research
 //    { "Celtic Woman","20th Anniversary","When You Believe","4d483147-c871-48c4-8470-85e5a66381c5","9659808f-3382-42be-8c5d-477d271f9791","376e5743-7bf5-49ee-9c7e-f00aa479882c" },

@@ -70,7 +70,7 @@ class RecordingIndex {
                     string encoded_recording_name = encode.encode_string(recording_name);
                     if (encoded_recording_name.size() == 0)
                         continue;
-
+                    
                     // Build the recording name -> releases reference 
                     EntityRef ref(release_id, rank);
                     auto iter = recording_ref.find(encoded_recording_name);
@@ -109,7 +109,7 @@ class RecordingIndex {
             }
        
             // Create an intermediate data structure for working out
-            // which recordings appear on which releases
+            // the release_id, text and rank for this artist credit
             vector<TempReleaseData> t_release_data;
             for(auto &data : release_name_rank) {
                 size_t split_pos = data.first.find('-');

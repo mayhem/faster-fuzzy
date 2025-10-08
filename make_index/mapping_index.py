@@ -76,14 +76,14 @@ class MappingLookupIndex:
                                         , array_agg(a.gid::TEXT) as artist_mbids
                                         , acn."name" as artist_credit_name
                                         , COALESCE(array_agg(a.sort_name ORDER BY acn.position)) as artist_credit_sortname
-                                        , 0 AS release_id
+                                        , 9223372036854775807 AS release_id
                                         , '' AS release_mbid
-                                        , 0 AS release_artist_credit_id
+                                        , 9223372036854775807 AS release_artist_credit_id
                                         , '' AS release_name
                                         , r.id AS recording_id
                                         , r.gid::TEXT AS recording_mbid
                                         , r.name
-                                        , 0
+                                        , 9223372036854775807
                                      FROM recording r
                                 LEFT JOIN track t
                                        ON t.recording = r.id

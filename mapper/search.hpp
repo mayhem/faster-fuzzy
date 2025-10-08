@@ -22,15 +22,13 @@ const float artist_threshold = .6;
 const char *fetch_metadata_query = 
     "  SELECT artist_mbids, artist_credit_name, release_mbid, release_name, recording_mbid, recording_name "
     "    FROM mapping "
-    "   WHERE mapping.artist_credit_id = ? AND "
-    "         mapping.release_id = ? AND "
+    "   WHERE mapping.release_id = ? AND "
     "         mapping.recording_id = ?";
 
 const char *fetch_metadata_query_without_release = 
     "  SELECT artist_mbids, artist_credit_name, release_mbid, release_name, recording_mbid, recording_name "
     "    FROM mapping "
-    "   WHERE mapping.artist_credit_id = ? AND "
-    "         mapping.recording_id = ? "
+    "   WHERE mapping.recording_id = ? "
     "ORDER BY score "
     "   LIMIT 1";
 
@@ -94,13 +92,12 @@ class MappingSearch {
                 SQLite::Database    db(db_file);
                 SQLite::Statement   db_query(db, string(query));
                 
-                db_query.bind(1, result.artist_credit_id);
                 if (result.release_id) {
-                    db_query.bind(2, result.release_id);
-                    db_query.bind(3, result.recording_id);
+                    db_query.bind(1, result.release_id);
+                    db_query.bind(2, result.recording_id);
                 }
                 else 
-                    db_query.bind(2, result.recording_id);
+                    db_query.bind(1, result.recording_id);
 
                 while (db_query.executeStep()) {
                     result.artist_credit_mbids = split(db_query.getColumn(0).getString());
@@ -152,10 +149,9 @@ class MappingSearch {
             IndexResult                 rec_result = { 0, 0, 0.0 };
             
             // Add thresholding
-            printf("  RECORDING RELEASE SEARCH for artist_credit_id %u\n", artist_credit_id);
 
-            auto cleaned_release_name = metadata_cleaner.clean_recording(release_name); 
-            printf("cleaned release: '%s'\n", cleaned_release_name.c_str());
+            printf("RELEASE/RECORDING SEARCH for artist credit %d\n", artist_credit_id);
+            //auto cleaned_release_name = metadata_cleaner.clean_recording(release_name); 
 
             artist_data = index_cache->get(artist_credit_id);
             if (!artist_data) {
@@ -172,35 +168,44 @@ class MappingSearch {
 
             if (release_name.size()) {
                 auto release_name_encoded = encode.encode_string(release_name); 
-                printf("    RELEASE SEARCH: '%s' (%s)\n", release_name.c_str(), release_name_encoded.c_str());
+                printf("    RELEASE SEARCH\n");
                 if (release_name_encoded.size()) {
                     vector<IndexResult> rel_results = artist_data->release_index->search(release_name_encoded, .7);
                     if (rel_results.size()) {
                         IndexResult &result = rel_results[0];
-                        EntityRef &ref = (*artist_data->release_data)[result.id].release_refs[0];
+                        const auto &release_refs = (*artist_data->release_data)[result.id].release_refs;
+                        const EntityRef &ref = release_refs[0];  // Still use first ref for rel_result
                         rel_result.id = ref.id;
                         rel_result.confidence = result.confidence;
 
                         string text = artist_data->release_index->get_index_text(rel_results[0].result_index);
-                        printf("      %s %.2f\n", text.c_str(), rel_results[0].confidence);
+                        printf("      %.2f %s [", rel_results[0].confidence, text.c_str());
+                        
+                        // Print all release refs
+                        for (size_t i = 0; i < release_refs.size(); i++) {
+                            if (i > 0) printf(", ");
+                            printf("(%u,%u)", release_refs[i].id, release_refs[i].rank);
+                        }
+                        printf("]\n");
                     } else
-                        printf("      no release matches, ignoring release.\n");
+                        printf("    no release matches, ignoring release.\n");
                 }
                 else
-                    printf("    warning: release name contains no word characters, ignoring release.\n");
+                    printf("  warning: release name contains no word characters, ignoring release.\n");
             }
 
-            printf("    RECORDING SEARCH: '%s' (%s)\n", recording_name.c_str(), recording_name_encoded.c_str());
+            printf("    RECORDING SEARCH\n");
             vector<IndexResult> rec_results = artist_data->recording_index->search(recording_name_encoded, .7);
             if (rec_results.size()) {
                 rec_result = rec_results[0];
                 string text = artist_data->recording_index->get_index_text(rec_results[0].result_index);
-                printf("      %s %.2f\n", text.c_str(), rec_results[0].confidence);
+                printf("      %-8d %.2f %s\n", rec_results[0].id, rec_results[0].confidence, text.c_str());
             } else {
                 printf("      No recording results.\n");
                 return no_result;
             }
             
+            printf("\n");   
             float score;
             if (release_name.size()) {
                 score = (rec_result.confidence + rel_result.confidence) / 2.0;
@@ -211,7 +216,6 @@ class MappingSearch {
                 SearchResult out(artist_credit_id, 0, rec_result.id, score);
                 return out;
             }
-                
         }
        
         
@@ -224,7 +228,6 @@ class MappingSearch {
             assert(!artist_credit_map.empty());
             
             auto cleaned_artist_credit_name = metadata_cleaner.clean_artist(artist_credit_name); 
-            printf("cleaned artist: '%s'\n", cleaned_artist_credit_name.c_str());
 
             // TODO: Make sure that we don't process an artist_id more than once!
             auto artist_name = encode.encode_string(artist_credit_name); 
