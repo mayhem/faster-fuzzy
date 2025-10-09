@@ -69,6 +69,7 @@ TestCase test_cases[] = {
     { "charli xcx","SUCKER","break the rules","260b6184-8828-48eb-945c-bc4cb6fc34ca","b0ea48e1-5b5f-4b7b-8e3e-c6d7fb2abe43","8a0add0c-c733-4a72-9bc7-85fd5322865b" },
     { "charli xcx","SUCKER","break the rules (femme remix)","260b6184-8828-48eb-945c-bc4cb6fc34ca","b0ea48e1-5b5f-4b7b-8e3e-c6d7fb2abe43","fbec0a7a-bdd0-4379-b6a0-ecdc62f76a48" },
     { "daft punk","Random Access Memories","horizon","056e4f3e-d505-4dad-8ec1-d04f521cbb56","79215cdf-4764-4dee-b0b9-fec1643df7c5","befed7fb-a77e-49a9-8005-c7e36d5173cf" },
+    { "daft punk","","horizon","056e4f3e-d505-4dad-8ec1-d04f521cbb56","79215cdf-4764-4dee-b0b9-fec1643df7c5","befed7fb-a77e-49a9-8005-c7e36d5173cf" },
     { "the xx","Coexist","reconsider","c5c2ea1c-4bde-4f4d-bd0b-47b200bf99d6","c58f53f5-a071-48fd-bb6b-8f344b2eca34","324d0034-9648-4f09-821e-1ef658f1c747" },
     { "florence + the machine","Lungs","bird song","5fee3020-513b-48c2-b1f7-4681b01db0c6","f4a3ef7e-ad82-3eba-8f20-425536925309","99d62964-f40a-466c-9293-3c5cae72f8ad" },
     { "the libertines","The Libertines","cyclops","82b304c0-7da4-45d3-896a-0767c7ae1141","d224298c-82a1-4668-a3d3-c3bd40c8fbb1","c23e0d75-e3a2-43f8-8b76-ae31d8e7eb31" },
