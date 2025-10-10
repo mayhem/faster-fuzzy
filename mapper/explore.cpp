@@ -369,19 +369,27 @@ class Explorer {
                 
                 printf("\n=== RELEASE DATA ===\n");
                 if (data->release_index && !data->links.empty()) {
-                    printf("%-8s %-50s %s\n", "ID", "Release Text", "Releases (id,rank)");
+                    printf("%-8s %-50s %-10s %-8s\n", "Rel_Idx", "Release Text", "Rel_ID", "Rank");
                     printf("---------------------------------------------------------------------------------------------\n");
                     
-                    // Combine release index and release data into one display
-                    size_t max_entries = min(data->release_index->index_texts.size(), data->links.size());
-                    for (size_t i = 0; i < max_entries; i++) {
-                        string text = data->release_index->index_texts[i];
-                        const auto& release_info = data->links[i];
+                    // Display release data from links
+                    for (const auto& pair : data->links) {
+                        const auto& link = pair.second;
+                        string release_text = "";
+                        if (link.release_index < data->release_index->index_texts.size()) {
+                            release_text = data->release_index->index_texts[link.release_index];
+                            if (release_text.length() > 50) {
+                                release_text = release_text.substr(0, 50);
+                            }
+                        }
                         
-                        printf("%-8zu %-50s ", i, text.c_str());
-                        printf("]\n");
+                        printf("%-8u %-50s %-10u %-8u\n", 
+                               link.release_index,
+                               release_text.c_str(),
+                               link.release_id,
+                               link.rank);
                     }
-                    printf("Total release entries: %zu\n", max_entries);
+                    printf("Total release entries: %zu\n", data->links.size());
                 } else {
                     printf("No release data found.\n");
                 }
@@ -468,8 +476,10 @@ class Explorer {
                            "Link#", "Rel_Idx", "Rel_ID", "Rank", "Release Name", "Rec_Idx", "Rec_ID", "Recording Name");
                     printf("---------------------------------------------------------------------------------------------------------------\n");
                     
-                    for (size_t i = 0; i < data->links.size(); i++) {
-                        const auto& link = data->links[i];
+                    size_t i = 0;
+                    for (const auto& pair : data->links) {
+                        unsigned int recording_id = pair.first;
+                        const auto& link = pair.second;
                         
                         // Get release name (truncate to 20 chars)
                         string release_name = "";
@@ -498,6 +508,7 @@ class Explorer {
                                link.recording_index, 
                                link.recording_id,
                                recording_name.c_str());
+                        i++;
                     }
                     printf("Total links: %zu\n", data->links.size());
                 } else {

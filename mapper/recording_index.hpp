@@ -44,7 +44,7 @@ class RecordingIndex {
 
             // Map to track release and recording strings and their indexes 
             map<string, unsigned int>     release_string_index_map, recording_string_index_map;
-            vector<ReleaseRecordingLink>  links;
+            map<unsigned int, ReleaseRecordingLink>  links;
                 
             try
             {
@@ -90,15 +90,8 @@ class RecordingIndex {
                     } 
                     
                     ReleaseRecordingLink link = { release_index, release_id, rank, recording_index, recording_id };
-                    links.push_back(link);
+                    links[recording_id] = link;
                 }
-                auto compare = [](const ReleaseRecordingLink &a, const ReleaseRecordingLink &b) {
-                    if (a.recording_index != b.recording_index) {
-                        return a.recording_index < b.recording_index;
-                    }
-                    return a.rank < b.rank;
-                };
-                sort(links.begin(), links.end(), compare);
             }
             catch (std::exception& e)
             {
@@ -146,7 +139,7 @@ class RecordingIndex {
         load(const int artist_credit_id) {
             FuzzyIndex                   *recording_index = new FuzzyIndex();
             FuzzyIndex                   *release_index = new FuzzyIndex();
-            vector<ReleaseRecordingLink>  links;
+            map<unsigned int, ReleaseRecordingLink>  links;
             try
             {
                 SQLite::Database      db(db_file);

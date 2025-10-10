@@ -3,6 +3,8 @@
 #include <cereal/archives/binary.hpp>
 #include <cereal/types/vector.hpp>
 #include <cereal/types/string.hpp>
+#include <cereal/types/map.hpp>
+#include <map>
 
 const auto MAX_ENCODED_STRING_LENGTH = 30;
 
@@ -22,11 +24,11 @@ class FuzzyIndex;
 class ReleaseRecordingIndex {
     public:
         FuzzyIndex                   *recording_index, *release_index;
-        vector<ReleaseRecordingLink>  links;
+        map<unsigned int, ReleaseRecordingLink>  links;
 
         ReleaseRecordingIndex(FuzzyIndex *rec_index,
                               FuzzyIndex *rel_index, 
-                              vector<ReleaseRecordingLink> &_links) {
+                              map<unsigned int, ReleaseRecordingLink> &_links) {
             recording_index = rec_index;
             release_index = rel_index;
             links = _links;
