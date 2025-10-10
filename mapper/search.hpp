@@ -170,11 +170,16 @@ class MappingSearch {
                 if (release_name_encoded.size()) {
                     vector<IndexResult> *rel_results = release_recording_index->release_index->search(release_name_encoded, .7);
                     if (rel_results->size()) {
+                        // Sort results by confidence in descending order
+                        sort(rel_results->begin(), rel_results->end(), [](const IndexResult& a, const IndexResult& b) {
+                            return a.confidence > b.confidence;
+                        });
+                        
                         for(auto &result : *rel_results) {
                             string text = release_recording_index->release_index->get_index_text(result.result_index);
                             printf("      %.2f %s\n", result.confidence, text.c_str());
                         }     
-                        rel_result = (*rel_results)[0];
+                        rel_result = (*rel_results)[0]; // Now guaranteed to be the best match
                     }
                     else    
                         printf("    no release matches, ignoring release.\n");
@@ -188,11 +193,17 @@ class MappingSearch {
             IndexResult rec_result;
             vector<IndexResult> *rec_results = release_recording_index->recording_index->search(recording_name_encoded, .7);
             if (rec_results->size()) {
+                // TODO: Are results from FuzzyIndex sorted?
+                // Sort results by confidence in descending order
+                sort(rec_results->begin(), rec_results->end(), [](const IndexResult& a, const IndexResult& b) {
+                    return a.confidence > b.confidence;
+                });
+                
                 for(auto &result : *rec_results) {
                     string text = release_recording_index->recording_index->get_index_text(result.result_index);
                     printf("      %.2f %s\n", result.confidence, text.c_str());
                 }
-                rec_result = (*rec_results)[0];
+                rec_result = (*rec_results)[0]; // Now guaranteed to be the best match
                 delete rec_results;
             } else {
                 printf("      No recording results.\n");
@@ -327,6 +338,8 @@ class MappingSearch {
             // Process results for recording/release search using same interleaved order
             res_idx = 0; 
             mres_idx = 0;
+            SearchResult *best_result = nullptr;
+            float best_confidence = 0.0;
             
             while (res_idx < res->size() || mres_idx < mres->size()) {
                 bool use_res = false;
@@ -357,15 +370,30 @@ class MappingSearch {
                         if (ac_history.find(artist_credit_id) == ac_history.end()) {
                             SearchResult *r = recording_release_search(artist_credit_id, release_name, recording_name); 
                             if (r && r->confidence > .7) {
-                                if (!fetch_metadata(r)) {
-                                    delete r;
+                                // If this is a very high confidence result (> 0.95), return immediately
+                                if (r->confidence > 0.95) {
+                                    if (!fetch_metadata(r)) {
+                                        delete r;
+                                        if (best_result) delete best_result;
+                                        delete res;
+                                        delete mres;
+                                        throw std::length_error("failed to load metadata from sqlite.");
+                                    }
+                                    if (best_result) delete best_result;
                                     delete res;
                                     delete mres;
-                                    throw std::length_error("failed to load metadata from sqlite.");
+                                    return r;
                                 }
-                                delete res;
-                                delete mres;
-                                return r;
+                                // Otherwise, keep track of the best result so far
+                                if (r->confidence > best_confidence) {
+                                    if (best_result) delete best_result;
+                                    best_result = r;
+                                    best_confidence = r->confidence;
+                                } else {
+                                    delete r; // This result is not better than what we have
+                                }
+                            } else if (r) {
+                                delete r; // Clean up unused result
                             }
                             ac_history[artist_credit_id] = 1;
                         }
@@ -377,20 +405,49 @@ class MappingSearch {
                     unsigned int artist_credit_id = result.id;
                     if (ac_history.find(artist_credit_id) == ac_history.end()) {
                         SearchResult *r = recording_release_search(artist_credit_id, release_name, recording_name); 
-                        if (r->confidence > .7) {
-                            if (!fetch_metadata(r)) {
+                        if (r && r->confidence > .7) {
+                            // If this is a very high confidence result (> 0.95), return immediately
+                            if (r->confidence > 0.95) {
+                                if (!fetch_metadata(r)) {
+                                    delete r;
+                                    if (best_result) delete best_result;
+                                    delete res;
+                                    delete mres;
+                                    throw std::length_error("failed to load metadata from sqlite.");
+                                }
+                                if (best_result) delete best_result;
                                 delete res;
                                 delete mres;
-                                throw std::length_error("failed to load metadata from sqlite.");
+                                return r;
                             }
-                            delete res;
-                            delete mres;
-                            return r;
+                            // Otherwise, keep track of the best result so far
+                            if (r->confidence > best_confidence) {
+                                if (best_result) delete best_result;
+                                best_result = r;
+                                best_confidence = r->confidence;
+                            } else {
+                                delete r; // This result is not better than what we have
+                            }
+                        } else if (r) {
+                            delete r; // Clean up unused result
                         }
                         ac_history[artist_credit_id] = 1;
                     }
                     mres_idx++;
                 }
+            }
+            
+            // If we found any good result, return the best one
+            if (best_result) {
+                if (!fetch_metadata(best_result)) {
+                    delete best_result;
+                    delete res;
+                    delete mres;
+                    throw std::length_error("failed to load metadata from sqlite.");
+                }
+                delete res;
+                delete mres;
+                return best_result;
             }
             printf("No matches found.\n");
             delete res;

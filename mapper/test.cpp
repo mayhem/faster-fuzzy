@@ -76,7 +76,7 @@ TestCase test_cases[] = {
     { "foo fighters","Echoes, Silence, Patience & Grace","seda","67f66c07-6e61-4026-ade5-7e782fad3a5d","9bb88ca5-583a-4e21-96e8-994a5fc900e5","2535f4e5-7760-4740-8458-8176b09718ce" },
     { "the libertines","The Libertines","cyclops","82b304c0-7da4-45d3-896a-0767c7ae1141","d224298c-82a1-4668-a3d3-c3bd40c8fbb1","c23e0d75-e3a2-43f8-8b76-ae31d8e7eb31" },
     { "lorde","Pure Heroine","bravado (fffrrannno remix)","8e494408-8620-4c6a-82c2-c2ca4a1e4f12","491dd8ee-2b66-4510-b457-919b39058fe6","a9e44959-d060-4f47-a434-1db824c11ed5" },
-    { "queen","A Day at the Races","teo torriatte (let us cling together)","0383dadf-2a4e-4d10-a46a-e9e041da8eb3","fc10e789-d161-3472-8492-e7cae1acdd7c","27abf367-1c5f-4915-ba1a-a061cc00a14d" },
+    { "queen","A Day at the Races","teo torriatte (let us cling together)","0383dadf-2a4e-4d10-a46a-e9e041da8eb3","2183a8fd-569e-440d-9a8d-c6eeaa589c71","8317a338-cfb4-46e6-956b-4e6495feebbf" },
     { "lana del rey","Ultraviolence","flipside","b7539c32-53e7-4908-bda3-81449c367da6","abc92375-0d33-4479-aba0-97abd12f579e","b5a37a27-ea68-4adf-952a-4679c306e344" },
     { "david bowie","The Next Day","god bless the girl","5441c29d-3602-4898-b1a1-b77fa23b8e50","6241d76e-45d9-4f7e-b9fc-24ad33e4955a","68cbaf8d-7e6b-40e7-a404-8367935ea29f" },
     { "arctic monkeys","AM","2013","ada7a83c-e3e1-40f1-93f9-3e73dbc9298a","a432408f-335e-4d64-b33a-c1fb809af58f","e5bdbeac-6e52-495c-a51b-6b834aaccfc8" },
