@@ -151,7 +151,8 @@ void CreateBaseIndex::create() {
             break;
         }
         
-        printf("Processing batch of %d rows (total processed: %d)\n", num_rows, row_count);
+        printf("\rtotal rows imported: %d)", row_count);
+        fflush(stdout);
         
         for (int i = 0; i < num_rows; i++) {
             MappingRow mrow;
@@ -229,7 +230,7 @@ void CreateBaseIndex::create() {
     
     csvfile.close();
     PQfinish(conn);
-    printf("Wrote %d rows to CSV\n", row_count);
+    printf("\nWrote %d rows to CSV\n", row_count);
     
     printf("Importing CSV into SQLite...\n");
     import_csv_to_sqlite(db_file, csv_file);
@@ -386,14 +387,15 @@ void CreateBaseIndex::import_csv_to_sqlite(const string& db_file, const string& 
             
             count++;
             if (count % 100000 == 0) {
-                printf("Imported %d rows\n", count);
+                printf("\rImported %d rows in sqlite", count);
+                fflush(stdout);
             }
         }
         
         db.exec("COMMIT");
         csvfile.close();
         
-        printf("Imported %d total rows\n", count);
+        printf("\nImported %d total rows\n", count);
         
     } catch (const std::exception& e) {
         printf("CSV import error: %s\n", e.what());
