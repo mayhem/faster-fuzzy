@@ -9,21 +9,20 @@
 
 using namespace std;
 
-const char *fetch_query = 
-"      SELECT artist_credit_id   "
-"           , release_id  "
-"           , m.release_artist_credit_id   "
-"           , release_name   "
-"           , recording_id  "
-"           , recording_name "
-"           , score AS rank  "
-"        FROM mapping m  "
-"       WHERE release_artist_credit_id = ? "
-"          OR artist_credit_id = ?"
-"    ORDER BY score, m.release_id" ;
+const char *fetch_query = R"(
+      SELECT artist_credit_id   
+           , release_id  
+           , m.release_artist_credit_id   
+           , release_name   
+           , recording_id  
+           , recording_name 
+           , score AS rank  
+        FROM mapping m  
+       WHERE release_artist_credit_id = ? 
+          OR artist_credit_id = ?
+    ORDER BY score, m.release_id
+)";
 
-// TODO: darkseed, Entre dos tierras
-    
 class RecordingIndex {
     private:
         string           index_dir, db_file; 
@@ -43,8 +42,8 @@ class RecordingIndex {
         build_recording_release_indexes(unsigned int artist_credit_id) {
 
             // Map to track release and recording strings and their indexes 
-            map<string, unsigned int>     release_string_index_map, recording_string_index_map;
-            map<unsigned int, ReleaseRecordingLink>  links;
+            map<string, unsigned int>                        release_string_index_map, recording_string_index_map;
+            map<unsigned int, vector<ReleaseRecordingLink>>  links;
                 
             try
             {
@@ -90,7 +89,7 @@ class RecordingIndex {
                     } 
                     
                     ReleaseRecordingLink link = { release_index, release_id, rank, recording_index, recording_id };
-                    links[recording_id] = link;
+                    links[recording_id].push_back(link);
                 }
             }
             catch (std::exception& e)
@@ -139,7 +138,7 @@ class RecordingIndex {
         load(const int artist_credit_id) {
             FuzzyIndex                   *recording_index = new FuzzyIndex();
             FuzzyIndex                   *release_index = new FuzzyIndex();
-            map<unsigned int, ReleaseRecordingLink>  links;
+            map<unsigned int, vector<ReleaseRecordingLink>>  links;
             try
             {
                 SQLite::Database      db(db_file);

@@ -24,11 +24,11 @@ class FuzzyIndex;
 class ReleaseRecordingIndex {
     public:
         FuzzyIndex                   *recording_index, *release_index;
-        map<unsigned int, ReleaseRecordingLink>  links;
+        map<unsigned int, vector<ReleaseRecordingLink>>  links;
 
         ReleaseRecordingIndex(FuzzyIndex *rec_index,
                               FuzzyIndex *rel_index, 
-                              map<unsigned int, ReleaseRecordingLink> &_links) {
+                              map<unsigned int, vector<ReleaseRecordingLink>> &_links) {
             recording_index = rec_index;
             release_index = rel_index;
             links = _links;

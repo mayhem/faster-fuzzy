@@ -15,18 +15,18 @@ const float ARTIST_CONFIDENCE_THRESHOLD = .45;
 const int   NUM_ROWS_PER_COMMIT = 500;
 const int   MAX_THREADS = 16;
 
-const char *fetch_pending_artists_query = 
-    "WITH artist_ids AS ("
-    "        SELECT DISTINCT mapping.artist_credit_id"
-    "          FROM mapping"
-    "     LEFT JOIN index_cache"
-    "            ON mapping.artist_credit_id = index_cache.entity_id"
-    "         WHERE index_cache.entity_id is null"
-    ")"
-    "        SELECT artist_credit_id, count(*) as cnt "
-    "          FROM artist_ids "
-    "         WHERE artist_credit_id > 2 "
-    "      GROUP BY artist_credit_id order by cnt desc";
+const char *fetch_pending_artists_query = R"(
+    WITH artist_ids AS (
+            SELECT DISTINCT mapping.artist_credit_id
+              FROM mapping
+         LEFT JOIN index_cache
+                ON mapping.artist_credit_id = index_cache.entity_id
+             WHERE index_cache.entity_id is null
+    )
+            SELECT artist_credit_id, count(*) as cnt 
+              FROM artist_ids 
+             WHERE artist_credit_id > 2 
+          GROUP BY artist_credit_id order by cnt desc)";
 
 class CreatorThread {
     public:

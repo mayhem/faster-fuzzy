@@ -110,15 +110,15 @@ class FuzzyIndex {
             index->CreateIndex(index_params);
         }
 
-        vector<IndexResult> 
+        vector<IndexResult> *
         search(const string &query_string, float min_confidence, bool debug=false) {
             vector<string> text_data;
             similarity::ObjectVector data;
-            vector<IndexResult> results;
+            vector<IndexResult> *results = new vector<IndexResult>;
             
             if (index == nullptr) {
                 printf("No index available.");
-                return results;
+                return nullptr;
             }
 
             text_data.push_back(query_string);
@@ -137,7 +137,7 @@ class FuzzyIndex {
                 if (dist >= min_confidence) {
                     if (index_texts[queue->TopObject()->id()].size() > MAX_ENCODED_STRING_LENGTH)
                         has_long = true;
-                    results.push_back(IndexResult(index_ids[queue->TopObject()->id()], queue->TopObject()->id(), dist));
+                    results->push_back(IndexResult(index_ids[queue->TopObject()->id()], queue->TopObject()->id(), dist));
                 }
                 queue->Pop();
             }
@@ -145,20 +145,20 @@ class FuzzyIndex {
             for(auto &obj : data)
                 delete obj;
             
-            reverse(results.begin(), results.end());
+            reverse(results->begin(), results->end());
             if (query_string.size() > MAX_ENCODED_STRING_LENGTH || has_long)
                 return post_process_long_query(query_string, results, min_confidence);
 
             return results;
         }
          
-        vector<IndexResult>
-        post_process_long_query(const string &query, vector<IndexResult> &results, float min_confidence) {
-            vector<IndexResult> updated;
+        vector<IndexResult> *
+        post_process_long_query(const string &query, vector<IndexResult> *results, float min_confidence) {
+            vector<IndexResult> *updated = new vector<IndexResult>;
           
-            for(int i = results.size() - 1; i >= 0; i--) {
-                unsigned int id = results[i].id;
-                unsigned int index = results[i].result_index;
+            for(int i = results->size() - 1; i >= 0; i--) {
+                unsigned int id = (*results)[i].id;
+                unsigned int index = (*results)[i].result_index;
                 size_t dist = lev_edit_distance(query.size(), (const lev_byte*)query.c_str(), 
                                                 index_texts[index].size(), (const lev_byte*)index_texts[index].c_str(), 1);
                 float conf;
@@ -170,7 +170,7 @@ class FuzzyIndex {
                 //printf("'%s' - '%s' %u dist %lu %.3f", query.c_str(), index_texts[index].c_str(), id, dist, conf);
                 if (conf >= min_confidence) {
                     IndexResult temp = { id, index, conf };
-                    updated.push_back(temp);
+                    updated->push_back(temp);
                 }
             }
             return updated;

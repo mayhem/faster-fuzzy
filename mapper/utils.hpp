@@ -4,7 +4,7 @@
 
 using namespace std;
 
-void log(const char *format, ...) {
+inline void log(const char *format, ...) {
     va_list   args;
     char      buffer[255];
 

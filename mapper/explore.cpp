@@ -196,7 +196,7 @@ class Explorer {
         }
         
         void search_artist(const string &query) {
-            vector<IndexResult> res;
+            vector<IndexResult> *res = nullptr;
             
             // Try to encode the string normally first
             auto artist_name = encode.encode_string(query);
@@ -216,19 +216,20 @@ class Explorer {
                 res = artist_index->stupid_artist_index->search(stupid_name, 0.5);
             }
             
-            if (!res.size()) {
+            if (!res->size()) {
                 printf("  No results found.\n");
+                delete res;
                 return;
             }
             
             // Fetch artist credit IDs for all results
-            map<unsigned int, vector<unsigned int>> artist_credit_ids = fetch_artist_credit_ids(res);
+            map<unsigned int, vector<unsigned int>> artist_credit_ids = fetch_artist_credit_ids(*res);
             
             printf("\nResults:\n");
             printf("%-40s %-10s %-8s %-15s\n", "Name", "Confidence", "ID", "Artist Credits");
             printf("------------------------------------------------------------------------\n");
             
-            for (auto &result : res) {
+            for (auto &result : *res) {
                 string text;
                 if (artist_name.size()) {
                     text = artist_index->single_artist_index->get_index_text(result.result_index);
@@ -254,10 +255,11 @@ class Explorer {
                 printf("%-40s %-10.2f %-8d %-15s\n", short_name.c_str(), result.confidence, result.id, credit_ids_str.c_str());
             }
             printf("\n");
+            delete res;
         }
 
         void search_multiple_artist(const string &query) {
-            vector<IndexResult> res;
+            vector<IndexResult> *res = nullptr;
             
             // Try to encode the string normally first
             auto artist_name = encode.encode_string(query);
@@ -265,7 +267,7 @@ class Explorer {
                 printf("MULTIPLE ARTIST SEARCH: '%s' (%s)\n", query.c_str(), artist_name.c_str());
                 res = artist_index->multiple_artist_index->search(artist_name, 0.5);
             }
-            if (!res.size()) {
+            if (!res->size()) {
                 printf("  No results found.\n");
                 return;
             }
@@ -274,7 +276,7 @@ class Explorer {
             printf("%-40s %-10s %-8s\n", "Name", "Confidence", "Artist Credit");
             printf("------------------------------------------------------------------------\n");
             
-            for (auto &result : res) {
+            for (auto &result : *res) {
                 string text;
                 if (artist_name.size()) {
                     text = artist_index->multiple_artist_index->get_index_text(result.result_index);
@@ -285,6 +287,7 @@ class Explorer {
                 printf("%-40s %-10.2f %-8d\n", short_name.c_str(), result.confidence, result.id);
             }
             printf("\n");
+            delete res;
         }
         
         void dump_recordings_for_artist_credit(unsigned int artist_credit_id) {
@@ -374,22 +377,28 @@ class Explorer {
                     
                     // Display release data from links
                     for (const auto& pair : data->links) {
-                        const auto& link = pair.second;
-                        string release_text = "";
-                        if (link.release_index < data->release_index->index_texts.size()) {
-                            release_text = data->release_index->index_texts[link.release_index];
-                            if (release_text.length() > 50) {
-                                release_text = release_text.substr(0, 50);
+                        const auto& links_vector = pair.second;
+                        for (const auto& link : links_vector) {
+                            string release_text = "";
+                            if (link.release_index < data->release_index->index_texts.size()) {
+                                release_text = data->release_index->index_texts[link.release_index];
+                                if (release_text.length() > 50) {
+                                    release_text = release_text.substr(0, 50);
+                                }
                             }
+                            
+                            printf("%-8u %-50s %-10u %-8u\n", 
+                                   link.release_index,
+                                   release_text.c_str(),
+                                   link.release_id,
+                                   link.rank);
                         }
-                        
-                        printf("%-8u %-50s %-10u %-8u\n", 
-                               link.release_index,
-                               release_text.c_str(),
-                               link.release_id,
-                               link.rank);
                     }
-                    printf("Total release entries: %zu\n", data->links.size());
+                    size_t total_links = 0;
+                    for (const auto& pair : data->links) {
+                        total_links += pair.second.size();
+                    }
+                    printf("Total release entries: %zu\n", total_links);
                 } else {
                     printf("No release data found.\n");
                 }
@@ -479,38 +488,44 @@ class Explorer {
                     size_t i = 0;
                     for (const auto& pair : data->links) {
                         unsigned int recording_id = pair.first;
-                        const auto& link = pair.second;
+                        const auto& links_vector = pair.second;
                         
-                        // Get release name (truncate to 20 chars)
-                        string release_name = "";
-                        if (data->release_index && link.release_index < data->release_index->index_texts.size()) {
-                            release_name = data->release_index->index_texts[link.release_index];
-                            if (release_name.length() > 20) {
-                                release_name = release_name.substr(0, 20);
+                        for (const auto& link : links_vector) {
+                            // Get release name (truncate to 20 chars)
+                            string release_name = "";
+                            if (data->release_index && link.release_index < data->release_index->index_texts.size()) {
+                                release_name = data->release_index->index_texts[link.release_index];
+                                if (release_name.length() > 20) {
+                                    release_name = release_name.substr(0, 20);
+                                }
                             }
-                        }
-                        
-                        // Get recording name (truncate to 20 chars)
-                        string recording_name = "";
-                        if (data->recording_index && link.recording_index < data->recording_index->index_texts.size()) {
-                            recording_name = data->recording_index->index_texts[link.recording_index];
-                            if (recording_name.length() > 20) {
-                                recording_name = recording_name.substr(0, 20);
+                            
+                            // Get recording name (truncate to 20 chars)
+                            string recording_name = "";
+                            if (data->recording_index && link.recording_index < data->recording_index->index_texts.size()) {
+                                recording_name = data->recording_index->index_texts[link.recording_index];
+                                if (recording_name.length() > 20) {
+                                    recording_name = recording_name.substr(0, 20);
+                                }
                             }
+                            
+                            printf("%-8zu %-10u %-8u %-8u %-21s %-10u %-8u %-21s\n", 
+                                   i, 
+                                   link.release_index, 
+                                   link.release_id, 
+                                   link.rank, 
+                                   release_name.c_str(),
+                                   link.recording_index, 
+                                   link.recording_id,
+                                   recording_name.c_str());
+                            i++;
                         }
-                        
-                        printf("%-8zu %-10u %-8u %-8u %-21s %-10u %-8u %-21s\n", 
-                               i, 
-                               link.release_index, 
-                               link.release_id, 
-                               link.rank, 
-                               release_name.c_str(),
-                               link.recording_index, 
-                               link.recording_id,
-                               recording_name.c_str());
-                        i++;
                     }
-                    printf("Total links: %zu\n", data->links.size());
+                    size_t total_links = 0;
+                    for (const auto& pair : data->links) {
+                        total_links += pair.second.size();
+                    }
+                    printf("Total links: %zu\n", total_links);
                 } else {
                     printf("No links found.\n");
                 }
