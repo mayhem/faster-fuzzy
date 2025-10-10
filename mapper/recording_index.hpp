@@ -64,8 +64,8 @@ class RecordingIndex {
                     string       recording_name = query.getColumn(5);
                     unsigned int rank  = query.getColumn(6);
                     
-                    // This is likely too simplistic, but for a test...
-                    if (artist_credit_id != ac_id)
+                    // Include rows where either the recording artist_credit_id or release artist_credit_id matches
+                    if (artist_credit_id != ac_id && artist_credit_id != release_artist_credit_id)
                         continue;
                     
                     //printf("%-40s, %-40s\n", release_name.c_str(), recording_name.c_str());
