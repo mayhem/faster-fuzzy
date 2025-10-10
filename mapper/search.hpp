@@ -143,10 +143,10 @@ class MappingSearch {
         
         SearchResult
         recording_release_search(unsigned int artist_credit_id, const string &release_name, const string &recording_name) {
-            ArtistReleaseRecordingData *artist_data;
-            SearchResult                no_result;
-            IndexResult                 rel_result = { 0, 0, 0.0 };
-            IndexResult                 rec_result = { 0, 0, 0.0 };
+            ReleaseRecordingIndex *artist_data;
+            SearchResult           no_result;
+            IndexResult            rel_result = { 0, 0, 0.0 };
+            IndexResult            rec_result = { 0, 0, 0.0 };
             
             // Add thresholding
 
@@ -173,19 +173,12 @@ class MappingSearch {
                     vector<IndexResult> rel_results = artist_data->release_index->search(release_name_encoded, .7);
                     if (rel_results.size()) {
                         IndexResult &result = rel_results[0];
-                        const auto &release_refs = (*artist_data->release_data)[result.id].release_refs;
-                        const EntityRef &ref = release_refs[0];  // Still use first ref for rel_result
-                        rel_result.id = ref.id;
-                        rel_result.confidence = result.confidence;
 
                         string text = artist_data->release_index->get_index_text(rel_results[0].result_index);
                         printf("      %.2f %s [", rel_results[0].confidence, text.c_str());
-                        
-                        // Print all release refs
-                        for (size_t i = 0; i < release_refs.size(); i++) {
-                            if (i > 0) printf(", ");
-                            printf("(%u,%u)", release_refs[i].id, release_refs[i].rank);
-                        }
+                        for( auto &it : artist_data->links) 
+                            printf("       %-8u %-8u %-8u %-8u %-8u\n",
+                                it.release_index, it.release_id, it.rank, it.recording_index, it.recording_id);
                         printf("]\n");
                     } else
                         printf("    no release matches, ignoring release.\n");

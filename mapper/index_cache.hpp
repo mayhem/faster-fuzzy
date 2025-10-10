@@ -11,13 +11,13 @@ const int SLEEP_DELAY = 30;
 
 class IndexCache {
     private:
-        map<unsigned int, ArtistReleaseRecordingData *> index;
-        map<unsigned int, time_t>                       last_accessed;
-        mutex                                           mtx;
-        thread                                         *cleaner_thread;
-        int                                             max_memory_usage; // in MB
-        int                                             cleaning_target; // in MB
-        bool                                            stop;
+        map<unsigned int, ReleaseRecordingIndex *> index;
+        map<unsigned int, time_t>                  last_accessed;
+        mutex                                      mtx;
+        thread                                    *cleaner_thread;
+        int                                        max_memory_usage; // in MB
+        int                                        cleaning_target; // in MB
+        bool                                       stop;
 
     public:
 
@@ -88,15 +88,15 @@ class IndexCache {
         }
         
         void
-        add(unsigned int artist_credit_id, ArtistReleaseRecordingData *data) {
+        add(unsigned int artist_credit_id, ReleaseRecordingIndex *data) {
             mtx.lock();
             index[artist_credit_id] = data;
             mtx.unlock();
         }
 
-        ArtistReleaseRecordingData *
+        ReleaseRecordingIndex *
         get(unsigned int artist_credit_id) {
-            ArtistReleaseRecordingData *data = nullptr;
+            ReleaseRecordingIndex *data = nullptr;
 
             mtx.lock();
             auto iter = index.find(artist_credit_id);

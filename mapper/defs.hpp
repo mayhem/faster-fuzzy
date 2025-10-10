@@ -6,71 +6,37 @@
 
 const auto MAX_ENCODED_STRING_LENGTH = 30;
 
-class EntityRef {
-    public:
-       unsigned int id;
-       unsigned int rank;
-      
-        EntityRef() {};
-        EntityRef(unsigned int id_, unsigned int rank_) {
-            id = id_;
-            rank = rank_;
-        }
-        template<class Archive>
-        void serialize(Archive & archive)
-        {
-            archive(id, rank);
-        }
-};
+struct ReleaseRecordingLink {
+    
+    unsigned int release_index, release_id, rank;
+    unsigned int recording_index, recording_id;
 
-class TempReleaseData {
-    public:
-       unsigned int       id;
-       string             text;
-       unsigned int       rank;
-       
-        TempReleaseData(unsigned int id_, string &text_, unsigned int rank_) {
-            id = id_;
-            text = text_;
-            rank = rank_;
-        }
-};
-
-class IndexSupplementalReleaseData {
-    public:
-        vector<EntityRef> release_refs;
-       
-        IndexSupplementalReleaseData() {};
-        IndexSupplementalReleaseData(const vector<EntityRef> &refs_) {
-            release_refs = refs_;
-        }
-        
-        void
-        sort_refs_by_rank() {
-            sort(release_refs.begin(), release_refs.end(), [](const EntityRef& a, const EntityRef& b) {
-                return a.rank < b.rank;
-            }); 
-        }
-
-        template<class Archive>
-        void serialize(Archive & archive)
-        {
-            archive(release_refs);
-        }
+    template<class Archive>
+    void serialize(Archive & archive)
+    {
+       archive(release_index, release_id, rank, recording_index, recording_id);
+    }
 };
 
 class FuzzyIndex;
-class ArtistReleaseRecordingData {
+class ReleaseRecordingIndex {
     public:
-        FuzzyIndex                           *recording_index, *release_index;
-        vector<IndexSupplementalReleaseData> *release_data;
+        FuzzyIndex                   *recording_index, *release_index;
+        vector<ReleaseRecordingLink>  links;
 
-        ArtistReleaseRecordingData(FuzzyIndex *rec_index, FuzzyIndex *rel_index, 
-                                   vector<IndexSupplementalReleaseData> *rel_data) {
+        ReleaseRecordingIndex(FuzzyIndex *rec_index,
+                              FuzzyIndex *rel_index, 
+                              vector<ReleaseRecordingLink> &_links) {
             recording_index = rec_index;
             release_index = rel_index;
-            release_data = rel_data;
+            links = _links;
         };
+
+        template<class Archive>
+        void serialize(Archive & archive)
+        {
+           archive(links);
+        }
 };
 
 class IndexResult {

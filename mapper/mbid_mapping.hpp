@@ -2,6 +2,7 @@
 
 #include <unistd.h>
 #include <thread>
+#include <chrono>
 
 #include "fuzzy_index.hpp"
 #include "recording_index.hpp"
@@ -24,9 +25,8 @@ const char *fetch_pending_artists_query =
     ")"
     "        SELECT artist_credit_id, count(*) as cnt "
     "          FROM artist_ids "
-    "       WHERE artist_credit_id > 1 "
+    "         WHERE artist_credit_id > 2 "
     "      GROUP BY artist_credit_id order by cnt desc";
-    
 
 class CreatorThread {
     public:
@@ -43,16 +43,17 @@ void thread_build_index(const string &index_dir, CreatorThread *th, unsigned int
     RecordingIndex  ri(index_dir);
     
     th->sstream = new stringstream();
-    auto indexes = ri.build_recording_release_indexes(artist_id);
+    
+    auto index = ri.build_recording_release_indexes(artist_id);
     {
         cereal::BinaryOutputArchive oarchive(*th->sstream);
-        oarchive(*indexes.recording_index);
-        oarchive(*indexes.release_index);
-        oarchive(*indexes.release_data);
+        oarchive(*index.recording_index);
+        oarchive(*index.release_index);
+        oarchive(index.links);
     }
-    delete indexes.recording_index;
-    delete indexes.release_index;
-    delete indexes.release_data;
+    delete index.recording_index;
+    delete index.release_index;
+    th->sstream->seekg(ios_base::end);
     th->sstream->seekg(ios_base::beg);
     th->done = true;
 }
