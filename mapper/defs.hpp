@@ -23,8 +23,8 @@ struct ReleaseRecordingLink {
 class FuzzyIndex;
 class ReleaseRecordingIndex {
     public:
-        FuzzyIndex                   *recording_index, *release_index;
-        map<unsigned int, vector<ReleaseRecordingLink>>  links;
+        FuzzyIndex                                       *recording_index, *release_index;
+        map<unsigned int, vector<ReleaseRecordingLink>>   links;
 
         ReleaseRecordingIndex(FuzzyIndex *rec_index,
                               FuzzyIndex *rel_index, 
@@ -43,13 +43,17 @@ class ReleaseRecordingIndex {
 
 class IndexResult {
     public:
+        bool           is_valid;
         unsigned int   id;
         unsigned int   result_index;
         // TODO: rename this to confidence
         float          confidence;
         
-        IndexResult() {}
+        IndexResult() {
+            is_valid = false;
+        }
         IndexResult(unsigned int _id, unsigned int _result_index, float _confidence) {
+            is_valid = true;
             id = _id;
             confidence = _confidence;
             result_index = _result_index;

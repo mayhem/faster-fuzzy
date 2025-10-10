@@ -163,50 +163,54 @@ class MappingSearch {
                 return nullptr;
             }
 
-            vector<IndexResult> *rel_results = nullptr;
+            IndexResult rel_result;
             if (release_name.size()) {
                 auto release_name_encoded = encode.encode_string(release_name); 
                 printf("    RELEASE SEARCH\n");
                 if (release_name_encoded.size()) {
-                    rel_results = release_recording_index->release_index->search(release_name_encoded, .7);
+                    vector<IndexResult> *rel_results = release_recording_index->release_index->search(release_name_encoded, .7);
                     if (rel_results->size()) {
                         for(auto &result : *rel_results) {
                             string text = release_recording_index->release_index->get_index_text(result.result_index);
                             printf("      %.2f %s\n", result.confidence, text.c_str());
                         }     
+                        rel_result = (*rel_results)[0];
                     }
                     else    
-                        printf("    no release matches, ignoring release.\n");                 }
+                        printf("    no release matches, ignoring release.\n");
+                    delete rel_results;
+                }
                 else
                     printf("  warning: release name contains no word characters, ignoring release.\n");
             }
 
             printf("    RECORDING SEARCH\n");
+            IndexResult rec_result;
             vector<IndexResult> *rec_results = release_recording_index->recording_index->search(recording_name_encoded, .7);
             if (rec_results->size()) {
                 for(auto &result : *rec_results) {
                     string text = release_recording_index->recording_index->get_index_text(result.result_index);
                     printf("      %.2f %s\n", result.confidence, text.c_str());
                 }
+                rec_result = (*rec_results)[0];
+                delete rec_results;
             } else {
                 printf("      No recording results.\n");
-                delete rel_results;
                 delete rec_results;
                 return nullptr;
             }
-          
-//            if (release_name.size() && rel_results.size()) {
-//                auto result = rec_results[0]
-//                for(auto &it : artist_data->links[result.result_index]) {
-//                    if it.release_id = rec
-//
-//
-//                    
-//                }  
+         
+            if (rel_result.is_valid && rec_result.is_valid) {
+                printf("rel id: %d rec id: %d\n", rel_result.id, rec_result.id);
+                for(auto &it : release_recording_index->links[rec_result.id]) {
+                    printf("%d = %d\n", it.release_id, rel_result.id); 
+                    if (it.release_id == rel_result.id) {
+                        float score = (rec_result.confidence + rel_result.confidence) / 2.0;
+                        return new SearchResult(artist_credit_id, rel_result.id, rec_result.id, score);
+                    }
+                }  
+            }
 
-            delete rec_results;
-            delete rel_results;
-           
              printf("\n");   
 //            float score;
 //            if (release_name.size()) {
@@ -349,7 +353,7 @@ class MappingSearch {
                     for (auto artist_credit_id : artist_credit_map[result.id]) {
                         if (ac_history.find(artist_credit_id) == ac_history.end()) {
                             SearchResult *r = recording_release_search(artist_credit_id, release_name, recording_name); 
-                            if (r->confidence > .7) {
+                            if (r && r->confidence > .7) {
                                 if (!fetch_metadata(r)) {
                                     delete r;
                                     delete res;
