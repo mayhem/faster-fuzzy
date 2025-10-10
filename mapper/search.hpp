@@ -172,15 +172,12 @@ class MappingSearch {
                 if (release_name_encoded.size()) {
                     vector<IndexResult> rel_results = artist_data->release_index->search(release_name_encoded, .7);
                     if (rel_results.size()) {
-                        IndexResult &result = rel_results[0];
-
-                        string text = artist_data->release_index->get_index_text(rel_results[0].result_index);
-                        printf("      %.2f %s [", rel_results[0].confidence, text.c_str());
-                        for( auto &it : artist_data->links) 
-                            printf("       %-8u %-8u %-8u %-8u %-8u\n",
-                                it.release_index, it.release_id, it.rank, it.recording_index, it.recording_id);
-                        printf("]\n");
-                    } else
+                        for(auto &result : rel_results) {
+                            string text = artist_data->release_index->get_index_text(rel_results[0].result_index);
+                            printf("      %.2f %s\n", rel_results[0].confidence, text.c_str());
+                        }
+                    }
+                    else
                         printf("    no release matches, ignoring release.\n");
                 }
                 else
@@ -190,13 +187,18 @@ class MappingSearch {
             printf("    RECORDING SEARCH\n");
             vector<IndexResult> rec_results = artist_data->recording_index->search(recording_name_encoded, .7);
             if (rec_results.size()) {
-                rec_result = rec_results[0];
-                string text = artist_data->recording_index->get_index_text(rec_results[0].result_index);
-                printf("      %-8d %.2f %s\n", rec_results[0].id, rec_results[0].confidence, text.c_str());
+                if (rec_results.size()) {
+                    for(auto &result : rec_results) {
+                        string text = artist_data->recording_index->get_index_text(rec_results[0].result_index);
+                        printf("      %.2f %s\n", rec_results[0].confidence, text.c_str());
+                    }
+                }
             } else {
                 printf("      No recording results.\n");
                 return no_result;
             }
+            
+            
             
             printf("\n");   
             float score;
