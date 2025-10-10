@@ -1,6 +1,7 @@
 #pragma once
 #include <stdio.h>
 #include <ctime>
+#include <algorithm>
 #include "SQLiteCpp.h"
 #include "fuzzy_index.hpp"
 #include "encode.hpp"
@@ -89,7 +90,7 @@ class RecordingIndex {
                     } 
                     
                     ReleaseRecordingLink link = { release_index, release_id, rank, recording_index, recording_id };
-                    links[recording_id].push_back(link);
+                    links[recording_index].push_back(link);
                 }
             }
             catch (std::exception& e)
@@ -128,6 +129,16 @@ class RecordingIndex {
             catch(const std::exception& e)
             {
                 //printf("Index build error: '%s'\n", e.what());
+            }
+            
+            // TODO: does rank need to be saved to disk? 
+            
+            // Sort each vector of ReleaseRecordingLink by release_index
+            for (auto& pair : links) {
+                sort(pair.second.begin(), pair.second.end(), 
+                     [](const ReleaseRecordingLink& a, const ReleaseRecordingLink& b) {
+                         return a.release_index < b.release_index;
+                     });
             }
             
             ReleaseRecordingIndex ret(recording_index, release_index, links);

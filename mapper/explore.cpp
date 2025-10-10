@@ -6,6 +6,9 @@
 #include <set>
 #include <sstream>
 #include <algorithm>
+#include <termios.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
 #include <readline/readline.h>
 #include <readline/history.h>
 
@@ -17,6 +20,28 @@
 #include "utils.hpp"
 
 using namespace std;
+
+// Function to read a single character without pressing enter
+char getch() {
+    struct termios oldt, newt;
+    char ch;
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    ch = getchar();
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    return ch;
+}
+
+// Function to get terminal height for pagination
+int get_terminal_height() {
+    struct winsize w;
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == 0) {
+        return w.ws_row;
+    }
+    return 24; // Default fallback if ioctl fails
+}
 
 class Explorer {
     private:
@@ -91,23 +116,21 @@ class Explorer {
         void full_search(const string& query) {
             vector<string> parts = split_comma_separated(query);
             
-            if (parts.size() < 2 || parts.size() > 3) {
-                printf("Usage: s <artist>, <release> [recording]\n");
+            if (parts.size() != 3) {
+                printf("Usage: s <artist>, <release>, <recording>\n");
                 printf("Examples:\n");
-                printf("  s portishead, mezzanine\n");
                 printf("  s portishead, mezzanine, teardrop\n");
+                printf("  s bjork, homogenic, joga\n");
+                printf("For artist + recording only (no release), use: rs <artist>, <recording>\n");
                 return;
             }
             
             string artist_name = parts[0];
             string release_name = parts[1];
-            string recording_name = parts.size() > 2 ? parts[2] : "";
+            string recording_name = parts[2];
             
-            printf("\nFull search: Artist='%s', Release='%s'", artist_name.c_str(), release_name.c_str());
-            if (!recording_name.empty()) {
-                printf(", Recording='%s'", recording_name.c_str());
-            }
-            printf("\n\n");
+            printf("\nFull search: Artist='%s', Release='%s', Recording='%s'\n\n", 
+                   artist_name.c_str(), release_name.c_str(), recording_name.c_str());
             
             SearchResult* result = nullptr;
             try {
@@ -153,7 +176,7 @@ class Explorer {
                 printf("Usage: rs <artist>, <recording>\n");
                 printf("Examples:\n");
                 printf("  rs portishead, teardrop\n");
-                printf("  rs radiohead, creep\n");
+                printf("  rs bjork, joga\n");
                 return;
             }
             
@@ -486,22 +509,25 @@ class Explorer {
                            "Rec_Idx", "Rec_ID", "Recording Name", "Rel_Idx", "Rel_ID", "Rank", "Release Name");
                     printf("---------------------------------------------------------------------------------------------------------------\n");
                     
-                    // Collect all links with their recording index for sorting
-                    vector<pair<unsigned int, ReleaseRecordingLink>> all_links;
+                    // Get keys sorted by recording_index (not by recording_id)
+                    vector<unsigned int> sorted_keys;
                     for (const auto& pair : data->links) {
-                        const auto& links_vector = pair.second;
-                        for (const auto& link : links_vector) {
-                            all_links.push_back({pair.first, link});
-                        }
+                        sorted_keys.push_back(pair.first);
+                    }
+                    sort(sorted_keys.begin(), sorted_keys.end());
+                    
+                    // First, calculate the actual total number of links
+                    size_t total_links = 0;
+                    for (unsigned int recording_idx : sorted_keys) {
+                        total_links += data->links[recording_idx].size();
                     }
                     
-                    // Sort by recording index
-                    sort(all_links.begin(), all_links.end(), [](const auto& a, const auto& b) {
-                        return a.second.recording_index < b.second.recording_index;
-                    });
+                    size_t lines_printed = 0;
+                    const size_t page_size = max(5, get_terminal_height() - 3); // Terminal height minus header/prompt lines
                     
-                    for (const auto& entry : all_links) {
-                        const auto& link = entry.second;
+                    for (unsigned int recording_idx : sorted_keys) {
+                        const auto& links_vector = data->links[recording_idx];
+                        for (const auto& link : links_vector) {
                             // Get release name (truncate to 20 chars)
                             string release_name = "";
                             if (data->release_index && link.release_index < data->release_index->index_texts.size()) {
@@ -520,16 +546,68 @@ class Explorer {
                                 }
                             }
                             
-                            printf("%-10u %-8u %-21s %-10u %-8u %-8u %-21s\n", 
-                                   link.recording_index, 
-                                   link.recording_id,
-                                   recording_name.c_str(),
-                                   link.release_index, 
-                                   link.release_id, 
-                                   link.rank, 
-                                   release_name.c_str());
+                            // Handle sentinel values for release_id and rank
+                            const char* release_id_str = (link.release_id == 4294967295) ? "---" : nullptr;
+                            const char* rank_str = (link.rank == 4294967295) ? "---" : nullptr;
+                            
+                            if (release_id_str && rank_str) {
+                                printf("%-10u %-8u %-21s %-10u %-8s %-8s %-21s\n", 
+                                       link.recording_index, 
+                                       link.recording_id,
+                                       recording_name.c_str(),
+                                       link.release_index, 
+                                       release_id_str, 
+                                       rank_str, 
+                                       release_name.c_str());
+                            } else if (release_id_str) {
+                                printf("%-10u %-8u %-21s %-10u %-8s %-8u %-21s\n", 
+                                       link.recording_index, 
+                                       link.recording_id,
+                                       recording_name.c_str(),
+                                       link.release_index, 
+                                       release_id_str, 
+                                       link.rank, 
+                                       release_name.c_str());
+                            } else if (rank_str) {
+                                printf("%-10u %-8u %-21s %-10u %-8u %-8s %-21s\n", 
+                                       link.recording_index, 
+                                       link.recording_id,
+                                       recording_name.c_str(),
+                                       link.release_index, 
+                                       link.release_id, 
+                                       rank_str, 
+                                       release_name.c_str());
+                            } else {
+                                printf("%-10u %-8u %-21s %-10u %-8u %-8u %-21s\n", 
+                                       link.recording_index, 
+                                       link.recording_id,
+                                       recording_name.c_str(),
+                                       link.release_index, 
+                                       link.release_id, 
+                                       link.rank, 
+                                       release_name.c_str());
+                            }
+                            lines_printed++;
+                            
+                            // Check for pagination
+                            if (lines_printed % page_size == 0) {
+                                printf("<space> to continue, q to quit > ");
+                                fflush(stdout);
+                                char c = getch();
+                                printf("\r"); // Return to beginning of line
+                                printf("\033[K"); // Clear the line
+                                if (c == 'q' || c == 'Q') {
+                                    goto pagination_exit;
+                                }
+                            }
+                        }
                     }
-                    printf("Total links: %zu\n", all_links.size());
+                    pagination_exit:
+                    if (lines_printed < total_links) {
+                        printf("Displayed %zu of %zu total links\n", lines_printed, total_links);
+                    } else {
+                        printf("Total links: %zu\n", total_links);
+                    }
                 } else {
                     printf("No links found.\n");
                 }
@@ -581,7 +659,7 @@ class Explorer {
             printf("  l <artist_credit_id>         - Dump links table for artist credit\n");
             printf("  s <artist>, <release>, <rec> - Full search: artist + release + recording\n");
             printf("  rs <artist>, <recording>     - Recording search: artist + recording (no release)\n");
-            printf("  \\q, quit, exit               - Quit the program\n");
+            printf("  q, .q, \\q, quit, exit        - Quit the program\n");
             printf("\nUse Up/Down arrow keys for command history, Left/Right/Home/End for editing.\n");
             printf("Ctrl+A (beginning), Ctrl+E (end), Ctrl+K (kill to end), Ctrl+U (kill to beginning)\n\n");
             
@@ -600,8 +678,7 @@ class Explorer {
                     continue;
                 }
                 
-                if (input == "\\q" || input == "quit" || input == "exit") {
-                    printf("Goodbye!\n");
+                if (input == "\\q" || input == ".q" || input == "q" || input == "quit" || input == "exit") {
                     break;
                 }
                 
@@ -673,7 +750,11 @@ class Explorer {
                     if (!search_query.empty()) {
                         full_search(search_query);
                     } else {
-                        printf("Usage: s <artist>, <release>, recording\n");
+                        printf("Usage: s <artist>, <release>, <recording>\n");
+                        printf("Examples:\n");
+                        printf("  s portishead, mezzanine, teardrop\n");
+                        printf("  s björk, homogenic, joga\n");
+                        printf("For artist + recording only (no release), use: rs <artist>, <recording>\n");
                     }
                 } else if (input.substr(0, 3) == "rs ") {
                     string search_query = input.substr(3);
@@ -681,10 +762,13 @@ class Explorer {
                         recording_search(search_query);
                     } else {
                         printf("Usage: rs <artist>, <recording>\n");
+                        printf("Examples:\n");
+                        printf("  rs portishead, teardrop\n");
+                        printf("  rs björk, joga\n");
                     }
                 } else {
                     printf("Unknown command: '%s'\n", input.c_str());
-                    printf("Available commands: a <artist>, rec <id>, rel <id>, irel <id>, j <id>, s <artist>,<release>[,<recording>], rs <artist>,<recording>, quit\n");
+                    printf("Available commands: a <artist>, rec <id>, rel <id>, irel <id>, j <id>, s <artist>,<release>[,<recording>], rs <artist>,<recording>, q/quit/\\q/.q\n");
                 }
             }
         }

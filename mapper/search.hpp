@@ -201,28 +201,30 @@ class MappingSearch {
             }
          
             if (rel_result.is_valid && rec_result.is_valid) {
-                // Find links where recording_index matches rec_result.id and release_index matches rel_result.id
                 for(const auto& pair : release_recording_index->links) {
-                    for(const auto& link : pair.second) {
-                        if (link.recording_index == rec_result.id && link.release_index == rel_result.id) {
+                    if (pair.first == rec_result.result_index) {
+                        // Use binary search to find matching release_index since vector is sorted by release_index
+                        const auto& links_vector = pair.second;
+                        auto it = lower_bound(links_vector.begin(), links_vector.end(), rel_result.id,
+                                            [](const ReleaseRecordingLink& link, unsigned int target_release_index) {
+                                                return link.release_index < target_release_index;
+                                            });
+                        
+                        // Check if we found a match
+                        if (it != links_vector.end() && it->release_index == rel_result.id) {
                             float score = (rec_result.confidence + rel_result.confidence) / 2.0;
-                            return new SearchResult(artist_credit_id, link.release_id, link.recording_id, score);
+                            return new SearchResult(artist_credit_id, it->release_id, it->recording_id, score);
                         }
+                        break; // Found the recording, no need to continue searching
                     }
                 }  
             }
+            if (rec_result.is_valid)
+                return new SearchResult(artist_credit_id,
+                                        release_recording_index->links[rec_result.result_index][0].release_id,
+                                        release_recording_index->links[rec_result.result_index][0].recording_id,
+                                        rec_result.confidence);
 
-             printf("\n");   
-//            float score;
-//            if (release_name.size()) {
-//                score = (rec_result.confidence + rel_result.confidence) / 2.0;
-//                SearchResult out(artist_credit_id, rel_result.id, rec_result.id, score);
-//                return out;
-//            } else {
-//                score = rec_result.confidence;
-//                SearchResult out(artist_credit_id, 0, rec_result.id, score);
-//                return out;
-//            }
            return nullptr;
         }
        
