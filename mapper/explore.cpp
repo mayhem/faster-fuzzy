@@ -399,7 +399,16 @@ class Explorer {
                     printf("%-8s %-50s %-10s %-8s\n", "Rel_Idx", "Release Text", "Rel_ID", "Rank");
                     printf("---------------------------------------------------------------------------------------------\n");
                     
-                    // Display release data from links
+                    // Collect all release entries for sorting
+                    struct ReleaseEntry {
+                        unsigned int release_index;
+                        string release_text;
+                        unsigned int release_id;
+                        unsigned int rank;
+                    };
+                    vector<ReleaseEntry> release_entries;
+                    
+                    // Gather all release data from links
                     for (const auto& pair : data->links) {
                         const auto& links_vector = pair.second;
                         for (const auto& link : links_vector) {
@@ -411,18 +420,31 @@ class Explorer {
                                 }
                             }
                             
-                            printf("%-8u %-50s %-10u %-8u\n", 
-                                   link.release_index,
-                                   release_text.c_str(),
-                                   link.release_id,
-                                   link.rank);
+                            release_entries.push_back({
+                                link.release_index,
+                                release_text,
+                                link.release_id,
+                                link.rank
+                            });
                         }
                     }
-                    size_t total_links = 0;
-                    for (const auto& pair : data->links) {
-                        total_links += pair.second.size();
+                    
+                    // Sort by release text
+                    sort(release_entries.begin(), release_entries.end(),
+                         [](const ReleaseEntry& a, const ReleaseEntry& b) {
+                             return a.release_text < b.release_text;
+                         });
+                    
+                    // Display sorted release data
+                    for (const auto& entry : release_entries) {
+                        printf("%-8u %-50s %-10u %-8u\n", 
+                               entry.release_index,
+                               entry.release_text.c_str(),
+                               entry.release_id,
+                               entry.rank);
                     }
-                    printf("Total release entries: %zu\n", total_links);
+                    
+                    printf("Total release entries: %zu\n", release_entries.size());
                 } else {
                     printf("No release data found.\n");
                 }
