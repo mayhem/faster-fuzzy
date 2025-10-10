@@ -201,12 +201,13 @@ class MappingSearch {
             }
          
             if (rel_result.is_valid && rec_result.is_valid) {
-                printf("rel id: %d rec id: %d\n", rel_result.id, rec_result.id);
-                for(auto &it : release_recording_index->links[rec_result.id]) {
-                    printf("%d = %d\n", it.release_id, rel_result.id); 
-                    if (it.release_id == rel_result.id) {
-                        float score = (rec_result.confidence + rel_result.confidence) / 2.0;
-                        return new SearchResult(artist_credit_id, rel_result.id, rec_result.id, score);
+                // Find links where recording_index matches rec_result.id and release_index matches rel_result.id
+                for(const auto& pair : release_recording_index->links) {
+                    for(const auto& link : pair.second) {
+                        if (link.recording_index == rec_result.id && link.release_index == rel_result.id) {
+                            float score = (rec_result.confidence + rel_result.confidence) / 2.0;
+                            return new SearchResult(artist_credit_id, link.release_id, link.recording_id, score);
+                        }
                     }
                 }  
             }

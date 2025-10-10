@@ -482,16 +482,26 @@ class Explorer {
                 
                 printf("\n=== LINKS TABLE ===\n");
                 if (!data->links.empty()) {
-                    printf("%-8s %-10s %-8s %-8s %-21s %-10s %-8s %-21s\n", 
-                           "Link#", "Rel_Idx", "Rel_ID", "Rank", "Release Name", "Rec_Idx", "Rec_ID", "Recording Name");
+                    printf("%-10s %-8s %-21s %-10s %-8s %-8s %-21s\n", 
+                           "Rec_Idx", "Rec_ID", "Recording Name", "Rel_Idx", "Rel_ID", "Rank", "Release Name");
                     printf("---------------------------------------------------------------------------------------------------------------\n");
                     
-                    size_t i = 0;
+                    // Collect all links with their recording index for sorting
+                    vector<pair<unsigned int, ReleaseRecordingLink>> all_links;
                     for (const auto& pair : data->links) {
-                        unsigned int recording_id = pair.first;
                         const auto& links_vector = pair.second;
-                        
                         for (const auto& link : links_vector) {
+                            all_links.push_back({pair.first, link});
+                        }
+                    }
+                    
+                    // Sort by recording index
+                    sort(all_links.begin(), all_links.end(), [](const auto& a, const auto& b) {
+                        return a.second.recording_index < b.second.recording_index;
+                    });
+                    
+                    for (const auto& entry : all_links) {
+                        const auto& link = entry.second;
                             // Get release name (truncate to 20 chars)
                             string release_name = "";
                             if (data->release_index && link.release_index < data->release_index->index_texts.size()) {
@@ -510,23 +520,16 @@ class Explorer {
                                 }
                             }
                             
-                            printf("%-8zu %-10u %-8u %-8u %-21s %-10u %-8u %-21s\n", 
-                                   i, 
+                            printf("%-10u %-8u %-21s %-10u %-8u %-8u %-21s\n", 
+                                   link.recording_index, 
+                                   link.recording_id,
+                                   recording_name.c_str(),
                                    link.release_index, 
                                    link.release_id, 
                                    link.rank, 
-                                   release_name.c_str(),
-                                   link.recording_index, 
-                                   link.recording_id,
-                                   recording_name.c_str());
-                            i++;
-                        }
+                                   release_name.c_str());
                     }
-                    size_t total_links = 0;
-                    for (const auto& pair : data->links) {
-                        total_links += pair.second.size();
-                    }
-                    printf("Total links: %zu\n", total_links);
+                    printf("Total links: %zu\n", all_links.size());
                 } else {
                     printf("No links found.\n");
                 }
