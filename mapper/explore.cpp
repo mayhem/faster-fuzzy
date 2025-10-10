@@ -399,34 +399,43 @@ class Explorer {
                     printf("%-8s %-50s %-10s %-8s\n", "Rel_Idx", "Release Text", "Rel_ID", "Rank");
                     printf("---------------------------------------------------------------------------------------------\n");
                     
-                    // Collect all release entries for sorting
+                    // Collect unique release entries for sorting
                     struct ReleaseEntry {
                         unsigned int release_index;
                         string release_text;
                         unsigned int release_id;
                         unsigned int rank;
                     };
-                    vector<ReleaseEntry> release_entries;
+                    map<unsigned int, ReleaseEntry> unique_releases; // Use map to automatically deduplicate by release_index
                     
-                    // Gather all release data from links
+                    // Gather all release data from links, deduplicating by release_index
                     for (const auto& pair : data->links) {
                         const auto& links_vector = pair.second;
                         for (const auto& link : links_vector) {
-                            string release_text = "";
-                            if (link.release_index < data->release_index->index_texts.size()) {
-                                release_text = data->release_index->index_texts[link.release_index];
-                                if (release_text.length() > 50) {
-                                    release_text = release_text.substr(0, 50);
+                            // Only add if we haven't seen this release_index before
+                            if (unique_releases.find(link.release_index) == unique_releases.end()) {
+                                string release_text = "";
+                                if (link.release_index < data->release_index->index_texts.size()) {
+                                    release_text = data->release_index->index_texts[link.release_index];
+                                    if (release_text.length() > 50) {
+                                        release_text = release_text.substr(0, 50);
+                                    }
                                 }
+                                
+                                unique_releases[link.release_index] = {
+                                    link.release_index,
+                                    release_text,
+                                    link.release_id,
+                                    link.rank
+                                };
                             }
-                            
-                            release_entries.push_back({
-                                link.release_index,
-                                release_text,
-                                link.release_id,
-                                link.rank
-                            });
                         }
+                    }
+                    
+                    // Convert map to vector for sorting
+                    vector<ReleaseEntry> release_entries;
+                    for (const auto& pair : unique_releases) {
+                        release_entries.push_back(pair.second);
                     }
                     
                     // Sort by release text

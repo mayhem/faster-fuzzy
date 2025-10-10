@@ -44,6 +44,8 @@ class RecordingIndex {
 
             // Map to track release and recording strings and their indexes 
             map<string, unsigned int>                        release_string_index_map, recording_string_index_map;
+            map<string, unsigned int>                        recording_name_to_id_map; // Track first recording_id for each encoded name
+            map<string, unsigned int>                        release_name_to_id_map;   // Track first release_id for each encoded name
             map<unsigned int, vector<ReleaseRecordingLink>>  links;
                 
             try
@@ -79,6 +81,8 @@ class RecordingIndex {
                     } catch (const std::out_of_range& e) {
                         release_index = release_string_index_map.size();
                         release_string_index_map[encoded_release_name] = release_index;
+                        // Store the first release_id we encounter for this encoded name
+                        release_name_to_id_map[encoded_release_name] = release_id;
                     } 
 
                     unsigned int recording_index;
@@ -87,6 +91,8 @@ class RecordingIndex {
                     } catch (const std::out_of_range& e) {
                         recording_index = recording_string_index_map.size();
                         recording_string_index_map[encoded_recording_name] = recording_index;
+                        // Store the first recording_id we encounter for this encoded name
+                        recording_name_to_id_map[encoded_recording_name] = recording_id;
                     } 
                     
                     ReleaseRecordingLink link = { release_index, release_id, rank, recording_index, recording_id };
@@ -102,7 +108,8 @@ class RecordingIndex {
             vector<unsigned int> recording_ids(recording_string_index_map.size());
             for(auto &it : recording_string_index_map) {
                 recording_texts[it.second] = it.first;
-                recording_ids[it.second] = it.second;
+                // Use the actual recording_id from the database, not the index
+                recording_ids[it.second] = recording_name_to_id_map[it.first];
             }
 
             FuzzyIndex *recording_index = new FuzzyIndex();
@@ -119,7 +126,8 @@ class RecordingIndex {
             vector<unsigned int> release_ids(release_string_index_map.size());
             for(auto &it : release_string_index_map) {
                 release_texts[it.second] = it.first;
-                release_ids[it.second] = it.second;
+                // Use the actual release_id from the database, not the index
+                release_ids[it.second] = release_name_to_id_map[it.first];
             }
             FuzzyIndex *release_index = new FuzzyIndex();
             try
