@@ -176,6 +176,7 @@ lookup(const string &artist_credit_name, const string &release_name, const strin
     }
 
     tuple<string, string, string> ret = { artist_mbids, result->release_mbid, result->recording_mbid };
+    delete result;
     return ret;
 }
 

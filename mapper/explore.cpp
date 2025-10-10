@@ -269,6 +269,7 @@ class Explorer {
             }
             if (!res->size()) {
                 printf("  No results found.\n");
+                delete res;
                 return;
             }
             
