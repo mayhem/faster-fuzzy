@@ -63,7 +63,7 @@ class RecordingIndex {
                     unsigned int recording_id = query.getColumn(4);
                     string       recording_name = query.getColumn(5);
                     unsigned int rank  = query.getColumn(6);
-                    
+                   
                     // Include rows where either the recording artist_credit_id or release artist_credit_id matches
                     if (artist_credit_id != ac_id && artist_credit_id != release_artist_credit_id)
                         continue;

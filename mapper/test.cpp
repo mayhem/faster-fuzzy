@@ -81,11 +81,17 @@ TestCase test_cases[] = {
     { "david bowie","The Next Day","god bless the girl","5441c29d-3602-4898-b1a1-b77fa23b8e50","6241d76e-45d9-4f7e-b9fc-24ad33e4955a","68cbaf8d-7e6b-40e7-a404-8367935ea29f" },
     { "arctic monkeys","AM","2013","ada7a83c-e3e1-40f1-93f9-3e73dbc9298a","a432408f-335e-4d64-b33a-c1fb809af58f","e5bdbeac-6e52-495c-a51b-6b834aaccfc8" },
     { "void", "", "verdict for worst dictator", "c8a0cb7a-99c8-4bcd-82d5-bcef201e13d1", "5941ccda-d6b5-4d5e-8a1a-5ca755321482", "ac02d630-b95d-4942-87e7-2b8cc11debf6" },
-//    { "void", "Remind a Locus", "verdict for worst dictator", "c8a0cb7a-99c8-4bcd-82d5-bcef201e13d1", "5941ccda-d6b5-4d5e-8a1a-5ca755321482", "ac02d630-b95d-4942-87e7-2b8cc11debf6" },
-
+    { "鬱P feat. 初音ミク","HAPPYPILLS","ガ","3fdaac99-0261-49a7-92b3-5a909cba187d,130d679a-9a92-4373-8348-0800b6b93a30","df379666-f1de-4789-a8e8-c429a89dd1d2","6fd3bc0e-170f-45e6-a3c8-91943fd61c9c" },
+    { "void", "Remind a Locus", "verdict for worst dictator", "c8a0cb7a-99c8-4bcd-82d5-bcef201e13d1", "5941ccda-d6b5-4d5e-8a1a-5ca755321482", "ac02d630-b95d-4942-87e7-2b8cc11debf6" },
+    { "void", "", "verdict for worst dictator", "c8a0cb7a-99c8-4bcd-82d5-bcef201e13d1", "5941ccda-d6b5-4d5e-8a1a-5ca755321482", "ac02d630-b95d-4942-87e7-2b8cc11debf6" },
+    { "鬱P","HAPPYPILLS","ガ","3fdaac99-0261-49a7-92b3-5a909cba187d,130d679a-9a92-4373-8348-0800b6b93a30","df379666-f1de-4789-a8e8-c429a89dd1d2","6fd3bc0e-170f-45e6-a3c8-91943fd61c9c" },
 
 
 // s 鬱P, happypills, ガ
+// release in:  1065353
+// recording, "ga" 2063311
+// 
+// AC's: 1065353,3091565,3258059
 
 // Possible recording/release match issue. requires more research
 //    { "Celtic Woman","20th Anniversary","When You Believe","4d483147-c871-48c4-8470-85e5a66381c5","9659808f-3382-42be-8c5d-477d271f9791","376e5743-7bf5-49ee-9c7e-f00aa479882c" },

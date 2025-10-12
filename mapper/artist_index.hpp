@@ -19,47 +19,48 @@ const int MULTIPLE_ARTIST_INDEX_ENTITY_ID = -2;
 const int STUPID_ARTIST_INDEX_ENTITY_ID = -3;
 
 // Fetch artist names and aliases via the artist_credits and artist aliases for artist credits with artist_count = 1
-const char *fetch_artists_query = 
-  "WITH acs AS ( "
-  "   SELECT DISTINCT artist_credit AS artist_credit_id  "
-  "     FROM recording "
-  ") "
-  "   SELECT acn.artist AS artist_id "
-  "        , ac.id AS artist_credit_id"
-  "        , acn.name AS artist_name"
-  "     FROM artist_credit_name acn "
-  "     JOIN artist_credit ac "
-  "       ON acn.artist_credit = ac.id "
-  "     JOIN acs "
-  "       ON ac.id = acs.artist_credit_id "
-  "      AND artist > 1"
-  "      AND artist_count = 1 "
-  "UNION"
-  "   SELECT aa.artist AS artist_id"
-  "        , 0 AS artist_credit_id"
-  "        , aa.name AS artist_alias    "
-  "     FROM artist_alias aa"
-  "    WHERE aa.artist > 1 "
-  " ORDER BY artist_id, artist_credit_id   ";
+const char *fetch_artists_query = R"(
+WITH acs AS ( 
+   SELECT DISTINCT artist_credit_id  
+     FROM mapping.canonical_musicbrainz_data_release_support 
+    WHERE artist_credit_id > 1
+) 
+   SELECT acn.artist AS artist_id 
+        , ac.id AS artist_credit_id
+        , acn.name AS artist_name
+     FROM artist_credit_name acn 
+     JOIN artist_credit ac 
+       ON acn.artist_credit = ac.id 
+     JOIN acs 
+       ON ac.id = acs.artist_credit_id 
+      AND artist > 1
+      AND artist_count = 1 
+UNION
+   SELECT aa.artist AS artist_id
+        , 0 AS artist_credit_id
+        , aa.name AS artist_alias    
+     FROM artist_alias aa
+    WHERE aa.artist > 1 
+ ORDER BY artist_id, artist_credit_id)";
 
 // Fetch artist names for artist credits with artist_count > 1
-const char *fetch_multiple_artists_query = 
-  "WITH acs AS ( "
-  "   SELECT DISTINCT artist_credit AS artist_credit_id  "
-  "     FROM recording "
-  "    WHERE artist_credit > 1"
-  ") "
-  "   SELECT ac.id AS artist_credit_id"
-  "        , ac.name AS artist_name"
-  "     FROM artist_credit ac "
-  "     JOIN acs "
-  "       ON ac.id = acs.artist_credit_id "
-  "      AND artist_count > 1 "
-  " ORDER BY artist_credit_id   ";
+const char *fetch_multiple_artists_query = R"(
+WITH acs AS ( 
+   SELECT DISTINCT artist_credit_id  
+     FROM mapping.canonical_musicbrainz_data_release_support 
+    WHERE artist_credit_id > 1
+) 
+   SELECT ac.id AS artist_credit_id
+        , ac.name AS artist_name
+     FROM artist_credit ac 
+     JOIN acs 
+       ON ac.id = acs.artist_credit_id 
+      AND artist_count > 1 
+ ORDER BY artist_credit_id)";
 
-const char *insert_blob_query = 
-    "INSERT INTO index_cache (entity_id, index_data) VALUES (?, ?) "
-    "         ON CONFLICT(entity_id) DO UPDATE SET index_data=excluded.index_data";
+const char *insert_blob_query = R"(
+    INSERT INTO index_cache (entity_id, index_data) VALUES (?, ?)
+             ON CONFLICT(entity_id) DO UPDATE SET index_data=excluded.index_data)";
 const char *fetch_blob_query = 
     "SELECT index_data FROM index_cache WHERE entity_id = ?";
 
@@ -159,6 +160,103 @@ class ArtistIndex {
             }
         }
         
+        bool
+        is_transliterated(const string &artist_name, const string &artist_sortname) {
+            bool has_latin = false;
+            bool has_non_latin = false;
+            
+            // Check artist_name for mix of Latin and non-Latin characters
+            for (size_t i = 0; i < artist_name.length(); ) {
+                uint32_t codepoint = 0;
+                int byte_count = 0;
+                
+                // Parse UTF-8 character
+                unsigned char byte = artist_name[i];
+                if (byte < 0x80) {
+                    // Single byte character (ASCII)
+                    codepoint = byte;
+                    byte_count = 1;
+                } else if ((byte & 0xE0) == 0xC0) {
+                    // Two byte character
+                    if (i + 1 >= artist_name.length()) break;
+                    codepoint = ((byte & 0x1F) << 6) | (artist_name[i + 1] & 0x3F);
+                    byte_count = 2;
+                } else if ((byte & 0xF0) == 0xE0) {
+                    // Three byte character
+                    if (i + 2 >= artist_name.length()) break;
+                    codepoint = ((byte & 0x0F) << 12) | ((artist_name[i + 1] & 0x3F) << 6) | (artist_name[i + 2] & 0x3F);
+                    byte_count = 3;
+                } else if ((byte & 0xF8) == 0xF0) {
+                    // Four byte character
+                    if (i + 3 >= artist_name.length()) break;
+                    codepoint = ((byte & 0x07) << 18) | ((artist_name[i + 1] & 0x3F) << 12) | 
+                               ((artist_name[i + 2] & 0x3F) << 6) | (artist_name[i + 3] & 0x3F);
+                    byte_count = 4;
+                } else {
+                    // Invalid UTF-8, skip this byte
+                    i++;
+                    continue;
+                }
+                
+                // Check if character is in Latin range (U+0000 to U+024F)
+                if (codepoint <= 0x024F) {
+                    has_latin = true;
+                } else {
+                    has_non_latin = true;
+                }
+                
+                i += byte_count;
+            }
+            
+            // If artist_name doesn't have both Latin and non-Latin, it's not transliterated
+            if (!has_latin || !has_non_latin) {
+                return false;
+            }
+            
+            // Check artist_sortname contains ONLY Latin characters
+            for (size_t i = 0; i < artist_sortname.length(); ) {
+                uint32_t codepoint = 0;
+                int byte_count = 0;
+                
+                // Parse UTF-8 character
+                unsigned char byte = artist_sortname[i];
+                if (byte < 0x80) {
+                    // Single byte character (ASCII)
+                    codepoint = byte;
+                    byte_count = 1;
+                } else if ((byte & 0xE0) == 0xC0) {
+                    // Two byte character
+                    if (i + 1 >= artist_sortname.length()) break;
+                    codepoint = ((byte & 0x1F) << 6) | (artist_sortname[i + 1] & 0x3F);
+                    byte_count = 2;
+                } else if ((byte & 0xF0) == 0xE0) {
+                    // Three byte character
+                    if (i + 2 >= artist_sortname.length()) break;
+                    codepoint = ((byte & 0x0F) << 12) | ((artist_sortname[i + 1] & 0x3F) << 6) | (artist_sortname[i + 2] & 0x3F);
+                    byte_count = 3;
+                } else if ((byte & 0xF8) == 0xF0) {
+                    // Four byte character
+                    if (i + 3 >= artist_sortname.length()) break;
+                    codepoint = ((byte & 0x07) << 18) | ((artist_sortname[i + 1] & 0x3F) << 12) | 
+                               ((artist_sortname[i + 2] & 0x3F) << 6) | (artist_sortname[i + 3] & 0x3F);
+                    byte_count = 4;
+                } else {
+                    // Invalid UTF-8, skip this byte
+                    i++;
+                    continue;
+                }
+                
+                // Check if character is NOT in Latin range (U+0000 to U+024F)
+                if (codepoint > 0x024F) {
+                    return false; // Found non-Latin character in sortname
+                }
+                
+                i += byte_count;
+            }
+            
+            return true; // artist_name has both Latin and non-Latin, sortname has only Latin
+        }
+
         vector<string>
         encode_and_dedup_artist_names(const vector<string> &artist_names) {
             set<string> unique_artist_names;

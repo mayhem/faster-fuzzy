@@ -96,8 +96,11 @@ class FuzzyIndex {
             // Make a copy, I hope, of the index id data and hold on to it
             index_ids = _index_ids; 
             index_texts = text_data;
+            vector<string> short_texts;
+            for(auto & it : text_data)
+                short_texts.push_back(it.substr(0, MAX_ENCODED_STRING_LENGTH));
            
-            arma::sp_mat matrix = vectorizer.fit_transform(text_data);
+            arma::sp_mat matrix = vectorizer.fit_transform(short_texts);
             transform_text(matrix, vectorized_data);
             
             index = similarity::MethodFactoryRegistry<float>::Instance().CreateMethod(false,
@@ -121,33 +124,60 @@ class FuzzyIndex {
                 return nullptr;
             }
 
-            text_data.push_back(query_string);
+            text_data.push_back(query_string.substr(0, MAX_ENCODED_STRING_LENGTH));
             arma::sp_mat matrix = vectorizer.transform(text_data);
             transform_text(matrix, data);
 
             unsigned k = NUM_FUZZY_SEARCH_RESULTS;
-            similarity::KNNQuery<float> knn(*space, data[0], k);
-            index->Search(&knn, -1);
+            bool has_long = false;
+            const unsigned max_k = 1000; // Reasonable upper limit to prevent infinite growth
 
+            printf("query: '%s'\n", query_string.substr(0, MAX_ENCODED_STRING_LENGTH).c_str());
+            printf("%d\n", __LINE__);
+            // Keep searching with increasing k until we get some non-perfect matches
+            while (k <= max_k) {
+                similarity::KNNQuery<float> knn(*space, data[0], k);
+                index->Search(&knn, -1);
 
-            bool has_long = false; 
-            auto queue = knn.Result()->Clone();
-            while (!queue->Empty()) {
-                auto dist = -queue->TopDistance();
-                if (dist >= min_confidence) {
-                    if (index_texts[queue->TopObject()->id()].size() > MAX_ENCODED_STRING_LENGTH)
-                        has_long = true;
-                    results->push_back(IndexResult(index_ids[queue->TopObject()->id()], queue->TopObject()->id(), dist));
+                bool found_non_perfect = false;
+                results->clear(); // Clear previous results
+                has_long = false; // Reset for each iteration
+                
+                auto queue = knn.Result()->Clone();
+                while (!queue->Empty()) {
+                    auto dist = -queue->TopDistance();
+                    if (dist >= min_confidence) {
+                        if (index_texts[queue->TopObject()->id()].size() > MAX_ENCODED_STRING_LENGTH)
+                            has_long = true;
+                        results->push_back(IndexResult(index_ids[queue->TopObject()->id()], queue->TopObject()->id(), dist));
+                        
+                        // Check if this result has confidence < 1.0
+                        if (dist < 1.0) {
+                            found_non_perfect = true;
+                        }
+                    }
+                    queue->Pop();
                 }
-                queue->Pop();
+                delete queue;
+                
+                // If we found some non-perfect matches or no results at all, we're done
+                if (found_non_perfect || results->empty()) {
+                    break;
+                }
+                
+                // If all results are still perfect matches (1.0), double k and try again
+                k += NUM_FUZZY_SEARCH_RESULTS;
             }
-            delete queue;
+            printf("%d\n", __LINE__);
             for(auto &obj : data)
                 delete obj;
             
             reverse(results->begin(), results->end());
-            if (query_string.size() > MAX_ENCODED_STRING_LENGTH || has_long)
+            if (query_string.size() > MAX_ENCODED_STRING_LENGTH || has_long) {
+                printf("%d\n", __LINE__);
                 return post_process_long_query(query_string, results, min_confidence);
+                printf("%d\n", __LINE__);
+            }
 
             return results;
         }
