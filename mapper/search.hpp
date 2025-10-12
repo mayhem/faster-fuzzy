@@ -38,7 +38,6 @@ class MappingSearch {
         ArtistIndex                             *artist_index;
         IndexCache                              *index_cache;
         EncodeSearchData                         encode;
-        map<unsigned int, vector<unsigned int>>  artist_credit_map;
         lb_matching_tools::MetadataCleaner       metadata_cleaner;
 
     public:
@@ -58,7 +57,6 @@ class MappingSearch {
         void
         load() {
             artist_index->load();
-            fetch_artist_credit_map();
             // TODO: Enable this when we start running a server
             //index_cache.start();
         }
@@ -116,7 +114,7 @@ class MappingSearch {
             
             return false;
         }
-
+#if 0
         void
         fetch_artist_credit_map() {
             string db_file = index_dir + string("/mapping.db");
@@ -140,6 +138,7 @@ class MappingSearch {
             }
             printf("%lu items\n", artist_credit_map.size());
         }
+#endif    
         
         SearchResult *
         recording_release_search(unsigned int artist_credit_id, const string &release_name, const string &recording_name) {
@@ -245,8 +244,6 @@ class MappingSearch {
             vector<IndexResult>     *res = nullptr, *mres = nullptr;
             map<unsigned int, int>  ac_history;
             
-            assert(!artist_credit_map.empty());
-            
             auto cleaned_artist_credit_name = metadata_cleaner.clean_artist(artist_credit_name); 
 
             // TODO: Make sure that we don't process an artist_id more than once!
@@ -305,25 +302,10 @@ class MappingSearch {
                 }
                 
                 if (use_res) {
-                    // Display single/stupid artist result - need to resolve artist_id to artist_credit_ids
+                    // Display single artist result - id is already an artist_credit_id
                     IndexResult& result = (*res)[res_idx];
-                    if (artist_name.size()) 
-                        text = artist_index->single_artist_index->get_index_text(result.result_index);
-                    else
-                        text = artist_index->stupid_artist_index->get_index_text(result.result_index);
-                    printf("S  %-9d %.2f %-40s ", result.id, result.confidence, text.c_str());
-
-                    // Look up artist_credit_ids for this artist_id
-                    auto it = artist_credit_map.find(result.id);
-                    if (it != artist_credit_map.end()) {
-                        for (size_t i = 0; i < it->second.size(); ++i) {
-                            if (i > 0) printf(",");
-                            printf("%u", it->second[i]);
-                        }
-                    } else {
-                        printf("none");
-                    }
-                    printf("\n");
+                    text = artist_index->single_artist_index->get_index_text(result.result_index);
+                    printf("M  %-9d %.2f %-40s %u\n", result.id, result.confidence, text.c_str(), result.id);
                     res_idx++;
                 } else {
                     // Display multiple artist result - id is already an artist_credit_id
@@ -365,38 +347,38 @@ class MappingSearch {
                 
                 if (use_res) {
                     // Process single/stupid artist result
+                    // TODO: Cleanup post complex simple artist stuff
                     IndexResult& result = (*res)[res_idx];
-                    for (auto artist_credit_id : artist_credit_map[result.id]) {
-                        if (ac_history.find(artist_credit_id) == ac_history.end()) {
-                            SearchResult *r = recording_release_search(artist_credit_id, release_name, recording_name); 
-                            if (r && r->confidence > .7) {
-                                // If this is a very high confidence result (> 0.95), return immediately
-                                if (r->confidence > 0.95) {
-                                    if (!fetch_metadata(r)) {
-                                        delete r;
-                                        if (best_result) delete best_result;
-                                        delete res;
-                                        delete mres;
-                                        throw std::length_error("failed to load metadata from sqlite.");
-                                    }
+                    auto artist_credit_id = result.id;
+                    if (ac_history.find(artist_credit_id) == ac_history.end()) {
+                        SearchResult *r = recording_release_search(artist_credit_id, release_name, recording_name); 
+                        if (r && r->confidence > .7) {
+                            // If this is a very high confidence result (> 0.95), return immediately
+                            if (r->confidence > 0.95) {
+                                if (!fetch_metadata(r)) {
+                                    delete r;
                                     if (best_result) delete best_result;
                                     delete res;
                                     delete mres;
-                                    return r;
+                                    throw std::length_error("failed to load metadata from sqlite.");
                                 }
-                                // Otherwise, keep track of the best result so far
-                                if (r->confidence > best_confidence) {
-                                    if (best_result) delete best_result;
-                                    best_result = r;
-                                    best_confidence = r->confidence;
-                                } else {
-                                    delete r; // This result is not better than what we have
-                                }
-                            } else if (r) {
-                                delete r; // Clean up unused result
+                                if (best_result) delete best_result;
+                                delete res;
+                                delete mres;
+                                return r;
                             }
-                            ac_history[artist_credit_id] = 1;
+                            // Otherwise, keep track of the best result so far
+                            if (r->confidence > best_confidence) {
+                                if (best_result) delete best_result;
+                                best_result = r;
+                                best_confidence = r->confidence;
+                            } else {
+                                delete r; // This result is not better than what we have
+                            }
+                        } else if (r) {
+                            delete r; // Clean up unused result
                         }
+                        ac_history[artist_credit_id] = 1;
                     }
                     res_idx++;
                 } else {

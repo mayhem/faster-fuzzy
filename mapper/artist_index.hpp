@@ -43,6 +43,23 @@ UNION
     WHERE aa.artist > 1 
  ORDER BY artist_id, artist_credit_id)";
 
+
+// Fetch artist names for artist credits with artist_count = 1
+const char *fetch_single_artists_query = R"(
+WITH acs AS ( 
+   SELECT DISTINCT artist_credit_id  
+     FROM mapping.canonical_musicbrainz_data_release_support 
+    WHERE artist_credit_id > 1
+) 
+   SELECT ac.id AS artist_credit_id
+        , ac.name AS artist_name
+     FROM artist_credit ac 
+     JOIN acs 
+       ON ac.id = acs.artist_credit_id 
+     JOIN artist a
+      AND artist_count = 1 
+ ORDER BY artist_credit_id)";
+
 // Fetch artist names for artist credits with artist_count > 1
 const char *fetch_multiple_artists_query = R"(
 WITH acs AS ( 
@@ -71,8 +88,8 @@ class ArtistIndex {
         EncodeSearchData                          encode;
 
         // Single artist index
-        vector<unsigned int>                      single_artist_ids;
-        vector<string>                            single_artist_texts;
+        vector<unsigned int>                      single_artist_credit_ids;
+        vector<string>                            single_artist_credit_texts;
 
         // Multiple artist index
         vector<unsigned int>                      multiple_artist_credit_ids;
@@ -94,7 +111,7 @@ class ArtistIndex {
             delete stupid_artist_index;
             delete multiple_artist_index;
         }
-        
+#if 0        
         void
         insert_artist_credit_mapping(map<unsigned int, set<unsigned int>> &artist_credit_map) {
             try {
@@ -159,7 +176,7 @@ class ArtistIndex {
                 printf("Error inserting artist credit mappings: %s\n", e.what());
             }
         }
-        
+#endif        
         bool
         is_transliterated(const string &artist_name, const string &artist_sortname) {
             bool has_latin = false;
@@ -272,7 +289,7 @@ class ArtistIndex {
             vector<string> result(unique_artist_names.begin(), unique_artist_names.end());
             return result;
         }
-        
+#if 0        
         void
         build_single_artist_index() {
             map<unsigned int, set<unsigned int>> artist_artist_credit_map;
@@ -314,8 +331,8 @@ class ArtistIndex {
                         artist_names.clear();
 
                         for(auto it : dedup_names) {
-                            single_artist_ids.push_back(last_artist_id);
-                            single_artist_texts.push_back(it);
+                            single_artist_credit_ids.push_back(last_artist_id);
+                            single_artist_credit_texts.push_back(it);
                         }
                     }
                     
@@ -327,7 +344,7 @@ class ArtistIndex {
                     last_artist_id = artist_id;
                 }
             
-                insert_artist_credit_mapping(artist_artist_credit_map);
+                //insert_artist_credit_mapping(artist_artist_credit_map);
 
                 // Clear the PGresult object to free memory
                 PQclear(res);
@@ -337,9 +354,9 @@ class ArtistIndex {
                 printf("build artist db exception: %s\n", e.what());
             }
         }
-        
+#endif        
         void
-        build_multiple_artist_index() {
+        build_artist_index(const char *query, vector<unsigned int> &ids, vector<string> &texts) {
             try
             {
                 PGconn     *conn;
@@ -352,7 +369,7 @@ class ArtistIndex {
                     return;
                 }
                
-                res = PQexec(conn, fetch_multiple_artists_query);
+                res = PQexec(conn, query);
                 if (PQresultStatus(res) != PGRES_TUPLES_OK) {
                     printf("Query failed: %s\n", PQerrorMessage(conn));
                     PQclear(res);
@@ -364,8 +381,8 @@ class ArtistIndex {
                     if (i >= PQntuples(res)) 
                         break;
 
-                    multiple_artist_credit_ids.push_back(atoi(PQgetvalue(res, i, 0)));
-                    multiple_artist_credit_texts.push_back(PQgetvalue(res, i, 1));
+                    ids.push_back(atoi(PQgetvalue(res, i, 0)));
+                    texts.push_back(PQgetvalue(res, i, 1));
                 }
             
                 // Clear the PGresult object to free memory
@@ -380,31 +397,30 @@ class ArtistIndex {
         void build() {
             
             log("load single artist data");
-            build_single_artist_index();
+            build_artist_index(fetch_single_artists_query, single_artist_credit_ids, single_artist_credit_texts);
 
             vector<unsigned int> single_ids, multiple_ids, stupid_ids;
             vector<string>       single_texts, multiple_texts, stupid_texts; 
             
             // TESTING:
             // - Leave out stupid artists for now.
-            // - Check: why are we doing the artist -> artist_credit_id conversation at run-time. Can we do it now?
 
             // Encode the single artists
-            for(unsigned int i = 0; i < single_artist_ids.size(); i++) {
-                auto ret = encode.encode_string(single_artist_texts[i]);
+            for(unsigned int i = 0; i < single_artist_credit_ids.size(); i++) {
+                auto ret = encode.encode_string(single_artist_credit_texts[i]);
                 if (ret.size() == 0) {
-                    auto stupid = encode.encode_string_for_stupid_artists(single_artist_texts[i]);
+                    auto stupid = encode.encode_string_for_stupid_artists(single_artist_credit_texts[i]);
                     if (stupid.size()) {
-                        stupid_ids.push_back(single_artist_ids[i]);
+                        stupid_ids.push_back(single_artist_credit_ids[i]);
                         stupid_texts.push_back(stupid);
                         continue;
                     }
                 }
-                single_ids.push_back(single_artist_ids[i]);
+                single_ids.push_back(single_artist_credit_ids[i]);
                 single_texts.push_back(ret);
             }
-            vector<unsigned int>().swap(single_artist_ids);
-            vector<string>().swap(single_artist_texts);
+            vector<unsigned int>().swap(single_artist_credit_ids);
+            vector<string>().swap(single_artist_credit_texts);
 
             // The extra contexts are so that the stringstreams go out of scope ASAP
             {
@@ -474,7 +490,7 @@ class ArtistIndex {
 
             // load and process multiple artists
             log("load multiple artist data");
-            build_multiple_artist_index();
+            build_artist_index(fetch_multiple_artists_query, multiple_artist_credit_ids, multiple_artist_credit_texts);
 
             for(unsigned int i = 0; i < multiple_artist_credit_ids.size(); i++) {
                 auto ret = encode.encode_string(multiple_artist_credit_texts[i]);

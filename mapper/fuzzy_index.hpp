@@ -62,6 +62,10 @@ class FuzzyIndex {
         
         string
         get_index_text(unsigned int offset) {
+            if (offset >= index_texts.size()) {
+                printf("ERROR: get_index_text offset %u out of bounds (size: %zu)\n", offset, index_texts.size());
+                return "";
+            }
             return index_texts[offset];
         }
 
