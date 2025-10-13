@@ -114,31 +114,6 @@ class MappingSearch {
             
             return false;
         }
-#if 0
-        void
-        fetch_artist_credit_map() {
-            string db_file = index_dir + string("/mapping.db");
-           
-            printf("Load artist credit map!\n");
-            try {
-                SQLite::Database db(db_file);
-                
-                // Load the entire artist_credit_mapping table
-                SQLite::Statement query(db, "SELECT artist_id, artist_credit_id FROM artist_credit_mapping");
-                
-                while (query.executeStep()) {
-                    unsigned int artist_id = query.getColumn(0).getInt();
-                    unsigned int artist_credit_id = query.getColumn(1).getInt();
-                    
-                    artist_credit_map[artist_id].push_back(artist_credit_id);
-                }
-            }
-            catch (std::exception& e) {
-                printf("Error fetching artist credit IDs: %s\n", e.what());
-            }
-            printf("%lu items\n", artist_credit_map.size());
-        }
-#endif    
         
         SearchResult *
         recording_release_search(unsigned int artist_credit_id, const string &release_name, const string &recording_name) {
@@ -307,7 +282,7 @@ class MappingSearch {
                     // Display single artist result - id is already an artist_credit_id
                     IndexResult& result = (*res)[res_idx];
                     text = artist_index->single_artist_index->get_index_text(result.result_index);
-                    printf("M  %-9d %.2f %-40s %u\n", result.id, result.confidence, text.c_str(), result.id);
+                    printf("S  %-9d %.2f %-40s %u\n", result.id, result.confidence, text.c_str(), result.id);
                     res_idx++;
                 } else {
                     // Display multiple artist result - id is already an artist_credit_id
