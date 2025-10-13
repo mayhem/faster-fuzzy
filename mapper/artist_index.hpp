@@ -51,14 +51,19 @@ WITH acs AS (
      FROM mapping.canonical_musicbrainz_data_release_support 
     WHERE artist_credit_id > 1
 ) 
-   SELECT ac.id AS artist_credit_id
-        , ac.name AS artist_name
-     FROM artist_credit ac 
-     JOIN acs 
-       ON ac.id = acs.artist_credit_id 
-     JOIN artist a
+  SELECT ac.id AS artist_credit_id
+       , ac.name AS artist_credit_name
+       , array_agg(a.sort_name::text ORDER BY acn.position) as artist_credit_sortname
+       , array_agg(acn.join_phrase::text ORDER BY acn.position) as artist_credit_join_phrase      
+    FROM artist_credit ac
+    JOIN artist_credit_name acn
+      ON acn.artist_credit = ac.id
+    JOIN artist a
+      ON acn.artist = a.id
       AND artist_count = 1 
- ORDER BY artist_credit_id)";
+GROUP BY ac.id, ac.name   
+ORDER BY ac.id
+)";
 
 // Fetch artist names for artist credits with artist_count > 1
 const char *fetch_multiple_artists_query = R"(
@@ -67,13 +72,19 @@ WITH acs AS (
      FROM mapping.canonical_musicbrainz_data_release_support 
     WHERE artist_credit_id > 1
 ) 
-   SELECT ac.id AS artist_credit_id
-        , ac.name AS artist_name
-     FROM artist_credit ac 
-     JOIN acs 
-       ON ac.id = acs.artist_credit_id 
+  SELECT ac.id AS artist_credit_id
+       , ac.name AS artist_credit_name
+       , array_agg(a.sort_name::text ORDER BY acn.position) as artist_credit_sortname
+       , array_agg(acn.join_phrase::text ORDER BY acn.position) as artist_credit_join_phrase      
+    FROM artist_credit ac
+    JOIN artist_credit_name acn
+      ON acn.artist_credit = ac.id
+    JOIN artist a
+      ON acn.artist = a.id
       AND artist_count > 1 
- ORDER BY artist_credit_id)";
+GROUP BY ac.id, ac.name   
+ORDER BY ac.id
+)";
 
 const char *insert_blob_query = R"(
     INSERT INTO index_cache (entity_id, index_data) VALUES (?, ?)
@@ -81,6 +92,57 @@ const char *insert_blob_query = R"(
 const char *fetch_blob_query = 
     "SELECT index_data FROM index_cache WHERE entity_id = ?";
 
+#include <iostream>
+#include <vector>
+#include <string>
+#include <algorithm> // For std::remove_if
+#include <libpq-fe.h> // The C API header
+
+vector<string> parse_pg_array(const char* array_str) {
+    if (!array_str || array_str[0] != '{') {
+        return {}; // Return empty vector if not a valid array string
+    }
+
+    vector<string> elements;
+    string raw(array_str);
+    
+    // Remove the surrounding braces: { and }
+    raw.erase(0, 1);
+    if (!raw.empty() && raw.back() == '}') {
+        raw.pop_back();
+    }
+
+    string current_element;
+    bool inside_quotes = false;
+    
+    for (size_t i = 0; i < raw.length(); ++i) {
+        char c = raw[i];
+
+        if (c == '"') {
+            // If the next character is also a quote, it's an escaped quote ("")
+            if (i + 1 < raw.length() && raw[i+1] == '"') {
+                current_element += '"';
+                i++; // Skip the next quote
+            } else {
+                // Toggle quote state for opening/closing quotes, but don't add the quote character
+                inside_quotes = !inside_quotes;
+            }
+        } else if (c == ',' && !inside_quotes) {
+            // Element separator outside of quotes
+            elements.push_back(current_element);
+            current_element.clear();
+        } else {
+            // Regular character
+            current_element += c;
+        }
+    }
+
+    if (!current_element.empty() || raw.empty()) {
+        elements.push_back(current_element);
+    }
+
+    return elements;
+}
 
 class ArtistIndex {
     private:
@@ -111,72 +173,7 @@ class ArtistIndex {
             delete stupid_artist_index;
             delete multiple_artist_index;
         }
-#if 0        
-        void
-        insert_artist_credit_mapping(map<unsigned int, set<unsigned int>> &artist_credit_map) {
-            try {
-                SQLite::Database db(db_file, SQLite::OPEN_READWRITE);
-                
-                // Begin transaction for bulk insert
-                SQLite::Transaction transaction(db);
-                
-                // Remove all existing artist credit mappings
-                SQLite::Statement delete_stmt(db, "DELETE FROM artist_credit_mapping");
-                delete_stmt.exec();
-                
-                size_t total_mappings = 0;
-                const size_t BATCH_SIZE = 1000;
-                
-                // Collect all mappings first for batch processing
-                vector<pair<unsigned int, unsigned int>> all_mappings;
-                for (const auto& artist_entry : artist_credit_map) {
-                    unsigned int artist_id = artist_entry.first;
-                    
-                    // Convert the set to a sorted list
-                    list<unsigned int> sorted_artist_credit_ids(artist_entry.second.begin(), artist_entry.second.end());
-                    
-                    for (unsigned int artist_credit_id : sorted_artist_credit_ids) {
-                        all_mappings.push_back({artist_id, artist_credit_id});
-                    }
-                }
-                
-                // Process mappings in batches
-                for (size_t i = 0; i < all_mappings.size(); i += BATCH_SIZE) {
-                    size_t batch_end = min(i + BATCH_SIZE, all_mappings.size());
-                    size_t batch_size = batch_end - i;
-                    
-                    // Build batch INSERT statement
-                    string batch_sql = "INSERT INTO artist_credit_mapping (artist_id, artist_credit_id) VALUES ";
-                    for (size_t j = 0; j < batch_size; j++) {
-                        if (j > 0) batch_sql += ", ";
-                        batch_sql += "(?, ?)";
-                    }
-                    
-                    SQLite::Statement batch_stmt(db, batch_sql);
-                    
-                    // Bind parameters for the batch
-                    int param_index = 1;
-                    for (size_t j = i; j < batch_end; j++) {
-                        batch_stmt.bind(param_index++, all_mappings[j].first);   // artist_id
-                        batch_stmt.bind(param_index++, all_mappings[j].second);  // artist_credit_id
-                    }
-                    
-                    batch_stmt.exec();
-                    total_mappings += batch_size;
-                }
-                vector<pair<unsigned int, unsigned int>>().swap(all_mappings);
-                
-                // Commit the transaction
-                transaction.commit();
-                
-                // Create index on artist_id column for better query performance
-                db.exec("CREATE INDEX IF NOT EXISTS artist_id_ndx ON artist_credit_mapping(artist_id)");
-                
-            } catch (std::exception& e) {
-                printf("Error inserting artist credit mappings: %s\n", e.what());
-            }
-        }
-#endif        
+
         bool
         is_transliterated(const string &artist_name, const string &artist_sortname) {
             bool has_latin = false;
@@ -289,72 +286,6 @@ class ArtistIndex {
             vector<string> result(unique_artist_names.begin(), unique_artist_names.end());
             return result;
         }
-#if 0        
-        void
-        build_single_artist_index() {
-            map<unsigned int, set<unsigned int>> artist_artist_credit_map;
-            try
-            {
-                PGconn     *conn;
-                PGresult   *res;
-                
-                conn = PQconnectdb("dbname=musicbrainz_db user=musicbrainz password=musicbrainz host=127.0.0.1 port=5432");
-                if (PQstatus(conn) != CONNECTION_OK) {
-                    printf("Connection to database failed: %s\n", PQerrorMessage(conn));
-                    PQfinish(conn);
-                    return;
-                }
-               
-                res = PQexec(conn, fetch_artists_query);
-                if (PQresultStatus(res) != PGRES_TUPLES_OK) {
-                    printf("Query failed: %s\n", PQerrorMessage(conn));
-                    PQclear(res);
-                    PQfinish(conn);
-                    return;
-                }
-
-                unsigned int         last_artist_id = 0;
-                vector<string>       artist_names;
-                for (int i = 0; i < PQntuples(res) + 1; i++) {
-                    unsigned  artist_id, artist_credit_id;
-                    string artist_name;
-
-                    if (i >= PQntuples(res)) 
-                        break;
-
-                    artist_id = atoi(PQgetvalue(res, i, 0));
-                    artist_credit_id = atoi(PQgetvalue(res, i, 1));
-                    artist_name = PQgetvalue(res, i, 2);
-                    if (last_artist_id != 0 && last_artist_id != artist_id) {
-                        
-                        auto dedup_names = encode_and_dedup_artist_names(artist_names);
-                        artist_names.clear();
-
-                        for(auto it : dedup_names) {
-                            single_artist_credit_ids.push_back(last_artist_id);
-                            single_artist_credit_texts.push_back(it);
-                        }
-                    }
-                    
-                    artist_names.push_back(artist_name);
-                    // artist_credit_ids are true artist aliases.
-                    if (artist_credit_id) 
-                        artist_artist_credit_map[artist_id].insert(artist_credit_id);
-                    
-                    last_artist_id = artist_id;
-                }
-            
-                //insert_artist_credit_mapping(artist_artist_credit_map);
-
-                // Clear the PGresult object to free memory
-                PQclear(res);
-            }
-            catch (std::exception& e)
-            {
-                printf("build artist db exception: %s\n", e.what());
-            }
-        }
-#endif        
         void
         build_artist_index(const char *query, vector<unsigned int> &ids, vector<string> &texts) {
             try
@@ -381,14 +312,44 @@ class ArtistIndex {
                     if (i >= PQntuples(res)) 
                         break;
 
-                    ids.push_back(atoi(PQgetvalue(res, i, 0)));
-                    texts.push_back(PQgetvalue(res, i, 1));
+                    unsigned int artist_credit_id = atoi(PQgetvalue(res, i, 0));
+                    string artist_credit_name = PQgetvalue(res, i, 1);
+                    vector<string> artist_credit_names = parse_pg_array(PQgetvalue(res, i, 2));
+                    vector<string> join_phrases = parse_pg_array(PQgetvalue(res, i, 3));
+
+                    ids.push_back(artist_credit_id);
+                    texts.push_back(artist_credit_name);
+
+                    string artist_credit_sort_name;
+                    for( size_t i = 0; i < artist_credit_names.size(); i++) {
+                        string acn, jp;
+                        // father forgive me, for I have pythoned too much
+                        try { 
+                            acn = artist_credit_names[i];
+                        }
+                        catch (exception& e) {
+                            ;
+                        }
+                        try { 
+                            jp = artist_credit_names[i];
+                        }
+                        catch (exception& e) {
+                            ;
+                        }
+                        artist_credit_sort_name += acn + jp;
+
+                    }
+                    
+                    if (is_transliterated(artist_credit_name, artist_credit_sort_name)) {
+                        ids.push_back(artist_credit_id);
+                        texts.push_back(artist_credit_sort_name);
+                    }
                 }
             
                 // Clear the PGresult object to free memory
                 PQclear(res);
             }
-            catch (std::exception& e)
+            catch (exception& e)
             {
                 printf("build artist db exception: %s\n", e.what());
             }

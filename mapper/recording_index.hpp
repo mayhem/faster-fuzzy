@@ -119,7 +119,7 @@ class RecordingIndex {
             }
             catch(const std::exception& e)
             {
-                //printf("Index build error: '%s'\n", e.what());
+                printf("artist_credit %d: Recording index build error: '%s'\n", artist_credit_id, e.what());
             }
 
             vector<string>       release_texts(release_string_index_map.size());
@@ -136,7 +136,8 @@ class RecordingIndex {
             }
             catch(const std::exception& e)
             {
-                //printf("Index build error: '%s'\n", e.what());
+                printf("id %lu text %lu", release_ids.size(), release_texts.size());
+                printf("artist_credit %d: release index build error: '%s'\n", artist_credit_id, e.what());
             }
             
             // TODO: does rank need to be saved to disk? 

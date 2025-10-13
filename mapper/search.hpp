@@ -153,6 +153,8 @@ class MappingSearch {
             if (!release_recording_index) {
                 RecordingIndex rec_index(index_dir);
                 release_recording_index = rec_index.load(artist_credit_id);
+                if (release_recording_index == nullptr)
+                    return nullptr;
                 index_cache->add(artist_credit_id, release_recording_index);
             }
                 
@@ -376,6 +378,7 @@ class MappingSearch {
                                 delete r; // This result is not better than what we have
                             }
                         } else if (r) {
+                            printf("ERROR: Could not load release recording index for artist_credit_id %d\n", artist_credit_id);
                             delete r; // Clean up unused result
                         }
                         ac_history[artist_credit_id] = 1;
@@ -411,6 +414,7 @@ class MappingSearch {
                                 delete r; // This result is not better than what we have
                             }
                         } else if (r) {
+                            printf("ERROR: Could not load release recording index for artist_credit_id %d\n", artist_credit_id);
                             delete r; // Clean up unused result
                         }
                         ac_history[artist_credit_id] = 1;

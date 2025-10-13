@@ -136,8 +136,6 @@ class FuzzyIndex {
             bool has_long = false;
             const unsigned max_k = 1000; // Reasonable upper limit to prevent infinite growth
 
-            printf("query: '%s'\n", query_string.substr(0, MAX_ENCODED_STRING_LENGTH).c_str());
-            printf("%d\n", __LINE__);
             // Keep searching with increasing k until we get some non-perfect matches
             while (k <= max_k) {
                 similarity::KNNQuery<float> knn(*space, data[0], k);
@@ -172,15 +170,12 @@ class FuzzyIndex {
                 // If all results are still perfect matches (1.0), double k and try again
                 k += NUM_FUZZY_SEARCH_RESULTS;
             }
-            printf("%d\n", __LINE__);
             for(auto &obj : data)
                 delete obj;
             
             reverse(results->begin(), results->end());
             if (query_string.size() > MAX_ENCODED_STRING_LENGTH || has_long) {
-                printf("%d\n", __LINE__);
                 return post_process_long_query(query_string, results, min_confidence);
-                printf("%d\n", __LINE__);
             }
 
             return results;
@@ -201,7 +196,6 @@ class FuzzyIndex {
                 else 
                     conf = 1.0 - fabs((float)dist / query.size());
 
-                //printf("'%s' - '%s' %u dist %lu %.3f", query.c_str(), index_texts[index].c_str(), id, dist, conf);
                 if (conf >= min_confidence) {
                     IndexResult temp = { id, index, conf };
                     updated->push_back(temp);
