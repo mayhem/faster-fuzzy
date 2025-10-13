@@ -18,51 +18,40 @@ const int SINGLE_ARTIST_INDEX_ENTITY_ID = -1;
 const int MULTIPLE_ARTIST_INDEX_ENTITY_ID = -2;
 const int STUPID_ARTIST_INDEX_ENTITY_ID = -3;
 
-// Fetch artist names and aliases via the artist_credits and artist aliases for artist credits with artist_count = 1
-const char *fetch_artists_query = R"(
-WITH acs AS ( 
-   SELECT DISTINCT artist_credit_id  
-     FROM mapping.canonical_musicbrainz_data_release_support 
-    WHERE artist_credit_id > 1
-) 
-   SELECT acn.artist AS artist_id 
-        , ac.id AS artist_credit_id
-        , acn.name AS artist_name
-     FROM artist_credit_name acn 
-     JOIN artist_credit ac 
-       ON acn.artist_credit = ac.id 
-     JOIN acs 
-       ON ac.id = acs.artist_credit_id 
-      AND artist > 1
-      AND artist_count = 1 
-UNION
-   SELECT aa.artist AS artist_id
-        , 0 AS artist_credit_id
-        , aa.name AS artist_alias    
-     FROM artist_alias aa
-    WHERE aa.artist > 1 
- ORDER BY artist_id, artist_credit_id)";
-
-
 // Fetch artist names for artist credits with artist_count = 1
 const char *fetch_single_artists_query = R"(
 WITH acs AS ( 
    SELECT DISTINCT artist_credit_id  
      FROM mapping.canonical_musicbrainz_data_release_support 
     WHERE artist_credit_id > 1
-) 
-  SELECT ac.id AS artist_credit_id
-       , ac.name AS artist_credit_name
+)
+  select ac.id as artist_credit_id
+       , aa.name as artist_credit_name
+       , ARRAY[]::text[] as artist_credit_sortname
+       , ARRAY[]::text[] as artist_credit_join_phrase      
+    from artist_credit ac 
+    join artist_credit_name acn
+      on acn.artist_credit = ac.id
+    join artist a
+      on acn.artist = a.id
+    join artist_alias aa
+      on aa.artist = a.id      
+   where artist_count = 1
+     and a.id > 1
+union
+  select ac.id as artist_credit_id
+       , ac.name as artist_credit_name
        , array_agg(a.sort_name::text ORDER BY acn.position) as artist_credit_sortname
        , array_agg(acn.join_phrase::text ORDER BY acn.position) as artist_credit_join_phrase      
-    FROM artist_credit ac
-    JOIN artist_credit_name acn
-      ON acn.artist_credit = ac.id
-    JOIN artist a
-      ON acn.artist = a.id
-      AND artist_count = 1 
-GROUP BY ac.id, ac.name   
-ORDER BY ac.id
+    from artist_credit ac
+    join artist_credit_name acn
+      on acn.artist_credit = ac.id
+    join artist a
+      on acn.artist = a.id
+   where artist_count = 1
+     and a.id > 1
+group by ac.id
+order by artist_credit_id
 )";
 
 // Fetch artist names for artist credits with artist_count > 1
