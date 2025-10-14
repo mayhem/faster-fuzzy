@@ -330,7 +330,7 @@ class Explorer {
             if (artist_index->single_artist_index) {
                 for (size_t i = 0; i < artist_index->single_artist_index->index_texts.size(); i++) {
                     const string& text = artist_index->single_artist_index->index_texts[i];
-                    if (text.find(encoded_text) != string::npos) {
+                    if (text == encoded_text) {
                         unsigned int id = artist_index->single_artist_index->index_ids[i];
                         string display_text = text.length() > 40 ? text.substr(0, 40) : text;
                         printf("%-8zu %-8u %-40s [single]\n", i, id, display_text.c_str());
@@ -343,7 +343,7 @@ class Explorer {
             if (artist_index->multiple_artist_index) {
                 for (size_t i = 0; i < artist_index->multiple_artist_index->index_texts.size(); i++) {
                     const string& text = artist_index->multiple_artist_index->index_texts[i];
-                    if (text.find(encoded_text) != string::npos) {
+                    if (text == encoded_text) {
                         unsigned int id = artist_index->multiple_artist_index->index_ids[i];
                         string display_text = text.length() > 40 ? text.substr(0, 40) : text;
                         printf("%-8zu %-8u %-40s [multiple]\n", i, id, display_text.c_str());
@@ -356,7 +356,7 @@ class Explorer {
             if (artist_index->stupid_artist_index) {
                 for (size_t i = 0; i < artist_index->stupid_artist_index->index_texts.size(); i++) {
                     const string& text = artist_index->stupid_artist_index->index_texts[i];
-                    if (text.find(encoded_text) != string::npos) {
+                    if (text == encoded_text) {
                         unsigned int id = artist_index->stupid_artist_index->index_ids[i];
                         string display_text = text.length() > 40 ? text.substr(0, 40) : text;
                         printf("%-8zu %-8u %-40s [stupid]\n", i, id, display_text.c_str());
