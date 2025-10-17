@@ -88,6 +88,35 @@ WITH acs AS (
      and a.id > 1
 )";
 
+const char *fetch_alternate_artists_query = R"(
+with credits as (
+        select a.id as artist_id
+             , ac.id as artist_credit_id
+             , a.name as artist_name
+             , ac.name as artist_credit_name
+          from artist a
+          join artist_credit_name acn
+            on acn.artist = a.id
+          join artist_credit ac
+            on acn.artist_credit = ac.id
+         where a.id > 1
+           and ac.artist_count = 1
+ ), multiple_credits as (
+        SELECT artist_id
+          FROM credits
+      GROUP BY artist_id
+        HAVING count(*) > 1
+)
+        SELECT c.artist_id
+             , c.artist_credit_id
+             , c.artist_name
+             , c.artist_credit_name
+        FROM credits c
+        JOIN multiple_credits mc
+          ON c.artist_id = mc.artist_id
+    ORDER BY c.artist_id, c.artist_credit_id
+)";
+
 const char *insert_blob_query = R"(
     INSERT INTO index_cache (entity_id, index_data) VALUES (?, ?)
              ON CONFLICT(entity_id) DO UPDATE SET index_data=excluded.index_data)";
@@ -288,7 +317,189 @@ class ArtistIndex {
             vector<string> result(unique_artist_names.begin(), unique_artist_names.end());
             return result;
         }
+       
+        struct TempRow {
+            unsigned int artist_id, artist_credit_id;
+            string       artist_name, artist_credit_name, encoded_artist_credit_name;
+        };
 
+        void
+        process_artist_batch(const vector<TempRow>& batch_rows, TempRow* current_base_row, 
+                           const string& encoded_base, vector<set<unsigned int>>& artist_credit_groups) {
+            if (batch_rows.empty() || current_base_row == nullptr) {
+                return;
+            }
+            
+            // Create a set of artist_credit_ids for this artist group
+            set<unsigned int> artist_credit_set;
+            
+            // Always include the base row's artist_credit_id
+            artist_credit_set.insert(current_base_row->artist_credit_id);
+            
+            // Process all rows and find those that should be grouped with the base
+            for (const auto& row : batch_rows) {
+                //printf("%-8u %-8u %s %s\n", row.artist_id, row.artist_credit_id, row.artist_name.c_str(), row.artist_credit_name.c_str());
+                // Skip the base row itself (already added above)  
+                if (row.artist_credit_id == current_base_row->artist_credit_id) {
+                    continue;
+                }
+                
+                // Encode this row and compare with base
+                string encoded_row = encode.encode_string(row.artist_credit_name);
+                
+                // Original logic: include rows that encode differently from base AND have non-empty encoding
+                // This groups artist credits that are variations but don't normalize to the exact same encoded form
+                if (encoded_row != encoded_base && !encoded_row.empty()) 
+                    artist_credit_set.insert(row.artist_credit_id);
+            }
+//            printf("\n");
+            
+            // Add this set to our collection if it has more than just the base
+            if (artist_credit_set.size() > 1) {
+                artist_credit_groups.push_back(artist_credit_set);
+            }
+        }
+
+        void
+        insert_artist_alternate_artist_credits() {
+            vector<set<unsigned int>> artist_credit_groups;
+            map<unsigned int, set<unsigned int>> alternate_artist_credits;
+
+            try
+            {
+                PGconn     *conn;
+                PGresult   *res;
+                
+                conn = PQconnectdb("dbname=musicbrainz_db user=musicbrainz password=musicbrainz host=127.0.0.1 port=5432");
+                if (PQstatus(conn) != CONNECTION_OK) {
+                    printf("Connection to database failed: %s\n", PQerrorMessage(conn));
+                    PQfinish(conn);
+                    return;
+                }
+               
+                res = PQexec(conn, fetch_alternate_artists_query);
+                if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+                    printf("Query failed: %s\n", PQerrorMessage(conn));
+                    PQclear(res);
+                    PQfinish(conn);
+                    return;
+                }
+
+                unsigned int last_artist_id = 0;
+                vector<TempRow> batch_rows;
+                int base_row_index = -1;
+                string encoded_base;
+                
+                for (int i = 0; i < PQntuples(res); i++) {
+                    if (i >= PQntuples(res)) 
+                        break;
+
+                    unsigned int artist_id = atoi(PQgetvalue(res, i, 0));
+                    unsigned int artist_credit_id = atoi(PQgetvalue(res, i, 1));
+                    string artist_name = PQgetvalue(res, i, 2);
+                    string artist_credit_name = PQgetvalue(res, i, 3);
+                    
+                    // Check if we've moved to a new artist_id (batch boundary)
+                    if (last_artist_id != 0 && artist_id != last_artist_id) {
+                                // Process the current batch before starting a new one
+                        TempRow* base_ptr = (base_row_index >= 0) ? &batch_rows[base_row_index] : nullptr;
+                        process_artist_batch(batch_rows, base_ptr, encoded_base, artist_credit_groups);
+                        
+                        // Clear the batch for the new artist
+                        batch_rows.clear();
+                        base_row_index = -1;
+                        encoded_base.clear();
+                    }
+                    
+                    // Create current row
+                    TempRow temp_row;
+                    temp_row.artist_id = artist_id;
+                    temp_row.artist_credit_id = artist_credit_id;
+                    temp_row.artist_name = artist_name;
+                    temp_row.artist_credit_name = artist_credit_name;
+                    temp_row.encoded_artist_credit_name = encode.encode_string(artist_credit_name);
+                    
+                    // Add row to batch first
+                    batch_rows.push_back(temp_row);
+                    
+                    // Check if this is the base row (where artist_name == artist_credit_name)
+                    if (artist_name == artist_credit_name && base_row_index == -1) {
+                        base_row_index = batch_rows.size() - 1;  // Index of the row we just added
+                        encoded_base = encode.encode_string(artist_credit_name);
+                    }
+                    
+                    last_artist_id = artist_id;
+                }
+                
+                // Process the final batch if any rows remain
+                if (!batch_rows.empty()) {
+                    TempRow* base_ptr = (base_row_index >= 0) ? &batch_rows[base_row_index] : nullptr;
+                    printf("Processing final batch for artist_id %u, batch size: %zu, base_row_index: %d\n", 
+                           last_artist_id, batch_rows.size(), base_row_index);
+                    process_artist_batch(batch_rows, base_ptr, encoded_base, artist_credit_groups);
+                }
+            
+                // Clear the PGresult object to free memory
+                PQclear(res);
+                
+                // Build the final data structure: for each artist_credit_id, map to all other IDs in its group
+                printf("Total artist_credit_groups found: %zu\n", artist_credit_groups.size());
+                for (const auto& group : artist_credit_groups) {
+                    for (unsigned int artist_credit_id : group) {
+                        // For each ID, create a set of all OTHER IDs in the same group
+                        set<unsigned int> others;
+                        for (unsigned int other_id : group) {
+                            if (other_id != artist_credit_id) {
+                                others.insert(other_id);
+                            }
+                        }
+                        alternate_artist_credits[artist_credit_id] = others;
+                    }
+                }
+                
+                // Insert into SQLite table
+                try {
+                    SQLite::Database db(db_file, SQLite::OPEN_READWRITE);
+                    
+                    // Truncate the table first
+                    db.exec("DELETE FROM alternate_artist_credits");
+                    
+                    // Begin transaction for bulk insert
+                    SQLite::Transaction transaction(db);
+                    
+                    // Prepare the insert statement
+                    SQLite::Statement insert_stmt(db, "INSERT INTO alternate_artist_credits (artist_credit_id, alternate_artist_credit_id) VALUES (?, ?)");
+                    
+                    // Flatten and insert the data
+                    for (const auto& entry : alternate_artist_credits) {
+                        unsigned int artist_credit_id = entry.first;
+                        const set<unsigned int>& alternates = entry.second;
+                        
+                        for (unsigned int alternate_id : alternates) {
+                            insert_stmt.bind(1, artist_credit_id);
+                            insert_stmt.bind(2, alternate_id);
+                            insert_stmt.exec();
+                            insert_stmt.reset();
+                        }
+                    }
+                    
+                    // Commit the transaction
+                    transaction.commit();
+                    
+                    // Create index on artist_credit_id for better query performance
+                    db.exec("CREATE INDEX IF NOT EXISTS idx_alternate_artist_credits_artist_credit_id ON alternate_artist_credits (artist_credit_id)");
+                    
+                    log("Inserted alternate artist credits into database and created index\n");
+                } catch (std::exception& e) {
+                    printf("Error inserting alternate artist credits: %s\n", e.what());
+                }
+            }
+            catch (exception& e)
+            {
+                printf("build artist db exception: %s\n", e.what());
+            }
+        }
+        
         void
         load_artist_data(const char *query, vector<unsigned int> &ids, vector<string> &texts) {
             try
@@ -410,6 +621,9 @@ class ArtistIndex {
         }
         
         void build() {
+            
+            log("Create alternate artist credits");
+            insert_artist_alternate_artist_credits();
             
             log("load single artist data");
             // TODO: THis process creates duplicates
@@ -566,7 +780,7 @@ class ArtistIndex {
                     printf("save multiple artist index db exception: %s\n", e.what());
                 }
             }
-            
+           
             log("done building artists indexes.");
         }
         

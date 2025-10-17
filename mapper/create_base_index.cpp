@@ -273,9 +273,9 @@ void CreateBaseIndex::create_sqlite_db(const string& db_file) {
         
         // Create artist_credit_mapping table
         db.exec(R"(
-            CREATE TABLE artist_credit_mapping (
-                artist_id INTEGER NOT NULL,
-                artist_credit_id INTEGER NOT NULL
+            CREATE TABLE alternate_artist_credits (
+                artist_credit_id INTEGER NOT NULL,
+                alternate_artist_credit_id INTEGER NOT NULL
             )
         )");
         

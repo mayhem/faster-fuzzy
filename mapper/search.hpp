@@ -153,7 +153,7 @@ class MappingSearch {
                         
                         for(auto &result : *rel_results) {
                             string text = release_recording_index->release_index->get_index_text(result.result_index);
-                            printf("      %.2f %-8u %s\n", result.confidence, result.id, text.c_str());
+                            printf("      %.2f %-8u %-8d %s\n", result.confidence, result.id, result.result_index, text.c_str());
                         }     
                         rel_result = (*rel_results)[0]; // Now guaranteed to be the best match
                     }

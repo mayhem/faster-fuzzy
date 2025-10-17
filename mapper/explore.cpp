@@ -403,7 +403,39 @@ class Explorer {
             printf("\n");
             delete res;
         }
-        
+
+        void search_stupid_artist(const string &query) {
+            vector<IndexResult> *res = nullptr;
+            
+            // For stupid artist index, we always use stupid encoding
+            auto stupid_name = encode.encode_string_for_stupid_artists(query);
+            if (!stupid_name.size()) {
+                printf("Could not encode query for stupid artists: '%s'\n", query.c_str());
+                return;
+            }
+            
+            printf("STUPID ARTIST SEARCH: '%s' (%s)\n", query.c_str(), stupid_name.c_str());
+            res = artist_index->stupid_artist_index->search(stupid_name, 0.5);
+            
+            if (!res->size()) {
+                printf("  No results found.\n");
+                delete res;
+                return;
+            }
+            
+            printf("\nResults:\n");
+            printf("%-40s %-10s %-8s\n", "Name", "Confidence", "Artist Credit");
+            printf("------------------------------------------------------------------------\n");
+            
+            for (auto &result : *res) {
+                string text = artist_index->stupid_artist_index->get_index_text(result.result_index);
+                string short_name = text.length() > 40 ? text.substr(0, 40) : text;
+                printf("%-40s %-10.2f %-8d\n", short_name.c_str(), result.confidence, result.id);
+            }
+            printf("\n");
+            delete res;
+        }
+
         void dump_recordings_for_artist_credit(unsigned int artist_credit_id) {
             try {
                 printf("\nLoading recordings for artist_credit_id: %u\n", artist_credit_id);
@@ -772,6 +804,7 @@ class Explorer {
             printf("\nCommands:\n");
             printf("  a <artist name>              - Search in single artist index\n");
             printf("  m <artist name>              - Search in multiple artist index\n");
+            printf("  ! <artist name>              - Search in stupid artist index\n");
             printf("  da <encoded text>            - debug artist index by looking up encoded text\n");
             printf("  ac <artist_id>               - Show artist_credit_ids for an artist\n");
             printf("  drec <artist_credit_id>      - Dump recordings for artist credit from SQLite\n");
@@ -818,6 +851,13 @@ class Explorer {
                         search_multiple_artist(artist_query);
                     } else {
                         printf("Usage: m <artist name>\n");
+                    }
+                } else if (input.substr(0, 2) == "! ") {
+                    string artist_query = input.substr(2);
+                    if (!artist_query.empty()) {
+                        search_stupid_artist(artist_query);
+                    } else {
+                        printf("Usage: ! <artist name>\n");
                     }
                 } else if (input.substr(0, 3) == "da ") {
                     string encoded_text = input.substr(3);
