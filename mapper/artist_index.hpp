@@ -324,37 +324,19 @@ class ArtistIndex {
         };
 
         void
-        process_artist_batch(const vector<TempRow>& batch_rows, TempRow* current_base_row, 
-                           const string& encoded_base, vector<set<unsigned int>>& artist_credit_groups) {
-            if (batch_rows.empty() || current_base_row == nullptr) {
+        process_artist_batch(const vector<TempRow>& batch_rows, vector<set<unsigned int>>& artist_credit_groups) {
+            if (batch_rows.empty()) {
                 return;
             }
             
-            // Create a set of artist_credit_ids for this artist group
+            // Create a set of all artist_credit_ids for this artist
             set<unsigned int> artist_credit_set;
             
-            // Always include the base row's artist_credit_id
-            artist_credit_set.insert(current_base_row->artist_credit_id);
-            
-            // Process all rows and find those that should be grouped with the base
             for (const auto& row : batch_rows) {
-                //printf("%-8u %-8u %s %s\n", row.artist_id, row.artist_credit_id, row.artist_name.c_str(), row.artist_credit_name.c_str());
-                // Skip the base row itself (already added above)  
-                if (row.artist_credit_id == current_base_row->artist_credit_id) {
-                    continue;
-                }
-                
-                // Encode this row and compare with base
-                string encoded_row = encode.encode_string(row.artist_credit_name);
-                
-                // Original logic: include rows that encode differently from base AND have non-empty encoding
-                // This groups artist credits that are variations but don't normalize to the exact same encoded form
-                if (encoded_row != encoded_base && !encoded_row.empty()) 
-                    artist_credit_set.insert(row.artist_credit_id);
+                artist_credit_set.insert(row.artist_credit_id);
             }
-//            printf("\n");
             
-            // Add this set to our collection if it has more than just the base
+            // Add this set to our collection if it has more than one artist_credit
             if (artist_credit_set.size() > 1) {
                 artist_credit_groups.push_back(artist_credit_set);
             }
@@ -387,8 +369,6 @@ class ArtistIndex {
 
                 unsigned int last_artist_id = 0;
                 vector<TempRow> batch_rows;
-                int base_row_index = -1;
-                string encoded_base;
                 
                 for (int i = 0; i < PQntuples(res); i++) {
                     if (i >= PQntuples(res)) 
@@ -401,14 +381,11 @@ class ArtistIndex {
                     
                     // Check if we've moved to a new artist_id (batch boundary)
                     if (last_artist_id != 0 && artist_id != last_artist_id) {
-                                // Process the current batch before starting a new one
-                        TempRow* base_ptr = (base_row_index >= 0) ? &batch_rows[base_row_index] : nullptr;
-                        process_artist_batch(batch_rows, base_ptr, encoded_base, artist_credit_groups);
+                        // Process the current batch before starting a new one
+                        process_artist_batch(batch_rows, artist_credit_groups);
                         
                         // Clear the batch for the new artist
                         batch_rows.clear();
-                        base_row_index = -1;
-                        encoded_base.clear();
                     }
                     
                     // Create current row
@@ -417,26 +394,15 @@ class ArtistIndex {
                     temp_row.artist_credit_id = artist_credit_id;
                     temp_row.artist_name = artist_name;
                     temp_row.artist_credit_name = artist_credit_name;
-                    temp_row.encoded_artist_credit_name = encode.encode_string(artist_credit_name);
                     
-                    // Add row to batch first
+                    // Add row to batch
                     batch_rows.push_back(temp_row);
-                    
-                    // Check if this is the base row (where artist_name == artist_credit_name)
-                    if (artist_name == artist_credit_name && base_row_index == -1) {
-                        base_row_index = batch_rows.size() - 1;  // Index of the row we just added
-                        encoded_base = encode.encode_string(artist_credit_name);
-                    }
-                    
                     last_artist_id = artist_id;
                 }
                 
                 // Process the final batch if any rows remain
                 if (!batch_rows.empty()) {
-                    TempRow* base_ptr = (base_row_index >= 0) ? &batch_rows[base_row_index] : nullptr;
-                    printf("Processing final batch for artist_id %u, batch size: %zu, base_row_index: %d\n", 
-                           last_artist_id, batch_rows.size(), base_row_index);
-                    process_artist_batch(batch_rows, base_ptr, encoded_base, artist_credit_groups);
+                    process_artist_batch(batch_rows, artist_credit_groups);
                 }
             
                 // Clear the PGresult object to free memory
