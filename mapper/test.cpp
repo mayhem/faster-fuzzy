@@ -3,7 +3,7 @@
 #include <sstream>
 #include <algorithm>
 #include <iterator>
-#include "search.hpp"
+#include "fsm.hpp"
 
 #ifdef INFO
 #undef INFO
@@ -19,7 +19,7 @@
 
 #include <catch2/catch_all.hpp>
 
-MappingSearch *mapping_search;
+FSMMappingSearch *mapping_search;
 
 class TestCase {
     public:
@@ -152,7 +152,7 @@ string join(const vector<string>& strings, const string& delimiter) {
 
 tuple<string, string, string>
 lookup(const string &artist_credit_name, const string &release_name, const string &recording_name) {
-    SearchResult *result = mapping_search->search(artist_credit_name, release_name, recording_name);
+    SearchMatches *result = mapping_search->search(artist_credit_name, release_name, recording_name);
     if (!result) {
         tuple<string, string, string> ret = { string(), string(), string() };
         printf("no matches\n");
@@ -214,7 +214,7 @@ int main(int argc, char* argv[]) {
         return -1;
     }
     
-    mapping_search = new MappingSearch(string(argv[1]), 10);
+    mapping_search = new FSMMappingSearch(string(argv[1]), 10);
     mapping_search->load();
 
     Catch::Session session;

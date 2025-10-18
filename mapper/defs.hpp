@@ -46,21 +46,22 @@ class IndexResult {
         bool           is_valid;
         unsigned int   id;
         unsigned int   result_index;
-        // TODO: rename this to confidence
         float          confidence;
+        char           source;
         
         IndexResult() {
             is_valid = false;
         }
-        IndexResult(unsigned int _id, unsigned int _result_index, float _confidence) {
+        IndexResult(unsigned int _id, unsigned int _result_index, float _confidence, char _source) {
             is_valid = true;
             id = _id;
             confidence = _confidence;
             result_index = _result_index;
+            source = _source;
         }
 };
 
-class SearchResult {
+class SearchMatches {
     public:
         unsigned int   artist_credit_id, release_id, recording_id;
         float          confidence;
@@ -71,13 +72,13 @@ class SearchResult {
         string         recording_name;
         string         recording_mbid;
        
-        SearchResult() {
+        SearchMatches() {
             artist_credit_id = 0;
             release_id = 0;
             recording_id = 0;
             confidence = 0.0;
         }
-        SearchResult(unsigned int _artist_credit_id, unsigned int _release_id, unsigned int _recording_id, float _confidence) {
+        SearchMatches(unsigned int _artist_credit_id, unsigned int _release_id, unsigned int _recording_id, float _confidence) {
             artist_credit_id = _artist_credit_id;
             release_id = _release_id;
             recording_id = _recording_id;

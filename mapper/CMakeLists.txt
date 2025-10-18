@@ -31,7 +31,6 @@ FetchContent_Declare(libpq
     SOURCE_SUBDIR libpq)
 FetchContent_MakeAvailable(libpq)
 
-add_executable(server server.cpp tfidf_vectorizer.cpp levenshtein.cpp)
 add_executable(indexer indexer.cpp tfidf_vectorizer.cpp)
 add_executable(test test.cpp tfidf_vectorizer.cpp levenshtein.cpp)
 add_executable(explore explore.cpp tfidf_vectorizer.cpp levenshtein.cpp)
@@ -49,6 +48,7 @@ include_directories(deps/nmslib/similarity_search/include
                     deps/listenbrainz-matching-tools/cpp/include
 )
 
+
 target_link_libraries(indexer NonMetricSpaceLib
                               unidecode
                               libpcre2-8.a
@@ -58,14 +58,6 @@ target_link_libraries(indexer NonMetricSpaceLib
                               cereal
                               pq
                               bsd
-)
-target_link_libraries(server NonMetricSpaceLib
-                             unidecode
-                             libpcre2-8.a
-                             armadillo
-                             SQLiteCpp 
-                             pthread
-                             cereal
 )
 
 target_link_libraries(test NonMetricSpaceLib

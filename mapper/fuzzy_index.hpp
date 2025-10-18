@@ -118,7 +118,7 @@ class FuzzyIndex {
         }
 
         vector<IndexResult> *
-        search(const string &query_string, float min_confidence, bool debug=false) {
+        search(const string &query_string, float min_confidence, char source) {
             vector<string> text_data;
             similarity::ObjectVector data;
             vector<IndexResult> *results = new vector<IndexResult>;
@@ -151,7 +151,7 @@ class FuzzyIndex {
                     if (dist >= min_confidence) {
                         if (index_texts[queue->TopObject()->id()].size() > MAX_ENCODED_STRING_LENGTH)
                             has_long = true;
-                        results->push_back(IndexResult(index_ids[queue->TopObject()->id()], queue->TopObject()->id(), dist));
+                        results->push_back(IndexResult(index_ids[queue->TopObject()->id()], queue->TopObject()->id(), dist, source));
                         
                         // Check if this result has confidence < 1.0
                         if (dist < 1.0) {
@@ -175,14 +175,14 @@ class FuzzyIndex {
             
             reverse(results->begin(), results->end());
             if (query_string.size() > MAX_ENCODED_STRING_LENGTH || has_long) {
-                return post_process_long_query(query_string, results, min_confidence);
+                return post_process_long_query(query_string, results, min_confidence, source);
             }
 
             return results;
         }
          
         vector<IndexResult> *
-        post_process_long_query(const string &query, vector<IndexResult> *results, float min_confidence) {
+        post_process_long_query(const string &query, vector<IndexResult> *results, float min_confidence, char source) {
             vector<IndexResult> *updated = new vector<IndexResult>;
           
             for(int i = results->size() - 1; i >= 0; i--) {
@@ -197,7 +197,7 @@ class FuzzyIndex {
                     conf = 1.0 - fabs((float)dist / query.size());
 
                 if (conf >= min_confidence) {
-                    IndexResult temp = { id, index, conf };
+                    IndexResult temp = { id, index, conf, source };
                     updated->push_back(temp);
                 }
             }

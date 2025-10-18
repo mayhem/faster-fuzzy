@@ -15,7 +15,7 @@
 #include "SQLiteCpp.h"
 #include "artist_index.hpp"
 #include "recording_index.hpp"
-#include "search.hpp"
+#include "fsm.hpp"
 #include "encode.hpp"
 #include "utils.hpp"
 
@@ -48,7 +48,7 @@ class Explorer {
         string              index_dir;
         ArtistIndex        *artist_index;
         RecordingIndex     *recording_index;
-        MappingSearch      *mapping_search;
+        FSMMappingSearch   *mapping_search;
         EncodeSearchData    encode;
         map<unsigned int, vector<unsigned int>> artist_credit_map;
 
@@ -57,7 +57,7 @@ class Explorer {
             index_dir = _index_dir;
             artist_index = new ArtistIndex(index_dir);
             recording_index = new RecordingIndex(index_dir);
-            mapping_search = new MappingSearch(index_dir, 25); // 25MB cache
+            mapping_search = new FSMMappingSearch(index_dir, 25); // 25MB cache
         }
         
         ~Explorer() {
@@ -170,7 +170,7 @@ class Explorer {
             printf("\nFull search: Artist='%s', Release='%s', Recording='%s'\n\n", 
                    artist_name.c_str(), release_name.c_str(), recording_name.c_str());
             
-            SearchResult* result = nullptr;
+            SearchMatches* result = nullptr;
             try {
                 result = mapping_search->search(artist_name, release_name, recording_name);
             }
@@ -225,7 +225,7 @@ class Explorer {
             printf("\nRecording search: Artist='%s', Recording='%s'\n\n", 
                    artist_name.c_str(), recording_name.c_str());
             
-            SearchResult* result = mapping_search->search(artist_name, release_name, recording_name);
+            SearchMatches* result = mapping_search->search(artist_name, release_name, recording_name);
             
             if (result) {
                 printf("Search Result:\n");
@@ -263,7 +263,7 @@ class Explorer {
             auto artist_name = encode.encode_string(query);
             if (artist_name.size()) {
                 printf("ARTIST SEARCH: '%s' (%s)\n", query.c_str(), artist_name.c_str());
-                res = artist_index->single_artist_index->search(artist_name, 0.5);
+                res = artist_index->single_artist_index->search(artist_name, 0.5, 's');
             }
             else {
                 // Try encoding for "stupid artists" (non-Latin characters, etc.)
@@ -274,7 +274,7 @@ class Explorer {
                 }
                 
                 printf("STUPID ARTIST SEARCH: '%s' (%s)\n", query.c_str(), stupid_name.c_str());
-                res = artist_index->stupid_artist_index->search(stupid_name, 0.5);
+                res = artist_index->stupid_artist_index->search(stupid_name, 0.5, 's');
             }
             
             if (!res->size()) {
@@ -378,7 +378,7 @@ class Explorer {
             auto artist_name = encode.encode_string(query);
             if (artist_name.size()) {
                 printf("MULTIPLE ARTIST SEARCH: '%s' (%s)\n", query.c_str(), artist_name.c_str());
-                res = artist_index->multiple_artist_index->search(artist_name, 0.5);
+                res = artist_index->multiple_artist_index->search(artist_name, 0.5, 'm');
             }
             if (!res->size()) {
                 printf("  No results found.\n");
@@ -415,7 +415,7 @@ class Explorer {
             }
             
             printf("STUPID ARTIST SEARCH: '%s' (%s)\n", query.c_str(), stupid_name.c_str());
-            res = artist_index->stupid_artist_index->search(stupid_name, 0.5);
+            res = artist_index->stupid_artist_index->search(stupid_name, 0.5, 's');
             
             if (!res->size()) {
                 printf("  No results found.\n");

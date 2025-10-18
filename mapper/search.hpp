@@ -74,7 +74,7 @@ class MappingSearch {
         }
 
         bool
-        fetch_metadata(SearchResult *result) {
+        fetch_metadata(SearchMatches *result) {
             string db_file = index_dir + string("/mapping.db");
             string query;
             
@@ -154,7 +154,7 @@ class MappingSearch {
         }
 
         
-        SearchResult *
+        SearchMatches *
         recording_release_search(unsigned int artist_credit_id, const string &release_name, const string &recording_name) {
             ReleaseRecordingIndex *release_recording_index;
             
@@ -239,14 +239,14 @@ class MappingSearch {
                         // Check if we found a match
                         if (it != links_vector.end() && it->release_index == rel_result.id) {
                             float score = (rec_result.confidence + rel_result.confidence) / 2.0;
-                            return new SearchResult(artist_credit_id, it->release_id, it->recording_id, score);
+                            return new SearchMatches(artist_credit_id, it->release_id, it->recording_id, score);
                         }
                         break; // Found the recording, no need to continue searching
                     }
                 }  
             }
             if (rec_result.is_valid)
-                return new SearchResult(artist_credit_id,
+                return new SearchMatches(artist_credit_id,
                                         release_recording_index->links[rec_result.result_index][0].release_id,
                                         release_recording_index->links[rec_result.result_index][0].recording_id,
                                         rec_result.confidence);
@@ -255,8 +255,8 @@ class MappingSearch {
         }
        
         
-        SearchResult* search(const string &artist_credit_name, const string &release_name, const string &recording_name) {
-            SearchResult            output;
+        SearchMatches* search(const string &artist_credit_name, const string &release_name, const string &recording_name) {
+            SearchMatches            output;
             vector<IndexResult>     *res = nullptr, *mres = nullptr;
             map<unsigned int, int>  ac_history;
             
@@ -336,7 +336,7 @@ class MappingSearch {
             // Process results for recording/release search using same interleaved order
             res_idx = 0; 
             mres_idx = 0;
-            SearchResult *best_result = nullptr;
+            SearchMatches *best_result = nullptr;
             float best_confidence = 0.0;
             
             while (res_idx < res->size() || mres_idx < mres->size()) {
@@ -367,7 +367,7 @@ class MappingSearch {
                     IndexResult& result = (*res)[res_idx];
                     auto artist_credit_id = result.id;
                     if (ac_history.find(artist_credit_id) == ac_history.end()) {
-                        SearchResult *r = recording_release_search(artist_credit_id, release_name, recording_name); 
+                        SearchMatches *r = recording_release_search(artist_credit_id, release_name, recording_name); 
                         if (r && r->confidence > .7) {
                             // If this is a very high confidence result (> 0.95), return immediately
                             if (r->confidence > 0.95) {
@@ -403,7 +403,7 @@ class MappingSearch {
                     IndexResult& result = (*mres)[mres_idx];
                     unsigned int artist_credit_id = result.id;
                     if (ac_history.find(artist_credit_id) == ac_history.end()) {
-                        SearchResult *r = recording_release_search(artist_credit_id, release_name, recording_name); 
+                        SearchMatches *r = recording_release_search(artist_credit_id, release_name, recording_name); 
                         if (r && r->confidence > .7) {
                             // If this is a very high confidence result (> 0.95), return immediately
                             if (r->confidence > 0.95) {
