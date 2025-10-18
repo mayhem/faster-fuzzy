@@ -7,20 +7,20 @@ using namespace std;
 #include "encode.hpp"
 #include "artist_index.hpp"
 #include "index_cache.hpp"
+#include <lb_matching_tools/cleaner.hpp>
 
 const int state_start                         = 0;
 const int state_artist_name_check             = 1; 
 const int state_artist_search                 = 2;
 const int state_clean_artist_name             = 3;
-const int state_has_matches                   = 4;
-const int state_fetch_alternate_acs           = 5;
-const int state_stupid_artist_search          = 6;
-const int state_evaluate_artist_matches       = 7;
-const int state_release_recording_search      = 8;
-const int state_fail                          = 9;
-const int state_success                       = 10;
-const int state_has_release_argument          = 11;
-const int state_last                          = 12;  // make sure this is always the last state!
+const int state_fetch_alternate_acs           = 4;
+const int state_stupid_artist_search          = 5;
+const int state_evaluate_artist_matches       = 6;
+const int state_release_recording_search      = 7;
+const int state_fail                          = 8;
+const int state_success                       = 9;
+const int state_has_release_argument          = 10;
+const int state_last                          = 11;  // make sure this is always the last state!
 
 const int event_start                         = 0;
 const int event_yes                           = 1;
@@ -87,24 +87,25 @@ const char *fetch_metadata_query_without_release =
     "   LIMIT 1";
 
 class FSMMappingSearch {
-    string                     artist_credit_name, encoded_artist_credit_name;
-    string                     stupid_artist_name;
-    string                     release_name;
-    string                     recording_name;
+    string                              artist_credit_name, encoded_artist_credit_name;
+    string                              stupid_artist_name;
+    string                              release_name;
+    string                              recording_name;
 
-    int                        current_state;
-    bool                       has_cleaned_artist;
+    int                                 current_state;
+    bool                                has_cleaned_artist;
     
     // Array of function pointers for each state
-    typedef void               (FSMMappingSearch::*StateFunction)();
-    StateFunction              state_functions[state_last];
-    EncodeSearchData           encode;
-    string                     index_dir;
+    typedef void                        (FSMMappingSearch::*StateFunction)();
+    StateFunction                       state_functions[state_last];
+    EncodeSearchData                    encode;
+    string                              index_dir;
 
-    ArtistIndex               *artist_index;
-    IndexCache                *index_cache;
-    vector<IndexResult>       *artist_matches;     
-    
+    ArtistIndex                        *artist_index;
+    IndexCache                         *index_cache;
+    vector<IndexResult>                *artist_matches;     
+    lb_matching_tools::MetadataCleaner  metadata_cleaner;
+
     public:
 
         FSMMappingSearch(const string &_index_dir, int cache_size) {
@@ -118,9 +119,8 @@ class FSMMappingSearch {
             state_functions[state_artist_name_check] = &FSMMappingSearch::do_state_artist_name_check;
             state_functions[state_artist_search] =  &FSMMappingSearch::do_artist_search;
             state_functions[state_clean_artist_name] = nullptr;
-            state_functions[state_has_matches] = nullptr;
             state_functions[state_fetch_alternate_acs] = nullptr;
-            state_functions[state_stupid_artist_search] = nullptr;
+            state_functions[state_stupid_artist_search] = &FSMMappingSearch::do_stupid_artist_search;;
             state_functions[state_evaluate_artist_matches] = nullptr;
             state_functions[state_release_recording_search] = nullptr;
             state_functions[state_fail] = nullptr;
@@ -145,9 +145,11 @@ class FSMMappingSearch {
         bool enter_transition(int event) {
             for (size_t i = 0; i < num_transitions; i++) {
                 if (transitions[i].initial_state == current_state && transitions[i].event == event) {
+                    int old_state = current_state;
                     current_state = transitions[i].end_state;
                     
                     if (state_functions[current_state] != nullptr) {
+                        printf("transition from %d to %d via event %d\n", old_state, current_state, event);
                         (this->*state_functions[current_state])();
                     }
                     else {
@@ -183,14 +185,45 @@ class FSMMappingSearch {
             
             artist_matches->insert(artist_matches->end(), multiple_artist_matches->begin(), multiple_artist_matches->end()); 
             
-            sort(artist_matches->begin(), artist_matches->end(), [](const SearchMatches& a, const SearchMatches& b) {
+            sort(artist_matches->begin(), artist_matches->end(), [](const IndexResult& a, const IndexResult& b) {
                 return a.confidence > b.confidence;
             });
             
             if (artist_matches->size())
                 enter_transition(event_has_matches);
-            else
+            else {
+                delete artist_matches;
+                if (has_cleaned_artist) 
+                    enter_transition(event_no_matches);
+                else
+                    enter_transition(event_no_matches_not_cleaned);
+            }
+        }
+        
+        void do_stupid_artist_search() {
+            artist_matches = artist_index->stupid_artist_index->search(encoded_artist_credit_name, .7, 's');
+            if (artist_matches->size())
+                enter_transition(event_has_matches);
+            else {
+                delete artist_matches;
                 enter_transition(event_no_matches);
+            }
+        }
+        
+        void do_clean_artist_name() {
+            auto cleaned_artist_credit_name = metadata_cleaner.clean_artist(artist_credit_name); 
+            if (cleaned_artist_credit_name != artist_credit_name) {
+                has_cleaned_artist = false;
+                artist_credit_name = cleaned_artist_credit_name;
+            }
+            enter_transition(event_cleaned);
+        }
+                
+        void do_state_has_release_argument() {
+            if (release_name.size())
+                enter_transition(event_yes);
+            else
+                enter_transition(event_no);
         }
         
         vector<string> split(const std::string& input) {
@@ -299,5 +332,6 @@ class FSMMappingSearch {
                 return nullptr;
             
             printf("Final state %d\n", current_state);
+            return nullptr;
         }
 };
