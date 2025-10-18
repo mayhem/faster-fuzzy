@@ -127,7 +127,6 @@ class MappingSearch {
             try {
                 SQLite::Database db(db_file);
                 
-                // Build the IN clause with placeholders
                 string placeholders;
                 for (size_t i = 0; i < artist_credit_ids.size(); i++) {
                     if (i > 0) placeholders += ",";

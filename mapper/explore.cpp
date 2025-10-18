@@ -575,7 +575,7 @@ class Explorer {
                                entry.rank);
                     }
                     
-                    printf("Total release entries: %zu\n", release_entries.size());
+                    printf("Total release entries: %lu\n", release_entries.size());
                 } else {
                     printf("No release data found.\n");
                 }
