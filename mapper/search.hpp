@@ -115,6 +115,46 @@ class MappingSearch {
             return false;
         }
         
+        vector<unsigned int>
+        fetch_alternate_artist_credits(const vector<unsigned int>& artist_credit_ids) {
+            vector<unsigned int> alternates;
+            if (artist_credit_ids.empty()) {
+                return alternates;
+            }
+            
+            string db_file = index_dir + string("/mapping.db");
+            
+            try {
+                SQLite::Database db(db_file);
+                
+                // Build the IN clause with placeholders
+                string placeholders;
+                for (size_t i = 0; i < artist_credit_ids.size(); i++) {
+                    if (i > 0) placeholders += ",";
+                    placeholders += "?";
+                }
+                
+                string sql = "SELECT DISTINCT alternate_artist_credit_id FROM alternate_artist_credits WHERE artist_credit_id IN (" + placeholders + ")";
+                SQLite::Statement query(db, sql);
+                
+                // Bind all the artist_credit_ids
+                for (size_t i = 0; i < artist_credit_ids.size(); i++) {
+                    query.bind(i + 1, artist_credit_ids[i]);
+                }
+                
+                while (query.executeStep()) {
+                    unsigned int alternate_id = query.getColumn(0).getUInt();
+                    alternates.push_back(alternate_id);
+                }
+            }
+            catch (std::exception& e) {
+                printf("fetch_alternate_artist_credits db exception: %s\n", e.what());
+            }
+            
+            return alternates;
+        }
+
+        
         SearchResult *
         recording_release_search(unsigned int artist_credit_id, const string &release_name, const string &recording_name) {
             ReleaseRecordingIndex *release_recording_index;
