@@ -48,7 +48,7 @@ class Explorer {
         string              index_dir;
         ArtistIndex        *artist_index;
         RecordingIndex     *recording_index;
-        FSMMappingSearch   *mapping_search;
+        MappingSearch   *mapping_search;
         EncodeSearchData    encode;
         map<unsigned int, vector<unsigned int>> artist_credit_map;
 
@@ -57,7 +57,7 @@ class Explorer {
             index_dir = _index_dir;
             artist_index = new ArtistIndex(index_dir);
             recording_index = new RecordingIndex(index_dir);
-            mapping_search = new FSMMappingSearch(index_dir, 25); // 25MB cache
+            mapping_search = new MappingSearch(index_dir, 25); // 25MB cache
         }
         
         ~Explorer() {
@@ -170,7 +170,7 @@ class Explorer {
             printf("\nFull search: Artist='%s', Release='%s', Recording='%s'\n\n", 
                    artist_name.c_str(), release_name.c_str(), recording_name.c_str());
             
-            SearchMatches* result = nullptr;
+            SearchMatch* result = nullptr;
             try {
                 result = mapping_search->search(artist_name, release_name, recording_name);
             }
@@ -199,8 +199,6 @@ class Explorer {
                 printf("{ \"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\" }\n", 
                     artist_name.c_str(), release_name.c_str(), recording_name.c_str(),
                     mbids.c_str(), result->release_mbid.c_str(), result->recording_mbid.c_str());
-                
-                delete result;
             } else {
                 printf("No match found.\n");
             }
@@ -225,7 +223,7 @@ class Explorer {
             printf("\nRecording search: Artist='%s', Recording='%s'\n\n", 
                    artist_name.c_str(), recording_name.c_str());
             
-            SearchMatches* result = mapping_search->search(artist_name, release_name, recording_name);
+            SearchMatch* result = mapping_search->search(artist_name, release_name, recording_name);
             
             if (result) {
                 printf("Search Result:\n");

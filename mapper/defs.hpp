@@ -61,7 +61,7 @@ class IndexResult {
         }
 };
 
-class SearchMatches {
+class SearchMatch {
     public:
         unsigned int   artist_credit_id, release_id, recording_id;
         float          confidence;
@@ -72,13 +72,13 @@ class SearchMatches {
         string         recording_name;
         string         recording_mbid;
        
-        SearchMatches() {
+        SearchMatch() {
             artist_credit_id = 0;
             release_id = 0;
             recording_id = 0;
             confidence = 0.0;
         }
-        SearchMatches(unsigned int _artist_credit_id, unsigned int _release_id, unsigned int _recording_id, float _confidence) {
+        SearchMatch(unsigned int _artist_credit_id, unsigned int _release_id, unsigned int _recording_id, float _confidence) {
             artist_credit_id = _artist_credit_id;
             release_id = _release_id;
             recording_id = _recording_id;

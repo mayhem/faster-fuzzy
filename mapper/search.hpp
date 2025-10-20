@@ -32,31 +32,25 @@ const char *fetch_metadata_query_without_release =
     "ORDER BY score "
     "   LIMIT 1";
 
-class MappingSearch {
+class SearchFunctions {
     private:
-        string                                   index_dir;
-        ArtistIndex                             *artist_index;
-        IndexCache                              *index_cache;
-        EncodeSearchData                         encode;
-        lb_matching_tools::MetadataCleaner       metadata_cleaner;
-
+        string                        index_dir;
+        IndexCache                   *index_cache;
+        EncodeSearchData              encode;
     public:
 
         // cache size is specified in MB
-        MappingSearch(const string &_index_dir, int cache_size) {
+        SearchFunctions(const string &_index_dir, int cache_size) {
             index_dir = _index_dir;
-            artist_index = new ArtistIndex(index_dir);
             index_cache = new IndexCache(cache_size);
         }
         
-        ~MappingSearch() {
-            delete artist_index;
+        ~SearchFunctions() {
             delete index_cache;
         }
         
         void
-        load() {
-            artist_index->load();
+        start() {
             // TODO: Enable this when we start running a server
             //index_cache.start();
         }
@@ -74,7 +68,7 @@ class MappingSearch {
         }
 
         bool
-        fetch_metadata(SearchMatches *result) {
+        fetch_metadata(SearchMatch *result) {
             string db_file = index_dir + string("/mapping.db");
             string query;
             
@@ -154,7 +148,7 @@ class MappingSearch {
         }
 
         
-        SearchMatches *
+        SearchMatch *
         recording_release_search(unsigned int artist_credit_id, const string &release_name, const string &recording_name) {
             ReleaseRecordingIndex *release_recording_index;
             
@@ -183,7 +177,7 @@ class MappingSearch {
                 auto release_name_encoded = encode.encode_string(release_name); 
                 printf("    RELEASE SEARCH\n");
                 if (release_name_encoded.size()) {
-                    vector<IndexResult> *rel_results = release_recording_index->release_index->search(release_name_encoded, .7);
+                    vector<IndexResult> *rel_results = release_recording_index->release_index->search(release_name_encoded, .7, 'l');
                     if (rel_results->size()) {
                         // Sort results by confidence in descending order
                         sort(rel_results->begin(), rel_results->end(), [](const IndexResult& a, const IndexResult& b) {
@@ -206,7 +200,7 @@ class MappingSearch {
 
             printf("    RECORDING SEARCH\n");
             IndexResult rec_result;
-            vector<IndexResult> *rec_results = release_recording_index->recording_index->search(recording_name_encoded, .7);
+            vector<IndexResult> *rec_results = release_recording_index->recording_index->search(recording_name_encoded, .7, 'c');
             if (rec_results->size()) {
                 // TODO: Are results from FuzzyIndex sorted?
                 // Sort results by confidence in descending order
@@ -239,14 +233,14 @@ class MappingSearch {
                         // Check if we found a match
                         if (it != links_vector.end() && it->release_index == rel_result.id) {
                             float score = (rec_result.confidence + rel_result.confidence) / 2.0;
-                            return new SearchMatches(artist_credit_id, it->release_id, it->recording_id, score);
+                            return new SearchMatch(artist_credit_id, it->release_id, it->recording_id, score);
                         }
                         break; // Found the recording, no need to continue searching
                     }
                 }  
             }
             if (rec_result.is_valid)
-                return new SearchMatches(artist_credit_id,
+                return new SearchMatch(artist_credit_id,
                                         release_recording_index->links[rec_result.result_index][0].release_id,
                                         release_recording_index->links[rec_result.result_index][0].recording_id,
                                         rec_result.confidence);
@@ -254,7 +248,7 @@ class MappingSearch {
            return nullptr;
         }
        
-        
+#if 0        
         SearchMatches* search(const string &artist_credit_name, const string &release_name, const string &recording_name) {
             SearchMatches            output;
             vector<IndexResult>     *res = nullptr, *mres = nullptr;
@@ -454,4 +448,5 @@ class MappingSearch {
             delete mres;
             return nullptr;
         }
+#endif
 };
