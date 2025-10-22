@@ -18,6 +18,7 @@
 // TODO: Implement DB connection re-use
 // TODO: Create dynamic thresholds based on length. Shorter artists will need more checks.
 const float artist_threshold = .7;
+const float release_recording_threshold = .7;
 
 const char *fetch_metadata_query = 
     "  SELECT artist_mbids, artist_credit_name, release_mbid, release_name, recording_mbid, recording_name "

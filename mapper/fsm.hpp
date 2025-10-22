@@ -34,7 +34,7 @@ using namespace std;
     EVENT_ITEM(event_no_matches, 4) \
     EVENT_ITEM(event_normal_name, 5) \
     EVENT_ITEM(event_has_stupid_name, 6) \
-    EVENT_ITEM(event_evaluate_matches, 7) \
+    EVENT_ITEM(event_evaluate_match, 7) \
     EVENT_ITEM(event_adelante, 8) \
     EVENT_ITEM(event_no_matches_not_cleaned, 9) \
     EVENT_ITEM(event_cleaned, 10)
@@ -86,16 +86,16 @@ static Transition transitions[] = {
     { state_artist_search,              event_has_matches,             state_has_release_argument },
 
     { state_has_release_argument,       event_yes,                     state_evaluate_artist_matches },
-    { state_has_release_argument,       event_no,                      state_fetch_alternate_acs },
+    { state_has_release_argument,       event_no,                      state_evaluate_artist_matches },
+//    { state_has_release_argument,       event_no,                      state_fetch_alternate_acs },
 
     { state_fetch_alternate_acs,        event_adelante,                state_evaluate_artist_matches },
 
-    { state_evaluate_artist_matches,    event_evaluate_matches,        state_release_recording_search },
+    { state_evaluate_artist_matches,    event_evaluate_match,        state_release_recording_search },
     { state_evaluate_artist_matches,    event_no_matches,              state_clean_artist_name },
 
     { state_release_recording_search,   event_no_matches,              state_evaluate_artist_matches },
     { state_release_recording_search,   event_has_matches,             state_fetch_metadata },
-    { state_release_recording_search,   event_no_matches,              state_evaluate_artist_matches },
 
     { state_clean_artist_name,          event_cleaned,                 state_artist_search }
 };
@@ -121,6 +121,7 @@ class MappingSearch {
     IndexCache                         *index_cache;
     SearchFunctions                    *search_functions;
     vector<IndexResult>                *artist_matches;     
+    IndexResult                        *current_artist_match;
     SearchMatch                        *current_relrec_match;
     lb_matching_tools::MetadataCleaner  metadata_cleaner;
 
@@ -156,6 +157,10 @@ class MappingSearch {
             delete search_functions;
             if (artist_matches != nullptr)
                 delete artist_matches;
+            if (current_artist_match != nullptr)
+                delete current_artist_match;
+            if (current_relrec_match != nullptr)
+                delete current_relrec_match;
         }
 
         void
@@ -172,7 +177,7 @@ class MappingSearch {
                     current_state = transitions[i].end_state;
                     
                     if (state_functions[current_state] != nullptr) {
-                        printf("current %-25s event %-25s new %-25s\n", 
+                        printf("current %-30s event %-25s new %-30s\n", 
                                get_state_name(old_state), 
                                get_event_name(event),
                                get_state_name(current_state));
@@ -257,20 +262,24 @@ class MappingSearch {
                 return a.confidence > b.confidence;
             });
             
-            for(auto &it : *artist_matches) {
-                if (it.confidence > artist_threshold) {
-                    if (do_release_recording_search())
-                        return true;
-                }
-                else
-                    return false;
-            }
-            return false;
+            current_artist_match = new IndexResult(artist_matches->front());
+            artist_matches->erase(artist_matches->begin());
+            if (current_artist_match->confidence > artist_threshold)
+                return enter_transition(event_evaluate_match);
+            return enter_transition(event_no_matches);
         }
-        
-        bool do_release_recording_search() {
 
-            return false;
+        // We need to add a new state, for doing the search and then eval in another state.
+        bool do_release_recording_search() {
+            SearchMatch *r = search_functions->recording_release_search(current_artist_match->id, release_name, recording_name); 
+            if (r && r->confidence >= release_recording_threshold) {
+                current_relrec_match = r;
+                return enter_transition(event_has_matches);
+            }
+            if (r != nullptr)
+                delete r;
+
+            return enter_transition(event_no_matches);
         } 
         
         bool do_fail() {
@@ -279,7 +288,7 @@ class MappingSearch {
         }
         
         bool do_fetch_metadata() {
-            return false;
+            return search_functions->fetch_metadata(current_relrec_match);
         }
 
         SearchMatch *
@@ -291,11 +300,14 @@ class MappingSearch {
             has_cleaned_artist = false;
             encoded_artist_credit_name.clear();
             stupid_artist_name.clear();
-
+            
+            current_state = state_start;
             if (!enter_transition(event_start)) 
                 return nullptr;
             
             printf("Final state %s\n", get_state_name(current_state));
-            return nullptr;
+            SearchMatch *temp = current_relrec_match;
+            current_relrec_match = nullptr;
+            return temp;
         }
 };

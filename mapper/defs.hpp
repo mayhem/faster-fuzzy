@@ -59,6 +59,15 @@ class IndexResult {
             result_index = _result_index;
             source = _source;
         }
+
+        // Copy constructor
+        IndexResult(const IndexResult& other) {
+            is_valid = other.is_valid;
+            id = other.id;
+            result_index = other.result_index;
+            confidence = other.confidence;
+            source = other.source;
+        }
 };
 
 class SearchMatch {
@@ -84,4 +93,17 @@ class SearchMatch {
             recording_id = _recording_id;
             confidence = _confidence;
         };
+
+        SearchMatch(const SearchMatch& other) {
+            artist_credit_id = other.artist_credit_id;
+            release_id = other.release_id;
+            recording_id = other.recording_id;
+            confidence = other.confidence;
+            artist_credit_name = other.artist_credit_name;
+            artist_credit_mbids = other.artist_credit_mbids;
+            release_name = other.release_name;
+            release_mbid = other.release_mbid;
+            recording_name = other.recording_name;
+            recording_mbid = other.recording_mbid;
+        }
 };
