@@ -7,6 +7,7 @@ using namespace std;
 #include "encode.hpp"
 #include "artist_index.hpp"
 #include "index_cache.hpp"
+#include "search.hpp"
 #include <lb_matching_tools/cleaner.hpp>
 
 // Define all states using a macro
@@ -20,7 +21,7 @@ using namespace std;
     STATE_ITEM(state_evaluate_artist_matches, 6) \
     STATE_ITEM(state_release_recording_search, 7) \
     STATE_ITEM(state_fail, 8) \
-    STATE_ITEM(state_success, 9) \
+    STATE_ITEM(state_fetch_metadata, 9) \
     STATE_ITEM(state_has_release_argument, 10) \
     STATE_ITEM(state_last, 11)
 
@@ -93,30 +94,13 @@ static Transition transitions[] = {
     { state_evaluate_artist_matches,    event_no_matches,              state_clean_artist_name },
 
     { state_release_recording_search,   event_no_matches,              state_evaluate_artist_matches },
-    { state_release_recording_search,   event_has_matches,             state_success },
+    { state_release_recording_search,   event_has_matches,             state_fetch_metadata },
     { state_release_recording_search,   event_no_matches,              state_evaluate_artist_matches },
 
     { state_clean_artist_name,          event_cleaned,                 state_artist_search }
 };
 
 const int num_transitions = sizeof(transitions) / sizeof(transitions[0]);
-
-// TODO: Implement DB connection re-use
-// TODO: Create dynamic thresholds based on length. Shorter artists will need more checks.
-const float artist_threshold = .6;
-
-const char *fetch_metadata_query = 
-    "  SELECT artist_mbids, artist_credit_name, release_mbid, release_name, recording_mbid, recording_name "
-    "    FROM mapping "
-    "   WHERE mapping.release_id = ? AND "
-    "         mapping.recording_id = ?";
-
-const char *fetch_metadata_query_without_release = 
-    "  SELECT artist_mbids, artist_credit_name, release_mbid, release_name, recording_mbid, recording_name "
-    "    FROM mapping "
-    "   WHERE mapping.recording_id = ? "
-    "ORDER BY score "
-    "   LIMIT 1";
 
 class MappingSearch {
     string                              artist_credit_name, encoded_artist_credit_name;
@@ -128,14 +112,16 @@ class MappingSearch {
     bool                                has_cleaned_artist;
     
     // Array of function pointers for each state
-    typedef void                        (MappingSearch::*StateFunction)();
+    typedef bool                        (MappingSearch::*StateFunction)();
     StateFunction                       state_functions[state_last];
     EncodeSearchData                    encode;
     string                              index_dir;
 
     ArtistIndex                        *artist_index;
     IndexCache                         *index_cache;
+    SearchFunctions                    *search_functions;
     vector<IndexResult>                *artist_matches;     
+    SearchMatch                        *current_relrec_match;
     lb_matching_tools::MetadataCleaner  metadata_cleaner;
 
     public:
@@ -144,25 +130,30 @@ class MappingSearch {
             index_dir = _index_dir;
             artist_index = new ArtistIndex(index_dir);
             index_cache = new IndexCache(cache_size);
+            search_functions = new SearchFunctions(index_dir, cache_size);
+            
+            artist_matches = nullptr;
+            current_relrec_match = nullptr;
 
             current_state = state_start;
             
             // Initialize state function array
-            state_functions[state_artist_name_check] = &MappingSearch::do_state_artist_name_check;
+            state_functions[state_artist_name_check] = &MappingSearch::do_artist_name_check;
             state_functions[state_artist_search] =  &MappingSearch::do_artist_search;
-            state_functions[state_clean_artist_name] = nullptr;
+            state_functions[state_clean_artist_name] = &MappingSearch::do_clean_artist_name;
             state_functions[state_fetch_alternate_acs] = nullptr;
             state_functions[state_stupid_artist_search] = &MappingSearch::do_stupid_artist_search;;
-            state_functions[state_evaluate_artist_matches] = nullptr;
-            state_functions[state_release_recording_search] = nullptr;
-            state_functions[state_fail] = nullptr;
-            state_functions[state_success] = nullptr;
-            state_functions[state_has_release_argument] = nullptr;
+            state_functions[state_evaluate_artist_matches] = &MappingSearch::do_evaluate_artist_matches;
+            state_functions[state_release_recording_search] = &MappingSearch::do_release_recording_search;
+            state_functions[state_fail] = &MappingSearch::do_fail;
+            state_functions[state_fetch_metadata] = &MappingSearch::do_fetch_metadata;
+            state_functions[state_has_release_argument] = &MappingSearch::do_has_release_argument;
         }
 
         ~MappingSearch() {
             delete artist_index;
             delete index_cache;
+            delete search_functions;
             if (artist_matches != nullptr)
                 delete artist_matches;
         }
@@ -204,17 +195,17 @@ class MappingSearch {
             return false;
         }
         
-        void do_state_artist_name_check() {
+        bool do_artist_name_check() {
             encoded_artist_credit_name = encode.encode_string(artist_credit_name); 
             if (encoded_artist_credit_name.size())
-                enter_transition(event_normal_name);
+                return enter_transition(event_normal_name);
             else {
                 stupid_artist_name = encode.encode_string_for_stupid_artists(artist_credit_name); 
-                enter_transition(event_has_stupid_name);
+                return enter_transition(event_has_stupid_name);
             }
         }
         
-        void do_artist_search() {
+        bool do_artist_search() {
             if (artist_matches != nullptr)
                 delete artist_matches;
 
@@ -224,137 +215,71 @@ class MappingSearch {
             
             artist_matches->insert(artist_matches->end(), multiple_artist_matches->begin(), multiple_artist_matches->end()); 
             
-            sort(artist_matches->begin(), artist_matches->end(), [](const IndexResult& a, const IndexResult& b) {
-                return a.confidence > b.confidence;
-            });
-            
             if (artist_matches->size())
-                enter_transition(event_has_matches);
+                return enter_transition(event_has_matches);
             else {
                 delete artist_matches;
                 if (has_cleaned_artist) 
-                    enter_transition(event_no_matches);
+                    return enter_transition(event_no_matches);
                 else
-                    enter_transition(event_no_matches_not_cleaned);
+                    return enter_transition(event_no_matches_not_cleaned);
             }
         }
         
-        void do_stupid_artist_search() {
+        bool do_stupid_artist_search() {
             artist_matches = artist_index->stupid_artist_index->search(encoded_artist_credit_name, .7, 's');
             if (artist_matches->size())
-                enter_transition(event_has_matches);
+                return enter_transition(event_has_matches);
             else {
                 delete artist_matches;
-                enter_transition(event_no_matches);
+                return enter_transition(event_no_matches);
             }
         }
         
-        void do_clean_artist_name() {
+        bool do_clean_artist_name() {
             auto cleaned_artist_credit_name = metadata_cleaner.clean_artist(artist_credit_name); 
             if (cleaned_artist_credit_name != artist_credit_name) {
                 has_cleaned_artist = false;
                 artist_credit_name = cleaned_artist_credit_name;
             }
-            enter_transition(event_cleaned);
+            return enter_transition(event_cleaned);
         }
                 
-        void do_state_has_release_argument() {
+        bool do_has_release_argument() {
             if (release_name.size())
-                enter_transition(event_yes);
+                return enter_transition(event_yes);
             else
-                enter_transition(event_no);
+                return enter_transition(event_no);
         }
         
-        vector<string> split(const std::string& input) {
-            vector<std::string> result;
-            stringstream        ss(input);
-            string              token;
-
-            while (getline(ss, token, ',')) {
-                result.push_back(token);
-            }
-
-            return result;
-        }
-
-        bool
-        fetch_metadata(SearchMatch *result) {
-            string db_file = index_dir + string("/mapping.db");
-            string query;
+        bool do_evaluate_artist_matches() {
+            sort(artist_matches->begin(), artist_matches->end(), [](const IndexResult& a, const IndexResult& b) {
+                return a.confidence > b.confidence;
+            });
             
-            printf("fetch metadata %d %d %d\n", result->artist_credit_id, result->release_id, result->recording_id);
-            
-            if (result->release_id)
-                query = string(fetch_metadata_query);
-            else
-                query = string(fetch_metadata_query_without_release);
-           
-            try
-            {
-                SQLite::Database    db(db_file);
-                SQLite::Statement   db_query(db, string(query));
-                
-                if (result->release_id) {
-                    db_query.bind(1, result->release_id);
-                    db_query.bind(2, result->recording_id);
+            for(auto &it : *artist_matches) {
+                if (it.confidence > artist_threshold) {
+                    if (do_release_recording_search())
+                        return true;
                 }
-                else 
-                    db_query.bind(1, result->recording_id);
-
-                while (db_query.executeStep()) {
-                    result->artist_credit_mbids = split(db_query.getColumn(0).getString());
-                    result->artist_credit_name = db_query.getColumn(1).getString();
-                    result->release_mbid = db_query.getColumn(2).getString();
-                    result->release_name = db_query.getColumn(3).getString();
-                    result->recording_mbid = db_query.getColumn(4).getString();
-                    result->recording_name = db_query.getColumn(5).getString();
-                    return true;
-                }
+                else
+                    return false;
             }
-            catch (std::exception& e)
-            {
-                printf("fetch metadata db exception: %s\n", e.what());
-            }
-            
             return false;
         }
         
-        vector<unsigned int>
-        fetch_alternate_artist_credits(const vector<unsigned int>& artist_credit_ids) {
-            vector<unsigned int> alternates;
-            if (artist_credit_ids.empty()) {
-                return alternates;
-            }
-            
-            string db_file = index_dir + string("/mapping.db");
-            
-            try {
-                SQLite::Database db(db_file);
-                
-                string placeholders;
-                for (size_t i = 0; i < artist_credit_ids.size(); i++) {
-                    if (i > 0) placeholders += ",";
-                    placeholders += "?";
-                }
-                
-                string sql = "SELECT DISTINCT alternate_artist_credit_id FROM alternate_artist_credits WHERE artist_credit_id IN (" + placeholders + ")";
-                SQLite::Statement query(db, sql);
-                
-                // Bind all the artist_credit_ids
-                for (size_t i = 0; i < artist_credit_ids.size(); i++) {
-                    query.bind(i + 1, artist_credit_ids[i]);
-                }
-                
-                while (query.executeStep()) {
-                    unsigned int alternate_id = query.getColumn(0).getUInt();
-                    alternates.push_back(alternate_id);
-                }
-            }
-            catch (std::exception& e) {
-                printf("fetch_alternate_artist_credits db exception: %s\n", e.what());
-            }
-            
-            return alternates;
+        bool do_release_recording_search() {
+
+            return false;
+        } 
+        
+        bool do_fail() {
+            // total rocket science here!
+            return false;
+        }
+        
+        bool do_fetch_metadata() {
+            return false;
         }
 
         SearchMatch *
