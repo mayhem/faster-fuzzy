@@ -35,7 +35,6 @@ add_executable(indexer indexer.cpp tfidf_vectorizer.cpp)
 add_executable(test test.cpp tfidf_vectorizer.cpp levenshtein.cpp)
 add_executable(explore explore.cpp tfidf_vectorizer.cpp levenshtein.cpp)
 add_executable(create create_base_index.cpp)
-add_executable(encoding_test encoding_test.cpp)
 
 include_directories(deps/nmslib/similarity_search/include
                     deps/unidecode/include
@@ -85,9 +84,4 @@ target_link_libraries(create SQLiteCpp
                              pq
                              pthread
                              bsd
-)
-
-target_link_libraries(encoding_test pq
-                                   pthread
-                                   bsd
 )

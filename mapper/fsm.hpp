@@ -16,14 +16,17 @@ using namespace std;
     STATE_ITEM(state_artist_name_check, 1) \
     STATE_ITEM(state_artist_search, 2) \
     STATE_ITEM(state_clean_artist_name, 3) \
-    STATE_ITEM(state_fetch_alternate_acs, 4) \
+    STATE_ITEM(state_select_artist_match, 4) \
     STATE_ITEM(state_stupid_artist_search, 5) \
-    STATE_ITEM(state_evaluate_artist_matches, 6) \
-    STATE_ITEM(state_release_recording_search, 7) \
-    STATE_ITEM(state_fail, 8) \
-    STATE_ITEM(state_fetch_metadata, 9) \
-    STATE_ITEM(state_has_release_argument, 10) \
-    STATE_ITEM(state_last, 11)
+    STATE_ITEM(state_recording_search, 6) \
+    STATE_ITEM(state_select_recording_match, 7) \
+    STATE_ITEM(state_has_release_argument, 8) \
+    STATE_ITEM(state_release_search, 9) \
+    STATE_ITEM(state_lookup_canonical_release, 10) \
+    STATE_ITEM(state_evaluate_match, 11) \
+    STATE_ITEM(state_fail, 12) \
+    STATE_ITEM(state_success_fetch_metadata, 13) \
+    STATE_ITEM(state_last, 14)
 
 // Define all events using a macro
 #define EVENT_LIST \
@@ -33,11 +36,13 @@ using namespace std;
     EVENT_ITEM(event_has_matches, 3) \
     EVENT_ITEM(event_no_matches, 4) \
     EVENT_ITEM(event_normal_name, 5) \
-    EVENT_ITEM(event_has_stupid_name, 6) \
-    EVENT_ITEM(event_evaluate_match, 7) \
-    EVENT_ITEM(event_adelante, 8) \
-    EVENT_ITEM(event_no_matches_not_cleaned, 9) \
-    EVENT_ITEM(event_cleaned, 10)
+    EVENT_ITEM(event_stupid_name, 6) \
+    EVENT_ITEM(event_meets_threshold, 7) \
+    EVENT_ITEM(event_doesnt_meet_threshold, 8) \
+    EVENT_ITEM(event_evaluate_match, 9) \
+    EVENT_ITEM(event_no_matches_not_cleaned, 10) \
+    EVENT_ITEM(event_no_cleanable, 11) \
+    EVENT_ITEM(event_cleaned, 12)
 
 // Generate the constants
 #define STATE_ITEM(name, value) const int name = value;
@@ -75,29 +80,35 @@ struct Transition {
 static Transition transitions[] = {
     { state_start,                      event_start,                   state_artist_name_check },
     
-    { state_artist_name_check,          event_has_stupid_name,         state_stupid_artist_search },
+    { state_artist_name_check,          event_stupid_name,             state_stupid_artist_search },
     { state_artist_name_check,          event_normal_name,             state_artist_search },
 
     { state_stupid_artist_search,       event_no_matches,              state_fail },
-    { state_stupid_artist_search,       event_has_matches,             state_has_release_argument },
+    { state_stupid_artist_search,       event_has_matches,             state_select_artist_match },
 
-    { state_artist_search,              event_no_matches,              state_clean_artist_name },
     { state_artist_search,              event_no_matches_not_cleaned,  state_clean_artist_name },
-    { state_artist_search,              event_has_matches,             state_has_release_argument },
+    { state_artist_search,              event_has_matches,             state_select_artist_match },
 
-    { state_has_release_argument,       event_yes,                     state_evaluate_artist_matches },
-    { state_has_release_argument,       event_no,                      state_evaluate_artist_matches },
-//    { state_has_release_argument,       event_no,                      state_fetch_alternate_acs },
+    { state_select_artist_match,        event_meets_threshold,         state_recording_search },
+    { state_select_artist_match,        event_doesnt_meet_threshold,   state_fail },
 
-    { state_fetch_alternate_acs,        event_adelante,                state_evaluate_artist_matches },
+    { state_recording_search,           event_has_matches,             state_select_recording_match },
+    { state_recording_search,           event_no_matches,              state_fail },
 
-    { state_evaluate_artist_matches,    event_evaluate_match,        state_release_recording_search },
-    { state_evaluate_artist_matches,    event_no_matches,              state_clean_artist_name },
+    { state_select_recording_match,     event_meets_threshold,         state_has_release_argument },
+    { state_select_recording_match,     event_doesnt_meet_threshold,   state_fail },
 
-    { state_release_recording_search,   event_no_matches,              state_evaluate_artist_matches },
-    { state_release_recording_search,   event_has_matches,             state_fetch_metadata },
+    { state_has_release_argument,       event_yes,                     state_release_search },
+    { state_has_release_argument,       event_no,                      state_lookup_canonical_release },
 
-    { state_clean_artist_name,          event_cleaned,                 state_artist_search }
+    { state_release_search,             event_has_matches,             state_evaluate_match },
+    { state_release_search,             event_no_matches,              state_fail },
+
+    { state_lookup_canonical_release,   event_has_matches,             state_evaluate_match },
+    { state_lookup_canonical_release,   event_no_matches,              state_fail },
+    
+    { state_evaluate_match,             event_meets_threshold,         state_fail },
+    { state_evaluate_match,             event_doesnt_meet_threshold,   state_success_fetch_metadata }
 };
 
 const int num_transitions = sizeof(transitions) / sizeof(transitions[0]);
@@ -121,8 +132,7 @@ class MappingSearch {
     IndexCache                         *index_cache;
     SearchFunctions                    *search_functions;
     vector<IndexResult>                *artist_matches;     
-    IndexResult                        *current_artist_match;
-    SearchMatch                        *current_relrec_match;
+    int                                 artist_match, recording_match;
     lb_matching_tools::MetadataCleaner  metadata_cleaner;
 
     public:
@@ -133,8 +143,8 @@ class MappingSearch {
             index_cache = new IndexCache(cache_size);
             search_functions = new SearchFunctions(index_dir, cache_size);
             
-            artist_matches = nullptr;
-            current_relrec_match = nullptr;
+            artist_match = -1;
+            recording_match = -1;
 
             current_state = state_start;
             
@@ -142,13 +152,16 @@ class MappingSearch {
             state_functions[state_artist_name_check] = &MappingSearch::do_artist_name_check;
             state_functions[state_artist_search] =  &MappingSearch::do_artist_search;
             state_functions[state_clean_artist_name] = &MappingSearch::do_clean_artist_name;
-            state_functions[state_fetch_alternate_acs] = nullptr;
-            state_functions[state_stupid_artist_search] = &MappingSearch::do_stupid_artist_search;;
-            state_functions[state_evaluate_artist_matches] = &MappingSearch::do_evaluate_artist_matches;
-            state_functions[state_release_recording_search] = &MappingSearch::do_release_recording_search;
-            state_functions[state_fail] = &MappingSearch::do_fail;
-            state_functions[state_fetch_metadata] = &MappingSearch::do_fetch_metadata;
+            state_functions[state_select_artist_match] = &MappingSearch::do_select_artist_match; 
+            state_functions[state_stupid_artist_search] = &MappingSearch::do_stupid_artist_search;
+            state_functions[state_recording_search] = &MappingSearch::do_recording_search;
+            state_functions[state_select_recording_match] = &MappingSearch::do_select_recording_match; 
             state_functions[state_has_release_argument] = &MappingSearch::do_has_release_argument;
+            state_functions[state_release_search] = &MappingSearch::do_release_search;
+            state_functions[state_lookup_canonical_release] = &MappingSearch::do_lookup_canonical_release; 
+            state_functions[state_evaluate_match] = &MappingSearch::do_evaluate_match;
+            state_functions[state_fail] = &MappingSearch::do_fail;
+            state_functions[state_success_fetch_metadata] = &MappingSearch::do_success_fetch_metadata;
         }
 
         ~MappingSearch() {
@@ -157,10 +170,6 @@ class MappingSearch {
             delete search_functions;
             if (artist_matches != nullptr)
                 delete artist_matches;
-            if (current_artist_match != nullptr)
-                delete current_artist_match;
-            if (current_relrec_match != nullptr)
-                delete current_relrec_match;
         }
 
         void
@@ -231,16 +240,6 @@ class MappingSearch {
             }
         }
         
-        bool do_stupid_artist_search() {
-            artist_matches = artist_index->stupid_artist_index->search(encoded_artist_credit_name, .7, 's');
-            if (artist_matches->size())
-                return enter_transition(event_has_matches);
-            else {
-                delete artist_matches;
-                return enter_transition(event_no_matches);
-            }
-        }
-        
         bool do_clean_artist_name() {
             auto cleaned_artist_credit_name = metadata_cleaner.clean_artist(artist_credit_name); 
             if (cleaned_artist_credit_name != artist_credit_name) {
@@ -249,15 +248,8 @@ class MappingSearch {
             }
             return enter_transition(event_cleaned);
         }
-                
-        bool do_has_release_argument() {
-            if (release_name.size())
-                return enter_transition(event_yes);
-            else
-                return enter_transition(event_no);
-        }
-        
-        bool do_evaluate_artist_matches() {
+
+        bool do_select_artist_match() {
             sort(artist_matches->begin(), artist_matches->end(), [](const IndexResult& a, const IndexResult& b) {
                 return a.confidence > b.confidence;
             });
@@ -269,8 +261,30 @@ class MappingSearch {
             return enter_transition(event_no_matches);
         }
 
-        // We need to add a new state, for doing the search and then eval in another state.
-        bool do_release_recording_search() {
+        bool do_stupid_artist_search() {
+            artist_matches = artist_index->stupid_artist_index->search(encoded_artist_credit_name, .7, 's');
+            if (artist_matches->size())
+                return enter_transition(event_has_matches);
+            else {
+                delete artist_matches;
+                return enter_transition(event_no_matches);
+            }
+        }
+        
+        bool do_recording_search() {
+        }
+
+        bool do_select_recording_match() {
+        }
+                
+        bool do_has_release_argument() {
+            if (release_name.size())
+                return enter_transition(event_yes);
+            else
+                return enter_transition(event_no);
+        }
+        
+        bool do_release_search() {
             SearchMatch *r = search_functions->recording_release_search(current_artist_match->id, release_name, recording_name); 
             if (r && r->confidence >= release_recording_threshold) {
                 current_relrec_match = r;
@@ -281,13 +295,19 @@ class MappingSearch {
 
             return enter_transition(event_no_matches);
         } 
+
+        bool do_lookup_canonical_release() {
+        }
         
+        bool do_evaluate_match() {
+        }
+
         bool do_fail() {
             // total rocket science here!
             return false;
         }
-        
-        bool do_fetch_metadata() {
+
+        bool do_success_fetch_metadata() {
             return search_functions->fetch_metadata(current_relrec_match);
         }
 
