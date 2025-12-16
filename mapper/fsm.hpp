@@ -147,6 +147,8 @@ class MappingSearch {
     ReleaseRecordingIndex              *release_recording_index;
     vector<IndexResult>                *artist_matches, *release_matches, *recording_matches;     
     int                                 artist_match_index, release_match_index, recording_match_index;
+    SearchMatch                        *search_match;
+    float                               artist_confidence, release_confidence, recording_confidence;
 
     public:
 
@@ -222,7 +224,7 @@ class MappingSearch {
             return false;
         }
 
-        bool reset_state_variables() {
+        void reset_state_variables() {
             current_state = state_start;
             artist_name_cleaned = false;
             current_artist_credit_name.clear();
@@ -236,6 +238,9 @@ class MappingSearch {
             release_match_index = -1;
             recording_match_index = -1;
 
+            release_confidence = 0.0;
+            recording_confidence = 0.0;
+
             delete artist_matches;
             artist_matches = nullptr;
             delete release_matches;
@@ -246,10 +251,13 @@ class MappingSearch {
             delete release_recording_index;
             release_recording_index = nullptr;
 
+            delete search_match;
+            search_match = nullptr;
         }
 
         bool do_start() {
             reset_state_variables();
+            return true;
         }
 
         bool do_artist_name_check() {
@@ -271,8 +279,8 @@ class MappingSearch {
                 delete artist_matches;
 
             printf("ARTIST SEARCH: '%s' (%s)\n", artist_credit_name.c_str(), current_artist_credit_name.c_str());
-            artist_matches = artist_index->single_artist_index->search(encoded_artist_credit_name, .7, 's');
-            auto multiple_artist_matches = artist_index->multiple_artist_index->search(encoded_artist_credit_name, .7, 'm');
+            artist_matches = artist_index->single_artist_index->search(current_artist_credit_name, artist_threshold, 's');
+            auto multiple_artist_matches = artist_index->multiple_artist_index->search(current_artist_credit_name, artist_threshold, 'm');
             artist_matches->insert(artist_matches->end(), multiple_artist_matches->begin(), multiple_artist_matches->end()); 
             
             if (artist_matches->size()) {
@@ -393,10 +401,23 @@ class MappingSearch {
 
         bool do_lookup_canonical_release() {
             // set release_match by looking up canonical release given artist and recording
+            selected_release_id = search_functions->get_canonical_release_id(selected_artist_credit_id, selected_recording_id);
+            if (selected_release_id == 0)
+                return enter_transition(event_no_matches);
+
+            return enter_transition(event_has_matches);
         }
         
         bool do_evaluate_match() {
             // select the right link between recording and release
+            search_match =  search_functions->find_match(selected_artist_credit_id,
+                                                         release_recording_index, 
+                                                         &(*release_matches)[release_match_index],
+                                                         &(*recording_matches)[recording_match_index]);
+            if (search_match)
+                return enter_transition(event_meets_threshold);
+            else
+                return enter_transition(event_doesnt_meet_threshold);
         }
 
         bool do_fail() {
@@ -405,7 +426,7 @@ class MappingSearch {
         }
 
         bool do_success_fetch_metadata() {
-            return search_functions->fetch_metadata(current_relrec_match);
+            return search_functions->fetch_metadata(search_match);
         }
 
         SearchMatch *
@@ -414,17 +435,13 @@ class MappingSearch {
             release_name = release_name_arg;
             recording_name = recording_name_arg;
 
-            has_cleaned_artist = false;
-            encoded_artist_credit_name.clear();
-            stupid_artist_name.clear();
-            
             current_state = state_start;
             if (!enter_transition(event_start)) 
                 return nullptr;
             
             printf("Final state %s\n", get_state_name(current_state));
-            SearchMatch *temp = current_relrec_match;
-            current_relrec_match = nullptr;
+            SearchMatch *temp = search_match;
+            search_match = nullptr;
             return temp;
         }
 };

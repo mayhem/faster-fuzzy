@@ -271,14 +271,6 @@ void CreateBaseIndex::create_sqlite_db(const string& db_file) {
             )
         )");
         
-        // Create artist_credit_mapping table
-        db.exec(R"(
-            CREATE TABLE alternate_artist_credits (
-                artist_credit_id INTEGER NOT NULL,
-                alternate_artist_credit_id INTEGER NOT NULL
-            )
-        )");
-        
         // Create index_cache table
         db.exec(R"(
             CREATE TABLE index_cache (

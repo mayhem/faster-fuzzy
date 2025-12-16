@@ -111,43 +111,28 @@ class SearchFunctions {
             
             return false;
         }
-        
-        vector<unsigned int>
-        fetch_alternate_artist_credits(const vector<unsigned int>& artist_credit_ids) {
-            vector<unsigned int> alternates;
-            if (artist_credit_ids.empty()) {
-                return alternates;
-            }
-            
+       
+        unsigned int
+        get_canonical_release_id(unsigned int artist_credit_id, unsigned int recording_id) {
             string db_file = index_dir + string("/mapping.db");
-            
             try {
                 SQLite::Database db(db_file);
                 
-                string placeholders;
-                for (size_t i = 0; i < artist_credit_ids.size(); i++) {
-                    if (i > 0) placeholders += ",";
-                    placeholders += "?";
-                }
-                
-                string sql = "SELECT DISTINCT alternate_artist_credit_id FROM alternate_artist_credits WHERE artist_credit_id IN (" + placeholders + ")";
+                string sql = "SELECT release_id FROM mapping WHERE artist_credit_id = ? AND recording_id = ? ORDER BY score";
                 SQLite::Statement query(db, sql);
                 
                 // Bind all the artist_credit_ids
-                for (size_t i = 0; i < artist_credit_ids.size(); i++) {
-                    query.bind(i + 1, artist_credit_ids[i]);
-                }
-                
-                while (query.executeStep()) {
-                    unsigned int alternate_id = query.getColumn(0).getUInt();
-                    alternates.push_back(alternate_id);
-                }
+                query.bind(1, artist_credit_id);
+                query.bind(2, recording_id);
+
+                if (query.executeStep()) {
+                    return query.getColumn(0).getUInt();
+                } 
             }
             catch (std::exception& e) {
                 printf("fetch_alternate_artist_credits db exception: %s\n", e.what());
             }
-            
-            return alternates;
+           return 0;
         }
 
         ReleaseRecordingIndex *
@@ -228,7 +213,7 @@ class SearchFunctions {
         find_match(unsigned int           artist_credit_id,
                    ReleaseRecordingIndex *release_recording_index, 
                    IndexResult           *rel_result,
-                   IndexResult *rec_result) {
+                   IndexResult           *rec_result) {
          
             if (rel_result->is_valid && rec_result->is_valid) {
                 for(const auto& pair : release_recording_index->links) {
@@ -241,7 +226,7 @@ class SearchFunctions {
                                             });
                         
                         // Check if we found a match
-                        if (it != links_vector.end() && it->release_index == rel_result->.id) {
+                        if (it != links_vector.end() && it->release_index == rel_result->id) {
                             float score = (rec_result->confidence + rel_result->confidence) / 2.0;
                             return new SearchMatch(artist_credit_id, it->release_id, it->recording_id, score);
                         }

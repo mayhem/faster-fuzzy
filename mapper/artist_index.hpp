@@ -88,35 +88,6 @@ WITH acs AS (
      and a.id > 1
 )";
 
-const char *fetch_alternate_artists_query = R"(
-with credits as (
-        select a.id as artist_id
-             , ac.id as artist_credit_id
-             , a.name as artist_name
-             , ac.name as artist_credit_name
-          from artist a
-          join artist_credit_name acn
-            on acn.artist = a.id
-          join artist_credit ac
-            on acn.artist_credit = ac.id
-         where a.id > 1
-           and ac.artist_count = 1
- ), multiple_credits as (
-        SELECT artist_id
-          FROM credits
-      GROUP BY artist_id
-        HAVING count(*) > 1
-)
-        SELECT c.artist_id
-             , c.artist_credit_id
-             , c.artist_name
-             , c.artist_credit_name
-        FROM credits c
-        JOIN multiple_credits mc
-          ON c.artist_id = mc.artist_id
-    ORDER BY c.artist_id, c.artist_credit_id
-)";
-
 const char *insert_blob_query = R"(
     INSERT INTO index_cache (entity_id, index_data) VALUES (?, ?)
              ON CONFLICT(entity_id) DO UPDATE SET index_data=excluded.index_data)";
@@ -343,130 +314,6 @@ class ArtistIndex {
         }
 
         void
-        insert_artist_alternate_artist_credits() {
-            vector<set<unsigned int>> artist_credit_groups;
-            map<unsigned int, set<unsigned int>> alternate_artist_credits;
-
-            try
-            {
-                PGconn     *conn;
-                PGresult   *res;
-                
-                conn = PQconnectdb("dbname=musicbrainz_db user=musicbrainz password=musicbrainz host=127.0.0.1 port=5432");
-                if (PQstatus(conn) != CONNECTION_OK) {
-                    printf("Connection to database failed: %s\n", PQerrorMessage(conn));
-                    PQfinish(conn);
-                    return;
-                }
-               
-                res = PQexec(conn, fetch_alternate_artists_query);
-                if (PQresultStatus(res) != PGRES_TUPLES_OK) {
-                    printf("Query failed: %s\n", PQerrorMessage(conn));
-                    PQclear(res);
-                    PQfinish(conn);
-                    return;
-                }
-
-                unsigned int last_artist_id = 0;
-                vector<TempRow> batch_rows;
-                
-                for (int i = 0; i < PQntuples(res); i++) {
-                    if (i >= PQntuples(res)) 
-                        break;
-
-                    unsigned int artist_id = atoi(PQgetvalue(res, i, 0));
-                    unsigned int artist_credit_id = atoi(PQgetvalue(res, i, 1));
-                    string artist_name = PQgetvalue(res, i, 2);
-                    string artist_credit_name = PQgetvalue(res, i, 3);
-                    
-                    // Check if we've moved to a new artist_id (batch boundary)
-                    if (last_artist_id != 0 && artist_id != last_artist_id) {
-                        // Process the current batch before starting a new one
-                        process_artist_batch(batch_rows, artist_credit_groups);
-                        
-                        // Clear the batch for the new artist
-                        batch_rows.clear();
-                    }
-                    
-                    // Create current row
-                    TempRow temp_row;
-                    temp_row.artist_id = artist_id;
-                    temp_row.artist_credit_id = artist_credit_id;
-                    temp_row.artist_name = artist_name;
-                    temp_row.artist_credit_name = artist_credit_name;
-                    
-                    // Add row to batch
-                    batch_rows.push_back(temp_row);
-                    last_artist_id = artist_id;
-                }
-                
-                // Process the final batch if any rows remain
-                if (!batch_rows.empty()) {
-                    process_artist_batch(batch_rows, artist_credit_groups);
-                }
-            
-                // Clear the PGresult object to free memory
-                PQclear(res);
-                
-                // Build the final data structure: for each artist_credit_id, map to all other IDs in its group
-                printf("Total artist_credit_groups found: %zu\n", artist_credit_groups.size());
-                for (const auto& group : artist_credit_groups) {
-                    for (unsigned int artist_credit_id : group) {
-                        // For each ID, create a set of all OTHER IDs in the same group
-                        set<unsigned int> others;
-                        for (unsigned int other_id : group) {
-                            if (other_id != artist_credit_id) {
-                                others.insert(other_id);
-                            }
-                        }
-                        alternate_artist_credits[artist_credit_id] = others;
-                    }
-                }
-                
-                // Insert into SQLite table
-                try {
-                    SQLite::Database db(db_file, SQLite::OPEN_READWRITE);
-                    
-                    // Truncate the table first
-                    db.exec("DELETE FROM alternate_artist_credits");
-                    
-                    // Begin transaction for bulk insert
-                    SQLite::Transaction transaction(db);
-                    
-                    // Prepare the insert statement
-                    SQLite::Statement insert_stmt(db, "INSERT INTO alternate_artist_credits (artist_credit_id, alternate_artist_credit_id) VALUES (?, ?)");
-                    
-                    // Flatten and insert the data
-                    for (const auto& entry : alternate_artist_credits) {
-                        unsigned int artist_credit_id = entry.first;
-                        const set<unsigned int>& alternates = entry.second;
-                        
-                        for (unsigned int alternate_id : alternates) {
-                            insert_stmt.bind(1, artist_credit_id);
-                            insert_stmt.bind(2, alternate_id);
-                            insert_stmt.exec();
-                            insert_stmt.reset();
-                        }
-                    }
-                    
-                    // Commit the transaction
-                    transaction.commit();
-                    
-                    // Create index on artist_credit_id for better query performance
-                    db.exec("CREATE INDEX IF NOT EXISTS idx_alternate_artist_credits_artist_credit_id ON alternate_artist_credits (artist_credit_id)");
-                    
-                    log("Inserted alternate artist credits into database and created index\n");
-                } catch (std::exception& e) {
-                    printf("Error inserting alternate artist credits: %s\n", e.what());
-                }
-            }
-            catch (exception& e)
-            {
-                printf("build artist db exception: %s\n", e.what());
-            }
-        }
-        
-        void
         load_artist_data(const char *query, vector<unsigned int> &ids, vector<string> &texts) {
             try
             {
@@ -587,9 +434,6 @@ class ArtistIndex {
         }
         
         void build() {
-            
-            log("Create alternate artist credits");
-            insert_artist_alternate_artist_credits();
             
             log("load single artist data");
             // TODO: THis process creates duplicates
