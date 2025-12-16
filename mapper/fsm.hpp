@@ -10,23 +10,26 @@ using namespace std;
 #include "search.hpp"
 #include <lb_matching_tools/cleaner.hpp>
 
+// TODO: Review alloc/free of results
+
 // Define all states using a macro
 #define STATE_LIST \
     STATE_ITEM(state_start, 0) \
     STATE_ITEM(state_artist_name_check, 1) \
     STATE_ITEM(state_artist_search, 2) \
     STATE_ITEM(state_clean_artist_name, 3) \
-    STATE_ITEM(state_select_artist_match, 4) \
-    STATE_ITEM(state_stupid_artist_search, 5) \
-    STATE_ITEM(state_recording_search, 6) \
-    STATE_ITEM(state_select_recording_match, 7) \
-    STATE_ITEM(state_has_release_argument, 8) \
-    STATE_ITEM(state_release_search, 9) \
-    STATE_ITEM(state_lookup_canonical_release, 10) \
-    STATE_ITEM(state_evaluate_match, 11) \
-    STATE_ITEM(state_fail, 12) \
-    STATE_ITEM(state_success_fetch_metadata, 13) \
-    STATE_ITEM(state_last, 14)
+    STATE_ITEM(state_clean_artist_search, 4) \
+    STATE_ITEM(state_select_artist_match, 5) \
+    STATE_ITEM(state_stupid_artist_search, 6) \
+    STATE_ITEM(state_recording_search, 7) \
+    STATE_ITEM(state_select_recording_match, 8) \
+    STATE_ITEM(state_has_release_argument, 9) \
+    STATE_ITEM(state_release_search, 10) \
+    STATE_ITEM(state_lookup_canonical_release, 11) \
+    STATE_ITEM(state_evaluate_match, 12) \
+    STATE_ITEM(state_fail, 13) \
+    STATE_ITEM(state_success_fetch_metadata, 14) \
+    STATE_ITEM(state_last, 15)
 
 // Define all events using a macro
 #define EVENT_LIST \
@@ -40,8 +43,8 @@ using namespace std;
     EVENT_ITEM(event_meets_threshold, 7) \
     EVENT_ITEM(event_doesnt_meet_threshold, 8) \
     EVENT_ITEM(event_evaluate_match, 9) \
-    EVENT_ITEM(event_no_matches_not_cleaned, 10) \
-    EVENT_ITEM(event_no_cleanable, 11) \
+    EVENT_ITEM(event_not_cleaned, 10) \
+    EVENT_ITEM(event_no_matches_not_cleaned, 11) \
     EVENT_ITEM(event_cleaned, 12)
 
 // Generate the constants
@@ -86,8 +89,11 @@ static Transition transitions[] = {
     { state_stupid_artist_search,       event_no_matches,              state_fail },
     { state_stupid_artist_search,       event_has_matches,             state_select_artist_match },
 
-    { state_artist_search,              event_no_matches_not_cleaned,  state_clean_artist_name },
+    { state_artist_search,              event_no_matches,              state_clean_artist_name },
     { state_artist_search,              event_has_matches,             state_select_artist_match },
+    
+    { state_clean_artist_name,          event_cleaned,                 state_artist_name_check },
+    { state_clean_artist_name,          event_not_cleaned,             state_fail },
 
     { state_select_artist_match,        event_meets_threshold,         state_recording_search },
     { state_select_artist_match,        event_doesnt_meet_threshold,   state_fail },
@@ -114,13 +120,10 @@ static Transition transitions[] = {
 const int num_transitions = sizeof(transitions) / sizeof(transitions[0]);
 
 class MappingSearch {
-    string                              artist_credit_name, encoded_artist_credit_name;
-    string                              stupid_artist_name;
+    string                              artist_credit_name;
     string                              release_name;
     string                              recording_name;
 
-    int                                 current_state;
-    bool                                has_cleaned_artist;
     
     // Array of function pointers for each state
     typedef bool                        (MappingSearch::*StateFunction)();
@@ -131,9 +134,19 @@ class MappingSearch {
     ArtistIndex                        *artist_index;
     IndexCache                         *index_cache;
     SearchFunctions                    *search_functions;
-    vector<IndexResult>                *artist_matches;     
-    int                                 artist_match, recording_match;
     lb_matching_tools::MetadataCleaner  metadata_cleaner;
+
+    // FSM variables that carry state for the machine
+    // current artist credit name represents the cleaned and/or encoded version of the artist credit
+    string                              current_artist_credit_name;
+    unsigned int                        selected_artist_credit_id;
+    unsigned int                        selected_recording_id;
+    unsigned int                        selected_release_id;
+    int                                 current_state;
+    bool                                has_cleaned_artist, artist_name_cleaned;
+    ReleaseRecordingIndex              *release_recording_index;
+    vector<IndexResult>                *artist_matches, *release_matches, *recording_matches;     
+    int                                 artist_match_index, release_match_index, recording_match_index;
 
     public:
 
@@ -142,13 +155,12 @@ class MappingSearch {
             artist_index = new ArtistIndex(index_dir);
             index_cache = new IndexCache(cache_size);
             search_functions = new SearchFunctions(index_dir, cache_size);
-            
-            artist_match = -1;
-            recording_match = -1;
 
-            current_state = state_start;
+            // not really needed since init does it, but I feel better like this.
+            reset_state_variables();
             
             // Initialize state function array
+            state_functions[state_start] = &MappingSearch::do_start;
             state_functions[state_artist_name_check] = &MappingSearch::do_artist_name_check;
             state_functions[state_artist_search] =  &MappingSearch::do_artist_search;
             state_functions[state_clean_artist_name] = &MappingSearch::do_clean_artist_name;
@@ -168,8 +180,9 @@ class MappingSearch {
             delete artist_index;
             delete index_cache;
             delete search_functions;
-            if (artist_matches != nullptr)
-                delete artist_matches;
+
+            // dealloc state variables
+            reset_state_variables();
         }
 
         void
@@ -208,73 +221,152 @@ class MappingSearch {
                    get_event_name(event));
             return false;
         }
-        
+
+        bool reset_state_variables() {
+            current_state = state_start;
+            artist_name_cleaned = false;
+            current_artist_credit_name.clear();
+
+            selected_artist_credit_id = 0;
+            selected_recording_id = 0;
+            selected_release_id = 0;
+
+            // I wanted to use iterators, but they are too inflexible
+            artist_match_index = -1;
+            release_match_index = -1;
+            recording_match_index = -1;
+
+            delete artist_matches;
+            artist_matches = nullptr;
+            delete release_matches;
+            release_matches = nullptr;
+            delete recording_matches;
+            recording_matches = nullptr;
+
+            delete release_recording_index;
+            release_recording_index = nullptr;
+
+        }
+
+        bool do_start() {
+            reset_state_variables();
+        }
+
         bool do_artist_name_check() {
-            encoded_artist_credit_name = encode.encode_string(artist_credit_name); 
-            if (encoded_artist_credit_name.size())
+            // set current_artist_credit_name
+            auto encoded_artist_credit_name = encode.encode_string(artist_credit_name); 
+            if (encoded_artist_credit_name.size()) {
+                current_artist_credit_name = encoded_artist_credit_name;
                 return enter_transition(event_normal_name);
+            }
             else {
-                stupid_artist_name = encode.encode_string_for_stupid_artists(artist_credit_name); 
-                return enter_transition(event_has_stupid_name);
+                current_artist_credit_name = encode.encode_string_for_stupid_artists(artist_credit_name); 
+                return enter_transition(event_stupid_name);
             }
         }
         
         bool do_artist_search() {
+            // define and store results in artist_matches
             if (artist_matches != nullptr)
                 delete artist_matches;
 
-            printf("ARTIST SEARCH: '%s' (%s)\n", artist_credit_name.c_str(), encoded_artist_credit_name.c_str());
+            printf("ARTIST SEARCH: '%s' (%s)\n", artist_credit_name.c_str(), current_artist_credit_name.c_str());
             artist_matches = artist_index->single_artist_index->search(encoded_artist_credit_name, .7, 's');
             auto multiple_artist_matches = artist_index->multiple_artist_index->search(encoded_artist_credit_name, .7, 'm');
-            
             artist_matches->insert(artist_matches->end(), multiple_artist_matches->begin(), multiple_artist_matches->end()); 
             
-            if (artist_matches->size())
+            if (artist_matches->size()) {
+                sort(artist_matches->begin(), artist_matches->end(), [](const IndexResult& a, const IndexResult& b) {
+                    return a.confidence > b.confidence;
+                });
                 return enter_transition(event_has_matches);
+            }
             else {
                 delete artist_matches;
+                artist_matches = nullptr;
                 if (has_cleaned_artist) 
                     return enter_transition(event_no_matches);
                 else
                     return enter_transition(event_no_matches_not_cleaned);
             }
         }
-        
+
         bool do_clean_artist_name() {
+            // update current_artist_credit_name
             auto cleaned_artist_credit_name = metadata_cleaner.clean_artist(artist_credit_name); 
             if (cleaned_artist_credit_name != artist_credit_name) {
-                has_cleaned_artist = false;
-                artist_credit_name = cleaned_artist_credit_name;
+                current_artist_credit_name = cleaned_artist_credit_name;
+                has_cleaned_artist = true;
+                return enter_transition(event_cleaned);
             }
-            return enter_transition(event_cleaned);
-        }
-
-        bool do_select_artist_match() {
-            sort(artist_matches->begin(), artist_matches->end(), [](const IndexResult& a, const IndexResult& b) {
-                return a.confidence > b.confidence;
-            });
-            
-            current_artist_match = new IndexResult(artist_matches->front());
-            artist_matches->erase(artist_matches->begin());
-            if (current_artist_match->confidence > artist_threshold)
-                return enter_transition(event_evaluate_match);
-            return enter_transition(event_no_matches);
+            return enter_transition(event_not_cleaned);
         }
 
         bool do_stupid_artist_search() {
-            artist_matches = artist_index->stupid_artist_index->search(encoded_artist_credit_name, .7, 's');
-            if (artist_matches->size())
-                return enter_transition(event_has_matches);
-            else {
+            // define and store results in artist_matches
+            // set artist_match_index to -1, not defined
+            // TODO: improve thresholding
+            if (artist_matches != nullptr)
                 delete artist_matches;
+            artist_match_index = -1;
+
+            artist_matches = artist_index->stupid_artist_index->search(current_artist_credit_name, .7, 's');
+            if (artist_matches->size()) {
+                return enter_transition(event_has_matches);
+            } else {
+                delete artist_matches;
+                artist_matches = nullptr;
                 return enter_transition(event_no_matches);
             }
         }
         
+        bool do_select_artist_match() {
+            // set artist_match_index, selected_artist_index_id
+            // dealloc relrec index, if one exists
+
+            if (artist_match_index < 0)
+                artist_match_index = 0;
+            else
+                artist_match_index++;
+
+            if (artist_match_index < artist_matches->size() && (*artist_matches)[artist_match_index].confidence >= artist_threshold) {
+                selected_artist_credit_id = (*artist_matches)[artist_match_index].id;
+                return enter_transition(event_meets_threshold);
+            }
+
+            // no more matches or doesn't meet threshold, same difference
+            return enter_transition(event_doesnt_meet_threshold);
+        }
+
         bool do_recording_search() {
+            // check for release_recording_index, load if nullptr
+            // set recording_matches
+            
+            if (release_recording_index == nullptr)
+                release_recording_index = search_functions->load_recording_release_index(selected_artist_credit_id);
+
+            delete recording_matches;
+            recording_matches = search_functions->recording_search(release_recording_index, recording_name); 
+            if (recording_matches)
+                return enter_transition(event_has_matches);
+           
+            return enter_transition(event_no_matches);
         }
 
         bool do_select_recording_match() {
+            // set recording_match
+            if (recording_match_index < 0)
+                recording_match_index = 0;
+            else
+                recording_match_index++;
+
+            if (recording_match_index < recording_matches->size() && (*recording_matches)[recording_match_index].confidence >= recording_threshold) {
+                selected_recording_id = (*recording_matches)[recording_match_index].id;
+                return enter_transition(event_meets_threshold);
+            }
+
+            // no more matches or doesn't meet threshold, same difference
+            return enter_transition(event_doesnt_meet_threshold);
         }
                 
         bool do_has_release_argument() {
@@ -285,21 +377,26 @@ class MappingSearch {
         }
         
         bool do_release_search() {
-            SearchMatch *r = search_functions->recording_release_search(current_artist_match->id, release_name, recording_name); 
-            if (r && r->confidence >= release_recording_threshold) {
-                current_relrec_match = r;
-                return enter_transition(event_has_matches);
-            }
-            if (r != nullptr)
-                delete r;
+            // check for release_recording_index, load if nullptr
+            // set release_matches
+            
+            if (release_recording_index == nullptr)
+                release_recording_index = search_functions->load_recording_release_index(selected_artist_credit_id);
 
+            delete release_matches;
+            release_matches = search_functions->release_search(release_recording_index, release_name); 
+            if (recording_matches)
+                return enter_transition(event_has_matches);
+           
             return enter_transition(event_no_matches);
         } 
 
         bool do_lookup_canonical_release() {
+            // set release_match by looking up canonical release given artist and recording
         }
         
         bool do_evaluate_match() {
+            // select the right link between recording and release
         }
 
         bool do_fail() {
