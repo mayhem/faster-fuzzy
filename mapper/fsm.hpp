@@ -113,8 +113,8 @@ static Transition transitions[] = {
     { state_lookup_canonical_release,   event_has_matches,             state_evaluate_match },
     { state_lookup_canonical_release,   event_no_matches,              state_fail },
     
-    { state_evaluate_match,             event_meets_threshold,         state_fail },
-    { state_evaluate_match,             event_doesnt_meet_threshold,   state_success_fetch_metadata }
+    { state_evaluate_match,             event_meets_threshold,         state_success_fetch_metadata },
+    { state_evaluate_match,             event_doesnt_meet_threshold,   state_fail }
 };
 
 const int num_transitions = sizeof(transitions) / sizeof(transitions[0]);
@@ -162,7 +162,7 @@ class MappingSearch {
             reset_state_variables();
             
             // Initialize state function array
-            state_functions[state_start] = &MappingSearch::do_start;
+            //state_functions[state_start] = &MappingSearch::do_start;
             state_functions[state_artist_name_check] = &MappingSearch::do_artist_name_check;
             state_functions[state_artist_search] =  &MappingSearch::do_artist_search;
             state_functions[state_clean_artist_name] = &MappingSearch::do_clean_artist_name;
@@ -248,17 +248,18 @@ class MappingSearch {
             delete recording_matches;
             recording_matches = nullptr;
 
-            delete release_recording_index;
+            // don't delete indexes -- the cache owns the objects
             release_recording_index = nullptr;
 
             delete search_match;
             search_match = nullptr;
         }
 
-        bool do_start() {
-            reset_state_variables();
-            return true;
-        }
+//        bool do_start() {
+//            reset_state_variables();
+//            printf("START '%s' '%s' '%s'\n", artist_credit_name.c_str(), release_name.c_str(), recording_name.c_str());
+//            return true;
+//        }
 
         bool do_artist_name_check() {
             // set current_artist_credit_name
@@ -350,8 +351,10 @@ class MappingSearch {
             // check for release_recording_index, load if nullptr
             // set recording_matches
             
-            if (release_recording_index == nullptr)
+            if (release_recording_index == nullptr) {
+                printf("load index\n");
                 release_recording_index = search_functions->load_recording_release_index(selected_artist_credit_id);
+            }
 
             delete recording_matches;
             recording_matches = search_functions->recording_search(release_recording_index, recording_name); 
@@ -426,7 +429,11 @@ class MappingSearch {
         }
 
         bool do_success_fetch_metadata() {
-            return search_functions->fetch_metadata(search_match);
+            bool ret;
+
+            ret = search_functions->fetch_metadata(search_match);
+            printf("ret: %d\n", (int)ret);
+            return ret;
         }
 
         SearchMatch *
@@ -436,8 +443,12 @@ class MappingSearch {
             recording_name = recording_name_arg;
 
             current_state = state_start;
-            if (!enter_transition(event_start)) 
+            reset_state_variables();
+            printf("START '%s' '%s' '%s'\n", artist_credit_name.c_str(), release_name.c_str(), recording_name.c_str());
+            if (!enter_transition(event_start))  {
+                printf("FAIL.\n");
                 return nullptr;
+            }
             
             printf("Final state %s\n", get_state_name(current_state));
             SearchMatch *temp = search_match;
