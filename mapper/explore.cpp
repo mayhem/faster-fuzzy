@@ -50,7 +50,6 @@ class Explorer {
         RecordingIndex     *recording_index;
         MappingSearch   *mapping_search;
         EncodeSearchData    encode;
-        map<unsigned int, vector<unsigned int>> artist_credit_map;
 
     public:
         Explorer(const string &_index_dir) {
@@ -68,59 +67,6 @@ class Explorer {
         
         void load() {
             mapping_search->load();
-            // Load local artist_credit_map for explorer features
-            try {
-                string db_file = index_dir + string("/mapping.db");
-                SQLite::Database db(db_file);
-                SQLite::Statement query(db, "SELECT artist_id, artist_credit_id FROM artist_credit_mapping");
-                while (query.executeStep()) {
-                    unsigned int artist_id = query.getColumn(0).getInt();
-                    unsigned int artist_credit_id = query.getColumn(1).getInt();
-                    artist_credit_map[artist_id].push_back(artist_credit_id);
-                }
-                // Optional: sort and dedup credit IDs for consistency
-                for (auto &entry : artist_credit_map) {
-                    auto &vec = entry.second;
-                    sort(vec.begin(), vec.end());
-                    vec.erase(unique(vec.begin(), vec.end()), vec.end());
-                }
-            } catch (const std::exception &e) {
-                printf("Warning: failed to load artist_credit_map: %s\n", e.what());
-            }
-        }
-       
-        map<unsigned int, vector<unsigned int>>
-        fetch_artist_credit_ids(const vector<IndexResult> &res) {
-            map<unsigned int, vector<unsigned int>> result_map;
-            
-            // Use the preloaded artist credit map instead of querying database
-            for (const auto& result : res) {
-                auto it = artist_credit_map.find(result.id);
-                if (it != artist_credit_map.end()) {
-                    result_map[result.id] = it->second;
-                }
-            }
-            
-            return result_map;
-        }
-
-        void print_artist_credits(unsigned int artist_id) {
-            printf("\nArtist ID: %u\n", artist_id);
-            auto it = artist_credit_map.find(artist_id);
-            if (it == artist_credit_map.end() || it->second.empty()) {
-                printf("Artist credits: none\n\n");
-                return;
-            }
-            // IDs are already sorted/deduped in load(); ensure again just in case
-            vector<unsigned int> credits = it->second;
-            sort(credits.begin(), credits.end());
-            credits.erase(unique(credits.begin(), credits.end()), credits.end());
-            printf("Artist credits: ");
-            for (size_t i = 0; i < credits.size(); ++i) {
-                if (i) printf(",");
-                printf("%u", credits[i]);
-            }
-            printf("\n\n");
         }
         
         string make_comma_sep_string(const vector<string> &str_array) {
@@ -198,6 +144,7 @@ class Explorer {
                 printf("{ \"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\" }\n", 
                     artist_name.c_str(), release_name.c_str(), recording_name.c_str(),
                     mbids.c_str(), result->release_mbid.c_str(), result->recording_mbid.c_str());
+                delete result;
             } else {
                 printf("No match found.\n");
             }
@@ -280,12 +227,9 @@ class Explorer {
                 return;
             }
             
-            // Fetch artist credit IDs for all results
-            map<unsigned int, vector<unsigned int>> artist_credit_ids = fetch_artist_credit_ids(*res);
-            
             printf("\nResults:\n");
-            printf("%-40s %-10s %-8s %-15s\n", "Name", "Confidence", "ID", "Artist Credits");
-            printf("------------------------------------------------------------------------\n");
+            printf("%-40s %-10s %-8s\n", "Name", "Confidence", "ID");
+            printf("------------------------------------------------------------\n");
             
             for (auto &result : *res) {
                 string text;
@@ -295,22 +239,10 @@ class Explorer {
                     text = artist_index->stupid_artist_index->get_index_text(result.result_index);
                 }
                 
-                // Limit artist name to 4 characters
+                // Limit artist name to 40 characters
                 string short_name = text.length() > 40 ? text.substr(0, 40) : text;
                 
-                // Format artist credit IDs
-                string credit_ids_str = "";
-                auto it = artist_credit_ids.find(result.id);
-                if (it != artist_credit_ids.end()) {
-                    for (size_t i = 0; i < it->second.size(); ++i) {
-                        if (i > 0) credit_ids_str += ",";
-                        credit_ids_str += to_string(it->second[i]);
-                    }
-                } else {
-                    credit_ids_str = "none";
-                }
-                
-                printf("%-40s %-10.2f %-8d %-15s\n", short_name.c_str(), result.confidence, result.id, credit_ids_str.c_str());
+                printf("%-40s %-10.2f %-8d\n", short_name.c_str(), result.confidence, result.id);
             }
             printf("\n");
             delete res;
@@ -803,7 +735,6 @@ class Explorer {
             printf("  m <artist name>              - Search in multiple artist index\n");
             printf("  ! <artist name>              - Search in stupid artist index\n");
             printf("  da <encoded text>            - debug artist index by looking up encoded text\n");
-            printf("  ac <artist_id>               - Show artist_credit_ids for an artist\n");
             printf("  drec <artist_credit_id>      - Dump recordings for artist credit from SQLite\n");
             printf("  drel <artist_credit_id>      - Dump releases for artist credit from SQLite\n");
             printf("  rel <artist_credit_id>       - Dump recording index contents and release data\n");
@@ -863,14 +794,6 @@ class Explorer {
                     } else {
                         printf("Usage: da <encoded text>\n");
                         printf("Search for encoded text in artist index (all three indexes)\n");
-                    }
-                } else if (input.substr(0, 3) == "ac ") {
-                    string id_str = input.substr(3);
-                    try {
-                        unsigned int artist_id = stoul(id_str);
-                        print_artist_credits(artist_id);
-                    } catch (const std::exception& e) {
-                        printf("Invalid artist_id: '%s'. Please enter a valid number.\n", id_str.c_str());
                     }
                 } else if (input.substr(0, 5) == "drec ") {
                     string id_str = input.substr(5);
