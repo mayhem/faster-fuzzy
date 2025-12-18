@@ -35,7 +35,7 @@ add_executable(indexer indexer.cpp tfidf_vectorizer.cpp)
 add_executable(test test.cpp tfidf_vectorizer.cpp levenshtein.cpp)
 add_executable(explore explore.cpp tfidf_vectorizer.cpp levenshtein.cpp)
 add_executable(create create_base_index.cpp)
-# add_executable(server server.cpp)
+add_executable(server server.cpp)
 
 include_directories(deps/nmslib/similarity_search/include
                     deps/unidecode/include
@@ -43,6 +43,8 @@ include_directories(deps/nmslib/similarity_search/include
                     deps/cereal
                     deps/SQLiteCpp/include/SQLiteCpp
                     deps/Catch2/src
+                    deps/Crow/include
+                    deps/asio/asio/include
                     ${libpq_SOURCE_DIR}/libpq/interfaces/libpq
                     ${libpq_SOURCE_DIR}/libpq/include
                     deps/listenbrainz-matching-tools/cpp/include
@@ -87,12 +89,4 @@ target_link_libraries(create SQLiteCpp
                              bsd
 )
 
-#target_link_libraries(server NonMetricSpaceLib
-#                             unidecode
-#                             libpcre2-8.a
-#                             armadillo
-#                             SQLiteCpp
-#                             pthread
-#                             cereal
-#                             Catch2::Catch2
-#)
+target_link_libraries(server pthread)

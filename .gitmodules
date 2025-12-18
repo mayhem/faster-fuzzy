@@ -35,3 +35,6 @@
 	path = mapper/deps/listenbrainz-matching-tools
 	url = https://github.com/metabrainz/listenbrainz-matching-tools.git
 	branch = add-cpp-port
+[submodule "mapper/deps/asio"]
+	path = mapper/deps/asio
+	url = https://github.com/chriskohlhoff/asio.git
