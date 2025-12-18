@@ -85,13 +85,8 @@ TestCase test_cases[] = {
     { "void", "Remind a Locus", "verdict for worst dictator", "c8a0cb7a-99c8-4bcd-82d5-bcef201e13d1", "5941ccda-d6b5-4d5e-8a1a-5ca755321482", "ac02d630-b95d-4942-87e7-2b8cc11debf6" },
     { "void", "", "verdict for worst dictator", "c8a0cb7a-99c8-4bcd-82d5-bcef201e13d1", "5941ccda-d6b5-4d5e-8a1a-5ca755321482", "ac02d630-b95d-4942-87e7-2b8cc11debf6" },
     { "鬱P","HAPPYPILLS","ガ","3fdaac99-0261-49a7-92b3-5a909cba187d,130d679a-9a92-4373-8348-0800b6b93a30","df379666-f1de-4789-a8e8-c429a89dd1d2","6fd3bc0e-170f-45e6-a3c8-91943fd61c9c" },
+    { "Eve","pray - Single","pray","66bdd1c9-d1c5-40b7-a487-5061fffbd87d","9117d976-7283-4517-b5ac-513e62009613","f8c50031-b2e0-4b60-b8f6-38215271092c" },
 
-
-// s 鬱P, happypills, ガ
-// release in:  1065353
-// recording, "ga" 2063311
-// 
-// AC's: 1065353,3091565,3258059
 
 // Possible recording/release match issue. requires more research
 //    { "Celtic Woman","20th Anniversary","When You Believe","4d483147-c871-48c4-8470-85e5a66381c5","9659808f-3382-42be-8c5d-477d271f9791","376e5743-7bf5-49ee-9c7e-f00aa479882c" },
@@ -103,8 +98,6 @@ TestCase test_cases[] = {
 //    { "The Beach Boys","The Smile Sessions","Child Is Father of the Man","ebfc1398-8d96-47e3-82c3-f782abcdb13d","581db767-5221-424b-b6a0-d5db2ff707a1","710ef859-ad3e-4e0e-981b-cecad50e41f4" },
 // Needs stupid indexes for release and recordings!
 //    { "!!!","!!!","KooKooKa Fuk‐U","f26c72d3-e52c-467b-b651-679c73d8e1a7","c4d9a024-c5d7-40c4-928d-0e3873cc7228","5c811d80-2743-461a-a163-82e14382aad7" },
-// Detune -- single
-//    { "Eve","pray - Single","pray","66bdd1c9-d1c5-40b7-a487-5061fffbd87d","9117d976-7283-4517-b5ac-513e62009613","f8c50031-b2e0-4b60-b8f6-38215271092c" },
 // Detune, Artist credit for track is quite different. Rmoving all after "," will get the right match
 //    { "Hans Zimmer, Lorne Balfe & Benjamin Wallfisch","Dunkirk: Original Motion Picture Soundtrack","End Titles","9cba57da-0a50-48d0-8a7b-232e31e196a0", "4d4b8a77-6c2e-4e6f-bc12-e563e9efab91","94f64a3f-b7d8-472f-99bb-ca07afad55da" },
 // Data issues

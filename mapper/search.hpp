@@ -260,7 +260,6 @@ class SearchFunctions {
                     }
                 }
             }
-#endif
 
             // Print all links for the recording in rec_result
             printf("      Links for recording (rec_result->result_index=%d):\n", rec_result->result_index);
@@ -273,6 +272,7 @@ class SearchFunctions {
                     break;
                 }
             }
+#endif
 
             
             for(const auto& pair : release_recording_index->links) {
