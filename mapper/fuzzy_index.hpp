@@ -176,7 +176,9 @@ class FuzzyIndex {
             
             reverse(results->begin(), results->end());
             if (query_string.size() > MAX_ENCODED_STRING_LENGTH || has_long) {
-                return post_process_long_query(query_string, results, min_confidence, source);
+                auto updated = post_process_long_query(query_string, results, min_confidence, source);
+                delete results;
+                return updated;
             }
 
             return results;
