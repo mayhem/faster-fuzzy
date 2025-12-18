@@ -67,7 +67,6 @@ class Explorer {
         }
         
         void load() {
-            artist_index->load();
             mapping_search->load();
             // Load local artist_credit_map for explorer features
             try {

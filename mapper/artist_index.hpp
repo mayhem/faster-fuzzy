@@ -455,7 +455,7 @@ class ArtistIndex {
                 if (ret.size() == 0) {
                     auto stupid = encode.encode_string_for_stupid_artists(single_artist_credit_texts[i]);
                     if (stupid.size()) {
-                        stupid_artist_data.insert({ single_artist_credit_ids[i], ret }); 
+                        stupid_artist_data.insert({ single_artist_credit_ids[i], stupid }); 
                         continue;
                     }
                 }
@@ -605,6 +605,7 @@ class ArtistIndex {
                 if (query.executeStep()) {
                     const void* blob_data = query.getColumn(0).getBlob();
                     size_t blob_size = query.getColumn(0).getBytes();
+                    printf("load index %d size: %ld\n", entity_id, blob_size);
                     
                     std::stringstream ss;
                     ss.write(static_cast<const char*>(blob_data), blob_size);
@@ -653,8 +654,8 @@ class ArtistIndex {
             ret = load_index(STUPID_ARTIST_INDEX_ENTITY_ID, stupid_artist_index);
             if (!ret) {
                 throw length_error("failed to load stupid artist index");
-                delete single_artist_index;
-                single_artist_index = nullptr;
+                delete stupid_artist_index;
+                stupid_artist_index = nullptr;
                 return;
             }
         }
