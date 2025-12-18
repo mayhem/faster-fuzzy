@@ -605,7 +605,6 @@ class ArtistIndex {
                 if (query.executeStep()) {
                     const void* blob_data = query.getColumn(0).getBlob();
                     size_t blob_size = query.getColumn(0).getBytes();
-                    printf("load index %d size: %ld\n", entity_id, blob_size);
                     
                     std::stringstream ss;
                     ss.write(static_cast<const char*>(blob_data), blob_size);

@@ -185,22 +185,17 @@ class FuzzyIndex {
         vector<IndexResult> *
         post_process_long_query(const string &query, vector<IndexResult> *results, float min_confidence, char source) {
             vector<IndexResult> *updated = new vector<IndexResult>;
-            
-            // Truncate query to max length to keep comparison consistent with index
-            string truncated_query = query.substr(0, MAX_ENCODED_STRING_LENGTH);
           
             for(int i = results->size() - 1; i >= 0; i--) {
                 unsigned int id = (*results)[i].id;
                 unsigned int index = (*results)[i].result_index;
-                // Also truncate index text for consistent comparison
-                string truncated_index_text = index_texts[index].substr(0, MAX_ENCODED_STRING_LENGTH);
-                size_t dist = lev_edit_distance(truncated_query.size(), (const lev_byte*)truncated_query.c_str(), 
-                                                truncated_index_text.size(), (const lev_byte*)truncated_index_text.c_str(), 1);
+                size_t dist = lev_edit_distance(query.size(), (const lev_byte*)query.c_str(), 
+                                                index_texts[index].size(), (const lev_byte*)index_texts[index].c_str(), 1);
                 float conf;
                 if (dist == 0)
                     conf = 1.0;
                 else 
-                    conf = 1.0 - fabs((float)dist / truncated_query.size());
+                    conf = 1.0 - fabs((float)dist / query.size());
 
                 if (conf >= min_confidence) {
                     IndexResult temp = { id, index, conf, source };
