@@ -75,7 +75,7 @@ class SearchFunctions {
             string db_file = index_dir + string("/mapping.db");
             string query;
             
-            printf("fetch metadata %d %d %d\n", result->artist_credit_id, result->release_id, result->recording_id);
+            log("fetch metadata %d %d %d", result->artist_credit_id, result->release_id, result->recording_id);
             
             if (result->release_id)
                 query = string(fetch_metadata_query);
@@ -180,10 +180,10 @@ class SearchFunctions {
                        const string          &release_name) {
 
             // Improve thresholding
-            printf("    RELEASE SEARCH\n");
+            log("    RELEASE SEARCH");
             auto release_name_encoded = encode.encode_string(release_name); 
             if (release_name_encoded.size() == 0) {
-                printf("    release name contains no word characters.\n");
+                log("    release name contains no word characters.");
                 return nullptr;
             }
 
@@ -196,11 +196,11 @@ class SearchFunctions {
                 
                 for(auto &result : *rel_results) {
                     string text = release_recording_index->release_index->get_index_text(result.result_index);
-                    printf("      %.2f %-8u %-8d %s\n", result.confidence, result.id, result.result_index, text.c_str());
+                    log("      %.2f %-8u %-8d %s", result.confidence, result.id, result.result_index, text.c_str());
                 }     
             }
             else    
-                printf("    no release matches, ignoring release.\n");
+                log("    no release matches, ignoring release.");
 
             return rel_results;
         }
@@ -209,10 +209,10 @@ class SearchFunctions {
         recording_search(ReleaseRecordingIndex *release_recording_index, 
                          const string          &recording_name) {
 
-            printf("    RECORDING SEARCH\n");
+            log("    RECORDING SEARCH");
             auto recording_name_encoded = encode.encode_string(recording_name); 
             if (recording_name_encoded.size() == 0) {
-                printf("    recording name contains no word characters.\n");
+                log("    recording name contains no word characters.");
                 return nullptr;
             }
 
@@ -225,10 +225,10 @@ class SearchFunctions {
                 
                 for(auto &result : *rec_results) {
                     string text = release_recording_index->recording_index->get_index_text(result.result_index);
-                    printf("      %.2f %-8u %s\n", result.confidence, result.id, text.c_str());
+                    log("      %.2f %-8u %s", result.confidence, result.id, text.c_str());
                 }
             } else {
-                printf("      No recording results.\n");
+                log("      No recording results.");
             }
 
             return rec_results;
@@ -240,41 +240,6 @@ class SearchFunctions {
                    IndexResult           *rel_result,
                    IndexResult           *rec_result) {
 
-#if 0
-            printf("    FIND_MATCH DEBUG:\n");
-            printf("      rel_result: id=%u, result_index=%d, confidence=%.2f\n", 
-                   rel_result->id, rel_result->result_index, rel_result->confidence);
-            printf("      rec_result: id=%u, result_index=%d, confidence=%.2f\n", 
-                   rec_result->id, rec_result->result_index, rec_result->confidence);
-            printf("      Looking for rec_result_index=%d with rel_result_id=%u in links\n",
-                   rec_result->result_index, rel_result->id);
-            printf("      Total link entries: %zu\n", release_recording_index->links.size());
-
-            // Print all links that point to the release in rel_result
-            printf("      Links pointing to release (rel_result->id=%u):\n", rel_result->id);
-            for(const auto& pair : release_recording_index->links) {
-                for(const auto& link : pair.second) {
-                    if (link.release_index == rel_result->id) {
-                        printf("        rec_index=%d -> (rel_idx=%u, rel_id=%u, rec_id=%u)\n",
-                               pair.first, link.release_index, link.release_id, link.recording_id);
-                    }
-                }
-            }
-
-            // Print all links for the recording in rec_result
-            printf("      Links for recording (rec_result->result_index=%d):\n", rec_result->result_index);
-            for(const auto& pair : release_recording_index->links) {
-                if (pair.first == rec_result->result_index) {
-                    for(const auto& link : pair.second) {
-                        printf("        rec_index=%d -> (rel_idx=%u, rel_id=%u, rec_id=%u)\n",
-                               pair.first, link.release_index, link.release_id, link.recording_id);
-                    }
-                    break;
-                }
-            }
-#endif
-
-            
             for(const auto& pair : release_recording_index->links) {
                 if (pair.first == rec_result->result_index) {
                     const auto& links_vector = pair.second;
@@ -306,7 +271,7 @@ class SearchFunctions {
                     break; // Found the recording, no need to continue searching
                 }
             }  
-            printf("found no link between recording and release\n");
+            log("found no link between recording and release");
             return nullptr;
         }
 };

@@ -205,10 +205,10 @@ class MappingSearch {
                     current_state = transitions[i].end_state;
                     
                     if (state_functions[current_state] != nullptr) {
-                        printf("current %-30s event %-25s new %-30s\n", 
-                               get_state_name(old_state), 
-                               get_event_name(event),
-                               get_state_name(current_state));
+                        log("current %-30s event %-25s new %-30s", 
+                             get_state_name(old_state), 
+                             get_event_name(event),
+                             get_state_name(current_state));
                         (this->*state_functions[current_state])();
                     }
                     else {
@@ -260,12 +260,6 @@ class MappingSearch {
             search_match = nullptr;
         }
 
-//        bool do_start() {
-//            reset_state_variables();
-//            printf("START '%s' '%s' '%s'\n", artist_credit_name.c_str(), release_name.c_str(), recording_name.c_str());
-//            return true;
-//        }
-
         bool do_artist_name_check() {
             // set current_artist_credit_name
             auto encoded_artist_credit_name = encode.encode_string(artist_credit_name); 
@@ -284,24 +278,24 @@ class MappingSearch {
             if (artist_matches != nullptr)
                 delete artist_matches;
 
-            printf("ARTIST SEARCH: '%s' (%s)\n", artist_credit_name.c_str(), current_artist_credit_name.c_str());
+            log("ARTIST SEARCH: '%s' (%s)", artist_credit_name.c_str(), current_artist_credit_name.c_str());
             auto start = std::chrono::high_resolution_clock::now();
             artist_matches = artist_index->single_artist_index->search(current_artist_credit_name, artist_threshold, 's');
             auto multiple_artist_matches = artist_index->multiple_artist_index->search(current_artist_credit_name, artist_threshold, 'm');
             artist_matches->insert(artist_matches->end(), multiple_artist_matches->begin(), multiple_artist_matches->end()); 
             auto end = std::chrono::high_resolution_clock::now();
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-            printf("Artist search took %ld ms\n", duration.count()); 
+            log("Artist search took %ld ms", duration.count()); 
             
             if (artist_matches->size()) {
                 sort(artist_matches->begin(), artist_matches->end(), [](const IndexResult& a, const IndexResult& b) {
                     return a.confidence > b.confidence;
                 });
 
-                printf("    ARTIST RESULTS:\n");
+                log("    ARTIST RESULTS:");
                 for(const auto &result : *artist_matches) {
                     string name = search_functions->get_artist_credit_name(result.id);
-                    printf("      %.2f %-8u %c %s\n", result.confidence, result.id, result.source, name.c_str());
+                    log("      %.2f %-8u %c %s", result.confidence, result.id, result.source, name.c_str());
                 }
 
                 return enter_transition(event_has_matches);
@@ -339,7 +333,7 @@ class MappingSearch {
             artist_matches = artist_index->stupid_artist_index->search(current_artist_credit_name, .7, 's');
             auto end = std::chrono::high_resolution_clock::now();
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-            printf("Stupid artist search took %ld ms\n", duration.count());
+            log("Stupid artist search took %ld ms", duration.count());
             if (artist_matches->size()) {
                 return enter_transition(event_has_matches);
             } else {
@@ -360,7 +354,7 @@ class MappingSearch {
 
             if (artist_match_index < artist_matches->size() && (*artist_matches)[artist_match_index].confidence >= artist_threshold) {
                 selected_artist_credit_id = (*artist_matches)[artist_match_index].id;
-                printf("artist credit id selected: %u\n", selected_artist_credit_id);
+                log("artist credit id selected: %u", selected_artist_credit_id);
 
                 // Invalidate the current recording matches
                 recording_match_index  = -1;
@@ -390,7 +384,7 @@ class MappingSearch {
             recording_matches = search_functions->recording_search(release_recording_index, recording_name); 
             auto end = std::chrono::high_resolution_clock::now();
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-            printf("Recording search took %ld ms\n", duration.count());
+            log("Recording search took %ld ms", duration.count());
             if (recording_matches && recording_matches->size() > 0)
                 return enter_transition(event_has_matches);
            
@@ -406,7 +400,7 @@ class MappingSearch {
 
             if (recording_match_index < recording_matches->size() && (*recording_matches)[recording_match_index].confidence >= recording_threshold) {
                 selected_recording_id = (*recording_matches)[recording_match_index].id;
-                printf("recording id selected: %u\n", selected_recording_id);
+                log("recording id selected: %u", selected_recording_id);
                 return enter_transition(event_meets_threshold);
             }
 
@@ -433,10 +427,10 @@ class MappingSearch {
             release_matches = search_functions->release_search(release_recording_index, release_name); 
             auto end = std::chrono::high_resolution_clock::now();
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-            printf("Release search took %ld ms\n", duration.count());
+            log("Release search took %ld ms", duration.count());
             if (release_matches && release_matches->size() > 0) {
                 selected_release_id = (*release_matches)[0].id;
-                printf("release id selected: %u\n", selected_release_id);
+                log("release id selected: %u", selected_release_id);
                 release_match_index = 0;
                 return enter_transition(event_has_matches);
             }
@@ -456,7 +450,7 @@ class MappingSearch {
                 return enter_transition(event_no_matches);
 
             release_match_index = 0;
-            printf("canonical release id: %u\n", (*release_matches)[release_match_index].id);
+            log("canonical release id: %u", (*release_matches)[release_match_index].id);
 
             return enter_transition(event_has_matches);
         }
@@ -481,9 +475,7 @@ class MappingSearch {
         bool do_success_fetch_metadata() {
             bool ret;
 
-            ret = search_functions->fetch_metadata(search_match);
-            printf("ret: %d\n", (int)ret);
-            return ret;
+            return search_functions->fetch_metadata(search_match);
         }
 
         SearchMatch *
@@ -496,19 +488,18 @@ class MappingSearch {
 
             current_state = state_start;
             reset_state_variables();
-            printf("START '%s' '%s' '%s'\n", artist_credit_name.c_str(), release_name.c_str(), recording_name.c_str());
+            log("START '%s' '%s' '%s'", artist_credit_name.c_str(), release_name.c_str(), recording_name.c_str());
             if (!enter_transition(event_start))  {
-                printf("FAIL.\n");
                 auto end = std::chrono::high_resolution_clock::now();
                 auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-                printf("Search took %ld ms\n", duration.count());
+                log("Search took %ld ms", duration.count());
                 return nullptr;
             }
             
-            printf("Final state %s\n", get_state_name(current_state));
+            log("Final state %s", get_state_name(current_state));
             auto end = std::chrono::high_resolution_clock::now();
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-            printf("Search took %ld ms\n", duration.count());
+            log("Search took %ld ms", duration.count());
             SearchMatch *temp = search_match;
             search_match = nullptr;
             return temp;
