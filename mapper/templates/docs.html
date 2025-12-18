@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MusicBrainz Mapping API</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+</head>
+<body>
+    <main class="container">
+        <h1>MusicBrainz Mapping API</h1>
+        <p>A fast fuzzy matching service for mapping music metadata to MusicBrainz IDs.</p>
+        
+        <h2>API Endpoints</h2>
+        
+        <article>
+            <h3><code>GET /mapping/lookup</code></h3>
+            <p>Look up a recording by artist, release, and recording name.</p>
+            
+            <h4>Parameters</h4>
+            <table>
+                <thead>
+                    <tr><th>Name</th><th>Required</th><th>Description</th></tr>
+                </thead>
+                <tbody>
+                    <tr><td><code>artist_credit_name</code></td><td>Yes</td><td>The artist name</td></tr>
+                    <tr><td><code>recording_name</code></td><td>Yes</td><td>The recording/track name</td></tr>
+                    <tr><td><code>release_name</code></td><td>No</td><td>The album/release name</td></tr>
+                </tbody>
+            </table>
+            
+            <h4>Example</h4>
+            <pre><code>GET /mapping/lookup?artist_credit_name=portishead&amp;recording_name=glory+box</code></pre>
+            
+            <h4>Response</h4>
+            <pre><code>{
+  "artist_credit_id": 12345,
+  "artist_credit_name": "Portishead",
+  "artist_credit_mbids": ["8f6bd1e4-fbe1-4f50-aa9b-94c450ec0f11"],
+  "release_id": 67890,
+  "release_name": "Dummy",
+  "release_mbid": "...",
+  "recording_id": 11111,
+  "recording_name": "Glory Box",
+  "recording_mbid": "...",
+  "confidence": 0.95
+}</code></pre>
+        </article>
+    </main>
+</body>
+</html>

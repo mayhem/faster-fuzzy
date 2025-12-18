@@ -77,10 +77,17 @@ int main(int argc, char* argv[]) {
     }
 
     crow::SimpleApp app;
+    crow::mustache::set_global_base("templates");
 
     CROW_ROUTE(app, "/")
     ([]() {
-        return "";
+        return "hi";
+    });
+
+    CROW_ROUTE(app, "/docs")
+    ([]() {
+        auto page = crow::mustache::load("docs.html");
+        return page.render();
     });
 
     CROW_ROUTE(app, "/mapping/lookup")
