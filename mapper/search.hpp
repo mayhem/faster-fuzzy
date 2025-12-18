@@ -3,6 +3,7 @@
 #include <set>
 #include <map>
 #include <algorithm>
+#include <memory>
 
 #include "SQLiteCpp.h"
 
@@ -15,7 +16,6 @@
 #include "levenshtein.hpp"
 #include <lb_matching_tools/cleaner.hpp>
 
-// TODO: Implement DB connection re-use
 // TODO: Create dynamic thresholds based on length. Shorter artists will need more checks.
 const float artist_threshold = .7;
 const float release_threshold = .7;
@@ -36,15 +36,26 @@ const char *fetch_metadata_query_without_release =
 
 class SearchFunctions {
     private:
-        string                        index_dir;
-        IndexCache                   *index_cache;
-        EncodeSearchData              encode;
+        string                              index_dir;
+        string                              db_file;
+        IndexCache                         *index_cache;
+        EncodeSearchData                    encode;
+        std::unique_ptr<SQLite::Database>   db;
+
+        // Lazy initialization of DB connection
+        SQLite::Database& get_db() {
+            if (!db) {
+                db = std::make_unique<SQLite::Database>(db_file);
+            }
+            return *db;
+        }
 
     public:
 
         // cache size is specified in MB
         SearchFunctions(const string &_index_dir, int cache_size) {
             index_dir = _index_dir;
+            db_file = index_dir + string("/mapping.db");
             index_cache = new IndexCache(cache_size);
         }
         
@@ -72,7 +83,6 @@ class SearchFunctions {
 
         bool
         fetch_metadata(SearchMatch *result) {
-            string db_file = index_dir + string("/mapping.db");
             string query;
             
             log("fetch metadata %d %d %d", result->artist_credit_id, result->release_id, result->recording_id);
@@ -84,8 +94,7 @@ class SearchFunctions {
            
             try
             {
-                SQLite::Database    db(db_file);
-                SQLite::Statement   db_query(db, string(query));
+                SQLite::Statement   db_query(get_db(), string(query));
                 
                 if (result->release_id) {
                     db_query.bind(1, result->release_id);
@@ -115,12 +124,9 @@ class SearchFunctions {
         // Debug function to fetch artist credit name - can be removed later
         string
         get_artist_credit_name(unsigned int artist_credit_id) {
-            string db_file = index_dir + string("/mapping.db");
             try {
-                SQLite::Database db(db_file);
-                
                 string sql = "SELECT artist_credit_name FROM mapping WHERE artist_credit_id = ? LIMIT 1";
-                SQLite::Statement query(db, sql);
+                SQLite::Statement query(get_db(), sql);
                 
                 query.bind(1, artist_credit_id);
 
@@ -136,12 +142,9 @@ class SearchFunctions {
 
         vector<IndexResult> *
         get_canonical_release_id(unsigned int artist_credit_id, unsigned int recording_id) {
-            string db_file = index_dir + string("/mapping.db");
             try {
-                SQLite::Database db(db_file);
-                
                 string sql = "SELECT release_id FROM mapping WHERE artist_credit_id = ? AND recording_id = ? ORDER BY score LIMIT 1";
-                SQLite::Statement query(db, sql);
+                SQLite::Statement query(get_db(), sql);
                 
                 query.bind(1, artist_credit_id);
                 query.bind(2, recording_id);
@@ -166,7 +169,7 @@ class SearchFunctions {
             auto release_recording_index = index_cache->get(artist_credit_id);
             if (!release_recording_index) {
                 RecordingIndex rec_index(index_dir);
-                release_recording_index = rec_index.load(artist_credit_id);
+                release_recording_index = rec_index.load(artist_credit_id, get_db());
                 if (release_recording_index == nullptr)
                     return nullptr;
                 index_cache->add(artist_credit_id, release_recording_index);

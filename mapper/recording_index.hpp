@@ -140,8 +140,6 @@ class RecordingIndex {
                 printf("artist_credit %d: release index build error: '%s'\n", artist_credit_id, e.what());
             }
             
-            // TODO: does rank need to be saved to disk? 
-            
             // Sort each vector of ReleaseRecordingLink by release_id
             for (auto& pair : links) {
                 sort(pair.second.begin(), pair.second.end(), 
@@ -154,14 +152,14 @@ class RecordingIndex {
             return ret;
         }
 
+        // Load with external DB connection (for connection reuse in server)
         ReleaseRecordingIndex *
-        load(const int artist_credit_id) {
+        load(const int artist_credit_id, SQLite::Database &db) {
             FuzzyIndex                   *recording_index = new FuzzyIndex();
             FuzzyIndex                   *release_index = new FuzzyIndex();
             map<unsigned int, vector<ReleaseRecordingLink>>  links;
             try
             {
-                SQLite::Database      db(db_file);
                 SQLite::Statement     query(db, fetch_blob_query);
             
                 query.bind(1, artist_credit_id);
@@ -187,5 +185,12 @@ class RecordingIndex {
                 printf("load rec index db exception: %s\n", e.what());
             }
             return nullptr;
+        }
+
+        // Load with internal DB connection (for standalone tools)
+        ReleaseRecordingIndex *
+        load(const int artist_credit_id) {
+            SQLite::Database db(db_file);
+            return load(artist_credit_id, db);
         }
 };
