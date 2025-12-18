@@ -283,6 +283,7 @@ class MappingSearch {
             artist_matches = artist_index->single_artist_index->search(current_artist_credit_name, artist_threshold, 's');
             auto multiple_artist_matches = artist_index->multiple_artist_index->search(current_artist_credit_name, artist_threshold, 'm');
             artist_matches->insert(artist_matches->end(), multiple_artist_matches->begin(), multiple_artist_matches->end()); 
+            delete multiple_artist_matches;
             auto end = std::chrono::high_resolution_clock::now();
             auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
             log("Artist search took %ld ms", duration.count()); 
