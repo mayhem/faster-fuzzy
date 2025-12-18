@@ -76,8 +76,8 @@ class IndexCache {
                 for(int i = 0; i < items_to_remove; i++) {
                     unsigned int entity_id = access_times[i].first;
                     last_accessed.erase(entity_id);
-                    index.erase(entity_id);
                     delete index[entity_id];
+                    index.erase(entity_id);
                 }
                 mtx.unlock();
                 

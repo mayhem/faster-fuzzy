@@ -34,6 +34,8 @@ class ReleaseRecordingIndex {
             links = _links;
         };
 
+        ~ReleaseRecordingIndex();
+
         template<class Archive>
         void serialize(Archive & archive)
         {

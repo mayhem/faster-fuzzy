@@ -10,6 +10,13 @@
 
 using namespace std;
 
+// Destructor implementation for ReleaseRecordingIndex (declared in defs.hpp)
+// Must be here because FuzzyIndex is only forward-declared in defs.hpp
+ReleaseRecordingIndex::~ReleaseRecordingIndex() {
+    delete recording_index;
+    delete release_index;
+}
+
 const char *fetch_query = R"(
       SELECT artist_credit_id   
            , release_id  
@@ -177,12 +184,16 @@ class RecordingIndex {
                     return new ReleaseRecordingIndex(recording_index, release_index, links);
                 } else {
                     printf("Cannot load index for %d\n", artist_credit_id);
-                    throw std::length_error("index not found in db");
+                    delete recording_index;
+                    delete release_index;
+                    return nullptr;
                 }
             }
             catch (std::exception& e)
             {
                 printf("load rec index db exception: %s\n", e.what());
+                delete recording_index;
+                delete release_index;
             }
             return nullptr;
         }
