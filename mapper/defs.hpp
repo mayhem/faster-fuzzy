@@ -43,17 +43,12 @@ class ReleaseRecordingIndex {
 
 class IndexResult {
     public:
-        bool           is_valid;
         unsigned int   id;
         unsigned int   result_index;
         float          confidence;
         char           source;
         
-        IndexResult() {
-            is_valid = false;
-        }
         IndexResult(unsigned int _id, unsigned int _result_index, float _confidence, char _source) {
-            is_valid = true;
             id = _id;
             confidence = _confidence;
             result_index = _result_index;
@@ -62,7 +57,6 @@ class IndexResult {
 
         // Copy constructor
         IndexResult(const IndexResult& other) {
-            is_valid = other.is_valid;
             id = other.id;
             result_index = other.result_index;
             confidence = other.confidence;

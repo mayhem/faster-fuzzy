@@ -112,27 +112,30 @@ class SearchFunctions {
             return false;
         }
        
-        unsigned int
+        vector<IndexResult> *
         get_canonical_release_id(unsigned int artist_credit_id, unsigned int recording_id) {
             string db_file = index_dir + string("/mapping.db");
             try {
                 SQLite::Database db(db_file);
                 
-                string sql = "SELECT release_id FROM mapping WHERE artist_credit_id = ? AND recording_id = ? ORDER BY score";
+                string sql = "SELECT release_id FROM mapping WHERE artist_credit_id = ? AND recording_id = ? ORDER BY score LIMIT 1";
                 SQLite::Statement query(db, sql);
                 
-                // Bind all the artist_credit_ids
                 query.bind(1, artist_credit_id);
                 query.bind(2, recording_id);
 
                 if (query.executeStep()) {
-                    return query.getColumn(0).getUInt();
+                    auto results = new vector<IndexResult>();
+                    unsigned int release_id = query.getColumn(0).getUInt();
+                    float score = 1.0;
+                    results->push_back(IndexResult(release_id, 0, score, 'r'));
+                    return results;
                 } 
             }
             catch (std::exception& e) {
-                printf("fetch_alternate_artist_credits db exception: %s\n", e.what());
+                printf("get_canonical_release_id db exception: %s\n", e.what());
             }
-           return 0;
+            return nullptr;
         }
 
         ReleaseRecordingIndex *
@@ -214,35 +217,58 @@ class SearchFunctions {
                    ReleaseRecordingIndex *release_recording_index, 
                    IndexResult           *rel_result,
                    IndexResult           *rec_result) {
-         
-            if (rel_result->is_valid && rec_result->is_valid) {
-                for(const auto& pair : release_recording_index->links) {
-                    if (pair.first == rec_result->result_index) {
-                        // Use binary search to find matching release_index since vector is sorted by release_index
-                        const auto& links_vector = pair.second;
-                        auto it = lower_bound(links_vector.begin(), links_vector.end(), rel_result->id,
-                                            [](const ReleaseRecordingLink& link, unsigned int target_release_index) {
-                                                return link.release_index < target_release_index;
-                                            });
-                        
-                        // Check if we found a match
-                        if (it != links_vector.end() && it->release_index == rel_result->id) {
-                            float score = (rec_result->confidence + rel_result->confidence) / 2.0;
-                            return new SearchMatch(artist_credit_id, it->release_id, it->recording_id, score);
-                        }
-                        break; // Found the recording, no need to continue searching
+
+            printf("    FIND_MATCH DEBUG:\n");
+            printf("      rel_result: id=%u, result_index=%d, confidence=%.2f\n", 
+                   rel_result->id, rel_result->result_index, rel_result->confidence);
+            printf("      rec_result: id=%u, result_index=%d, confidence=%.2f\n", 
+                   rec_result->id, rec_result->result_index, rec_result->confidence);
+            printf("      Looking for rec_result_index=%d with rel_result_id=%u in links\n",
+                   rec_result->result_index, rel_result->id);
+            printf("      Total link entries: %zu\n", release_recording_index->links.size());
+
+            // Print all links that point to the release in rel_result
+            printf("      Links pointing to release (rel_result->id=%u):\n", rel_result->id);
+            for(const auto& pair : release_recording_index->links) {
+                for(const auto& link : pair.second) {
+                    if (link.release_index == rel_result->id) {
+                        printf("        rec_index=%d -> (rel_idx=%u, rel_id=%u, rec_id=%u)\n",
+                               pair.first, link.release_index, link.release_id, link.recording_id);
                     }
-                }  
+                }
             }
-            else
-                return nullptr;
 
-            if (rec_result->is_valid)
-                return new SearchMatch(artist_credit_id,
-                                        release_recording_index->links[rec_result->result_index][0].release_id,
-                                        release_recording_index->links[rec_result->result_index][0].recording_id,
-                                        rec_result->confidence);
+            // Print all links for the recording in rec_result
+            printf("      Links for recording (rec_result->result_index=%d):\n", rec_result->result_index);
+            for(const auto& pair : release_recording_index->links) {
+                if (pair.first == rec_result->result_index) {
+                    for(const auto& link : pair.second) {
+                        printf("        rec_index=%d -> (rel_idx=%u, rel_id=%u, rec_id=%u)\n",
+                               pair.first, link.release_index, link.release_id, link.recording_id);
+                    }
+                    break;
+                }
+            }
 
-           return nullptr;
+            
+            for(const auto& pair : release_recording_index->links) {
+                if (pair.first == rec_result->result_index) {
+                    // Use binary search to find matching release_index since vector is sorted by release_index
+                    const auto& links_vector = pair.second;
+                    auto it = lower_bound(links_vector.begin(), links_vector.end(), rel_result->result_index,
+                                        [](const ReleaseRecordingLink& link, unsigned int target_release_index) {
+                                            return link.release_index < target_release_index;
+                                        });
+                    
+                    // Check if we found a match
+                    if (it != links_vector.end() && it->release_index == rel_result->result_index) {
+                        float score = (rec_result->confidence + rel_result->confidence) / 2.0;
+                        return new SearchMatch(artist_credit_id, it->release_id, it->recording_id, score);
+                    }
+                    break; // Found the recording, no need to continue searching
+                }
+            }  
+            printf("found no link between recording and release\n");
+            return nullptr;
         }
 };

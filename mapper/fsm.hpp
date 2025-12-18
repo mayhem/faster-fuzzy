@@ -238,6 +238,7 @@ class MappingSearch {
             release_match_index = -1;
             recording_match_index = -1;
 
+            artist_confidence = 0.0;
             release_confidence = 0.0;
             recording_confidence = 0.0;
 
@@ -396,27 +397,32 @@ class MappingSearch {
 
             delete release_matches;
             release_matches = search_functions->release_search(release_recording_index, release_name); 
-            if (recording_matches)
+            if (release_matches) {
+                selected_release_id = (*release_matches)[0].id;
+                release_match_index = 0;
                 return enter_transition(event_has_matches);
+            }
            
             return enter_transition(event_no_matches);
         } 
 
         bool do_lookup_canonical_release() {
             // set release_match by looking up canonical release given artist and recording
-            selected_release_id = search_functions->get_canonical_release_id(selected_artist_credit_id, selected_recording_id);
-            if (selected_release_id == 0)
+            release_matches = search_functions->get_canonical_release_id(selected_artist_credit_id, selected_recording_id);
+            if (release_matches == nullptr)
                 return enter_transition(event_no_matches);
+
+            release_match_index = 0;
 
             return enter_transition(event_has_matches);
         }
         
         bool do_evaluate_match() {
             // select the right link between recording and release
-            search_match =  search_functions->find_match(selected_artist_credit_id,
-                                                         release_recording_index, 
-                                                         &(*release_matches)[release_match_index],
-                                                         &(*recording_matches)[recording_match_index]);
+            search_match = search_functions->find_match(selected_artist_credit_id,
+                                                        release_recording_index, 
+                                                        &(*release_matches)[release_match_index],
+                                                        &(*recording_matches)[recording_match_index]);
             if (search_match)
                 return enter_transition(event_meets_threshold);
             else
