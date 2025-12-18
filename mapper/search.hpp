@@ -277,17 +277,31 @@ class SearchFunctions {
             
             for(const auto& pair : release_recording_index->links) {
                 if (pair.first == rec_result->result_index) {
-                    // Use binary search to find matching release_index since vector is sorted by release_index
                     const auto& links_vector = pair.second;
-                    auto it = lower_bound(links_vector.begin(), links_vector.end(), rel_result->result_index,
-                                        [](const ReleaseRecordingLink& link, unsigned int target_release_index) {
-                                            return link.release_index < target_release_index;
-                                        });
                     
-                    // Check if we found a match
-                    if (it != links_vector.end() && it->release_index == rel_result->result_index) {
-                        float score = (rec_result->confidence + rel_result->confidence) / 2.0;
-                        return new SearchMatch(artist_credit_id, it->release_id, it->recording_id, score);
+                    // Different matching strategy based on source:
+                    // 'r' = canonical release lookup (match by release_id)
+                    // 'l' = fuzzy release search (match by release_index)
+                    if (rel_result->source == 'r') {
+                        // Canonical lookup: use binary search on release_id (sorted)
+                        auto it = lower_bound(links_vector.begin(), links_vector.end(), rel_result->id,
+                                            [](const ReleaseRecordingLink& link, unsigned int target_release_id) {
+                                                return link.release_id < target_release_id;
+                                            });
+                        
+                        if (it != links_vector.end() && it->release_id == rel_result->id) {
+                            float score = (rec_result->confidence + rel_result->confidence) / 2.0;
+                            return new SearchMatch(artist_credit_id, it->release_id, it->recording_id, score);
+                        }
+                    } else {
+                        // Fuzzy search: linear search by release_index (not sorted by this field)
+                        // Not ideal: consider improving this.
+                        for (const auto& link : links_vector) {
+                            if (link.release_index == rel_result->result_index) {
+                                float score = (rec_result->confidence + rel_result->confidence) / 2.0;
+                                return new SearchMatch(artist_credit_id, link.release_id, link.recording_id, score);
+                            }
+                        }
                     }
                     break; // Found the recording, no need to continue searching
                 }

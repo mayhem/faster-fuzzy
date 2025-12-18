@@ -439,6 +439,7 @@ class MappingSearch {
                 return enter_transition(event_no_matches);
 
             release_match_index = 0;
+            printf("canonical release id: %u\n", (*release_matches)[release_match_index].id);
 
             return enter_transition(event_has_matches);
         }

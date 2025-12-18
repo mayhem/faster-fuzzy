@@ -37,6 +37,13 @@ int main(int argc, char *argv[])
     // Last argument should be the index directory
     index_dir = string(argv[argc - 1]);
     
+    // Validate that index_dir is not a flag
+    if (index_dir.rfind("--", 0) == 0) {
+        printf("Error: Missing index directory. Last argument appears to be a flag: %s\n", index_dir.c_str());
+        printf("Usage: mapping_create [--skip-artists] [--force-rebuild] <index_dir>\n");
+        return -1;
+    }
+    
     // Validate flag combinations
     if (skip_artists && force_rebuild) {
         printf("Error: --skip-artists and --force-rebuild cannot be used together\n");

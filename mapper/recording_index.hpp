@@ -142,11 +142,11 @@ class RecordingIndex {
             
             // TODO: does rank need to be saved to disk? 
             
-            // Sort each vector of ReleaseRecordingLink by release_index
+            // Sort each vector of ReleaseRecordingLink by release_id
             for (auto& pair : links) {
                 sort(pair.second.begin(), pair.second.end(), 
                      [](const ReleaseRecordingLink& a, const ReleaseRecordingLink& b) {
-                         return a.release_index < b.release_index;
+                         return a.release_id < b.release_id;
                      });
             }
             
