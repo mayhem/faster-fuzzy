@@ -99,7 +99,7 @@ static Transition transitions[] = {
     { state_select_artist_match,        event_doesnt_meet_threshold,   state_fail },
 
     { state_recording_search,           event_has_matches,             state_select_recording_match },
-    { state_recording_search,           event_no_matches,              state_fail },
+    { state_recording_search,           event_no_matches,              state_select_artist_match },
 
     { state_select_recording_match,     event_meets_threshold,         state_has_release_argument },
     { state_select_recording_match,     event_doesnt_meet_threshold,   state_fail },
@@ -108,13 +108,13 @@ static Transition transitions[] = {
     { state_has_release_argument,       event_no,                      state_lookup_canonical_release },
 
     { state_release_search,             event_has_matches,             state_evaluate_match },
-    { state_release_search,             event_no_matches,              state_fail },
+    { state_release_search,             event_no_matches,              state_select_artist_match },
 
     { state_lookup_canonical_release,   event_has_matches,             state_evaluate_match },
     { state_lookup_canonical_release,   event_no_matches,              state_fail },
     
     { state_evaluate_match,             event_meets_threshold,         state_success_fetch_metadata },
-    { state_evaluate_match,             event_doesnt_meet_threshold,   state_fail }
+    { state_evaluate_match,             event_doesnt_meet_threshold,   state_select_recording_match }
 };
 
 const int num_transitions = sizeof(transitions) / sizeof(transitions[0]);
@@ -162,7 +162,6 @@ class MappingSearch {
             reset_state_variables();
             
             // Initialize state function array
-            //state_functions[state_start] = &MappingSearch::do_start;
             state_functions[state_artist_name_check] = &MappingSearch::do_artist_name_check;
             state_functions[state_artist_search] =  &MappingSearch::do_artist_search;
             state_functions[state_clean_artist_name] = &MappingSearch::do_clean_artist_name;
@@ -289,6 +288,13 @@ class MappingSearch {
                 sort(artist_matches->begin(), artist_matches->end(), [](const IndexResult& a, const IndexResult& b) {
                     return a.confidence > b.confidence;
                 });
+
+                printf("    ARTIST RESULTS:\n");
+                for(const auto &result : *artist_matches) {
+                    string name = search_functions->get_artist_credit_name(result.id);
+                    printf("      %.2f %-8u %c %s\n", result.confidence, result.id, result.source, name.c_str());
+                }
+
                 return enter_transition(event_has_matches);
             }
             else {
@@ -341,6 +347,16 @@ class MappingSearch {
 
             if (artist_match_index < artist_matches->size() && (*artist_matches)[artist_match_index].confidence >= artist_threshold) {
                 selected_artist_credit_id = (*artist_matches)[artist_match_index].id;
+                printf("artist credit id selected: %u\n", selected_artist_credit_id);
+
+                // Invalidate the current recording matches
+                recording_match_index  = -1;
+                delete recording_matches;
+                recording_matches = nullptr;
+
+                // don't delete the index, its owned by the cache
+                release_recording_index = nullptr;
+
                 return enter_transition(event_meets_threshold);
             }
 
@@ -353,13 +369,12 @@ class MappingSearch {
             // set recording_matches
             
             if (release_recording_index == nullptr) {
-                printf("load index\n");
                 release_recording_index = search_functions->load_recording_release_index(selected_artist_credit_id);
             }
 
             delete recording_matches;
             recording_matches = search_functions->recording_search(release_recording_index, recording_name); 
-            if (recording_matches)
+            if (recording_matches && recording_matches->size() > 0)
                 return enter_transition(event_has_matches);
            
             return enter_transition(event_no_matches);
@@ -374,6 +389,7 @@ class MappingSearch {
 
             if (recording_match_index < recording_matches->size() && (*recording_matches)[recording_match_index].confidence >= recording_threshold) {
                 selected_recording_id = (*recording_matches)[recording_match_index].id;
+                printf("recording id selected: %u\n", selected_recording_id);
                 return enter_transition(event_meets_threshold);
             }
 
@@ -397,8 +413,9 @@ class MappingSearch {
 
             delete release_matches;
             release_matches = search_functions->release_search(release_recording_index, release_name); 
-            if (release_matches) {
+            if (release_matches && release_matches->size() > 0) {
                 selected_release_id = (*release_matches)[0].id;
+                printf("release id selected: %u\n", selected_release_id);
                 release_match_index = 0;
                 return enter_transition(event_has_matches);
             }
@@ -407,6 +424,11 @@ class MappingSearch {
         } 
 
         bool do_lookup_canonical_release() {
+
+            // we only need to do this once for a search
+            if (release_match_index == 0)
+                return enter_transition(event_has_matches);
+
             // set release_match by looking up canonical release given artist and recording
             release_matches = search_functions->get_canonical_release_id(selected_artist_credit_id, selected_recording_id);
             if (release_matches == nullptr)

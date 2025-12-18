@@ -112,6 +112,28 @@ class SearchFunctions {
             return false;
         }
        
+        // Debug function to fetch artist credit name - can be removed later
+        string
+        get_artist_credit_name(unsigned int artist_credit_id) {
+            string db_file = index_dir + string("/mapping.db");
+            try {
+                SQLite::Database db(db_file);
+                
+                string sql = "SELECT artist_credit_name FROM mapping WHERE artist_credit_id = ? LIMIT 1";
+                SQLite::Statement query(db, sql);
+                
+                query.bind(1, artist_credit_id);
+
+                if (query.executeStep()) {
+                    return query.getColumn(0).getString();
+                } 
+            }
+            catch (std::exception& e) {
+                printf("get_artist_credit_name db exception: %s\n", e.what());
+            }
+            return "";
+        }
+
         vector<IndexResult> *
         get_canonical_release_id(unsigned int artist_credit_id, unsigned int recording_id) {
             string db_file = index_dir + string("/mapping.db");
