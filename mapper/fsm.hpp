@@ -29,7 +29,8 @@ using namespace std;
     STATE_ITEM(state_evaluate_match, 12) \
     STATE_ITEM(state_fail, 13) \
     STATE_ITEM(state_success_fetch_metadata, 14) \
-    STATE_ITEM(state_last, 15)
+    STATE_ITEM(state_select_release_match, 15) \
+    STATE_ITEM(state_last, 16)
 
 // Define all events using a macro
 #define EVENT_LIST \
@@ -102,13 +103,16 @@ static Transition transitions[] = {
     { state_recording_search,           event_no_matches,              state_select_artist_match },
 
     { state_select_recording_match,     event_meets_threshold,         state_has_release_argument },
-    { state_select_recording_match,     event_doesnt_meet_threshold,   state_fail },
+    { state_select_recording_match,     event_doesnt_meet_threshold,   state_select_artist_match },
 
     { state_has_release_argument,       event_yes,                     state_release_search },
     { state_has_release_argument,       event_no,                      state_lookup_canonical_release },
 
     { state_release_search,             event_has_matches,             state_evaluate_match },
     { state_release_search,             event_no_matches,              state_select_artist_match },
+
+    { state_select_release_match,       event_meets_threshold,         state_evaluate_match },
+    { state_select_release_match,       event_no_matches,              state_select_release_match },
 
     { state_lookup_canonical_release,   event_has_matches,             state_evaluate_match },
     { state_lookup_canonical_release,   event_no_matches,              state_fail },

@@ -240,6 +240,7 @@ class SearchFunctions {
                    IndexResult           *rel_result,
                    IndexResult           *rec_result) {
 
+#if 0
             printf("    FIND_MATCH DEBUG:\n");
             printf("      rel_result: id=%u, result_index=%d, confidence=%.2f\n", 
                    rel_result->id, rel_result->result_index, rel_result->confidence);
@@ -259,6 +260,7 @@ class SearchFunctions {
                     }
                 }
             }
+#endif
 
             // Print all links for the recording in rec_result
             printf("      Links for recording (rec_result->result_index=%d):\n", rec_result->result_index);
