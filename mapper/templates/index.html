@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ListenBrainz MBID Mapper 2.0</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <style>
+        .timing { color: var(--pico-muted-color); font-size: 0.9em; margin-top: 1rem; }
+        .no-match { color: var(--pico-del-color); }
+        .match { color: var(--pico-ins-color); }
+        .result-table td:first-child { font-weight: 600; width: 180px; }
+        .mbid { font-family: monospace; font-size: 0.85em; }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <h1>ListenBrainz MBID Mapper 2.0</h1>
+        <p>Search for recordings and get MusicBrainz IDs.</p>
+        
+        <form method="get" action="/">
+            <div class="grid">
+                <label>
+                    Artist Name <span style="color: var(--pico-del-color)">*</span>
+                    <input type="text" name="artist_credit_name" value="{{artist_credit_name}}" placeholder="e.g. Portishead" required>
+                </label>
+                <label>
+                    Release Name <small>(optional)</small>
+                    <input type="text" name="release_name" value="{{release_name}}" placeholder="e.g. Dummy">
+                </label>
+                <label>
+                    Recording Name <span style="color: var(--pico-del-color)">*</span>
+                    <input type="text" name="recording_name" value="{{recording_name}}" placeholder="e.g. Glory Box" required>
+                </label>
+            </div>
+            <button type="submit">Search</button>
+        </form>
+        
+        {{#has_match}}
+        <article>
+            <summary>Found match</summary>
+            <table class="result-table">
+                <tr>
+                    <td>Artist Credit</td>
+                    <td>{{result_artist_credit_name}}</td>
+                </tr>
+                <tr>
+                    <td>Artist MBIDs</td>
+                    <td class="mbid">{{#artist_mbids}}<a href="https://musicbrainz.org/artist/{{mbid}}" target="_blank">{{mbid}}</a>{{^last}}, {{/last}}{{/artist_mbids}}</td>
+                </tr>
+                <tr>
+                    <td>Release</td>
+                    <td>{{result_release_name}}</td>
+                </tr>
+                <tr>
+                    <td>Release MBID</td>
+                    <td class="mbid"><a href="https://musicbrainz.org/release/{{result_release_mbid}}" target="_blank">{{result_release_mbid}}</a></td>
+                </tr>
+                <tr>
+                    <td>Recording</td>
+                    <td>{{result_recording_name}}</td>
+                </tr>
+                <tr>
+                    <td>Recording MBID</td>
+                    <td class="mbid"><a href="https://musicbrainz.org/recording/{{result_recording_mbid}}" target="_blank">{{result_recording_mbid}}</a></td>
+                </tr>
+                <tr>
+                    <td>Confidence</td>
+                    <td>{{result_confidence}}</td>
+                </tr>
+            </table>
+        </article>
+        {{/has_match}}
+        
+        {{^has_match}}
+        <article>
+            <header class="no-match">✗ No Match Found</header>
+            <p>No matching recording was found for the given search criteria.</p>
+        </article>
+        {{/has_match}}
+        
+        <p class="timing">Search completed in <strong>{{search_time_ms}} ms</strong></p>
+
+        {{#searched}}
+        <hr>
+        
+        <article>
+            <summary>Search Query</summary>
+            <table class="result-table">
+                <tr>
+                    <td>Artist</td>
+                    <td>{{artist_credit_name}}</td>
+                </tr>
+                {{#release_name}}
+                <tr>
+                    <td>Release</td>
+                    <td>{{release_name}}</td>
+                </tr>
+                {{/release_name}}
+                <tr>
+                    <td>Recording</td>
+                    <td>{{recording_name}}</td>
+                </tr>
+            </table>
+        </article>
+        {{/searched}}
+        
+        <footer>
+            <p><a href="/docs">API Documentation</a></p>
+        </footer>
+    </main>
+</body>
+</html>

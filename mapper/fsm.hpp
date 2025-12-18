@@ -163,7 +163,13 @@ class MappingSearch {
             index_cache = new IndexCache(cache_size);
             search_functions = new SearchFunctions(index_dir, cache_size);
 
-            // not really needed since init does it, but I feel better like this.
+            // Initialize pointers to nullptr before reset_state_variables() tries to delete them
+            artist_matches = nullptr;
+            release_matches = nullptr;
+            recording_matches = nullptr;
+            search_match = nullptr;
+            release_recording_index = nullptr;
+
             reset_state_variables();
             
             // Initialize state function array
