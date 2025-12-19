@@ -7,10 +7,11 @@ services:
     volumes:
       - mapper-volume:/data
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
-      - INDEX_DIR="/data"
-      - CANONICAL_MUSICBRAINZ_DATA_CONNECT="dbname=musicbrainz_db user=musicbrainz host=localhost port=5432 password=musicbrainz"
+      - INDEX_DIR=/data
+      - CANONICAL_MUSICBRAINZ_DATA_CONNECT=dbname=musicbrainz_db user=musicbrainz host=localhost port=5432 password=musicbrainz
     networks:
       - musicbrainz
     command: ["/mapper/create"]
@@ -22,9 +23,10 @@ services:
     volumes:
       - mapper-volume:/data
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
-      - INDEX_DIR="/data"
+      - INDEX_DIR=/data
       - NUM_BUILD_THREADS=0
     networks:
       - musicbrainz
@@ -38,10 +40,11 @@ services:
     volumes:
       - mapper-volume:/data
     env_file:
-      - .env
+      - path: .env
+        required: false
     environment:
-      - INDEX_DIR="/data"
-      - HOST="127.0.0.1"
+      - INDEX_DIR=/data
+      - HOST=127.0.0.1
       - PORT=5000
       - TEMPLATE_DIR="/mapper/templates"
       - NUM_THREADS=0
