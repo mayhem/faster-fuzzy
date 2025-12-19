@@ -12,6 +12,18 @@ services:
       - musicbrainz
     command: ["/mapper/create", "/data", "--build-indexes"]
 
+  make_cache:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - mapper-volume:/data
+    env_file:
+      - .env
+    networks:
+      - musicbrainz
+    command: ["/mapper/indexer", "/data"]
+
   # Run this to start the mapper
   mapper:
     build:
