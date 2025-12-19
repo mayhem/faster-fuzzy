@@ -20,6 +20,7 @@ cmake -DCMAKE_BUILD_TYPE=Release \
       -DWITHOUT_TESTS=ON \
       -DBUILD_SANDBOX=OFF \
       -DWITH_WERROR=OFF \
+      -DSKIP_PERFORMANCE_COMPARISON=ON \
       ..
 
 make -j$(nproc)
