@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y \
     g++-14 \
     gcc-14 \
     cmake \
+    git \
     libreadline-dev \
     libbsd-dev \
     liblapack-dev \
@@ -23,9 +24,12 @@ RUN apt-get update && apt-get install -y \
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 \
     && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-14 100
 
-# Copy the repository (assumes it's already cloned with submodules)
-WORKDIR /src/faster-fuzzy
+# Copy the repository
+WORKDIR /src
 COPY . .
+
+# Initialize submodules fresh (ensures clean state)
+RUN git submodule update --init --recursive
 
 # Build all targets using release script
 RUN ./build-release.sh
@@ -50,14 +54,14 @@ RUN apt-get update && apt-get install -y \
 RUN mkdir -p /mapper
 
 # Copy built binaries from builder stage
-COPY --from=builder /src/faster-fuzzy/mapper/build/indexer /mapper/
-COPY --from=builder /src/faster-fuzzy/mapper/build/test /mapper/
-COPY --from=builder /src/faster-fuzzy/mapper/build/explore /mapper/
-COPY --from=builder /src/faster-fuzzy/mapper/build/create /mapper/
-COPY --from=builder /src/faster-fuzzy/mapper/build/server /mapper/
+COPY --from=builder /src/mapper/build/indexer /mapper/
+COPY --from=builder /src/mapper/build/test /mapper/
+COPY --from=builder /src/mapper/build/explore /mapper/
+COPY --from=builder /src/mapper/build/create /mapper/
+COPY --from=builder /src/mapper/build/server /mapper/
 
 # Copy templates for the server
-COPY --from=builder /src/faster-fuzzy/mapper/templates /mapper/templates
+COPY --from=builder /src/mapper/templates /mapper/templates
 
 WORKDIR /mapper
 
