@@ -6,6 +6,14 @@
     <title>ListenBrainz MBID Mapper 2.0</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <style>
+        .logo {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+        }
+        .logo img {
+            height: 40px;
+        }
         .timing { color: var(--pico-muted-color); font-size: 0.9em; margin-top: 1rem; }
         .no-match { color: var(--pico-del-color); }
         .match { color: var(--pico-ins-color); }
@@ -14,6 +22,9 @@
     </style>
 </head>
 <body>
+    <a href="https://listenbrainz.org" class="logo" target="_blank">
+        <img src="https://listenbrainz.org/static/img/navbar_logo.svg" alt="ListenBrainz">
+    </a>
     <main class="container">
         <h1>ListenBrainz MBID Mapper 2.0</h1>
         <p>Search for recordings and get MusicBrainz IDs.</p>
