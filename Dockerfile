@@ -41,6 +41,7 @@ RUN apt-get update && apt-get install -y \
     libbsd0 \
     libgomp1 \
     libopenblas0 \
+    sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create target directory

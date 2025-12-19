@@ -147,7 +147,6 @@ class RecordingIndex {
             }
             catch(const std::exception& e)
             {
-                log("id %lu text %lu", release_ids.size(), release_texts.size());
                 log("artist_credit %d: release index build error: '%s'", artist_credit_id, e.what());
             }
             

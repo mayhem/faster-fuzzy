@@ -170,6 +170,7 @@ int main(int argc, char* argv[]) {
         ctx["artist_credit_name"] = artist_credit_name ? artist_credit_name : "";
         ctx["release_name"] = release_name ? release_name : "";
         ctx["recording_name"] = recording_name ? recording_name : "";
+        ctx["searched"] = false;
         
         // Only search if we have required parameters
         if (artist_credit_name && recording_name) {
