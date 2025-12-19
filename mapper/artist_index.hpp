@@ -320,7 +320,12 @@ class ArtistIndex {
                 PGconn     *conn;
                 PGresult   *res;
                 
-                conn = PQconnectdb("dbname=musicbrainz_db user=musicbrainz password=musicbrainz host=127.0.0.1 port=5432");
+                const char* db_connect = std::getenv("CANONICAL_MUSICBRAINZ_DATA_CONNECT");
+                if (!db_connect || strlen(db_connect) == 0) {
+                    log("CANONICAL_MUSICBRAINZ_DATA_CONNECT environment variable not set");
+                    return;
+                }
+                conn = PQconnectdb(db_connect);
                 if (PQstatus(conn) != CONNECTION_OK) {
                     log("Connection to database failed: %s", PQerrorMessage(conn));
                     PQfinish(conn);
@@ -389,7 +394,12 @@ class ArtistIndex {
                 PGconn     *conn;
                 PGresult   *res;
                 
-                conn = PQconnectdb("dbname=musicbrainz_db user=musicbrainz password=musicbrainz host=127.0.0.1 port=5432");
+                const char* db_connect = std::getenv("CANONICAL_MUSICBRAINZ_DATA_CONNECT");
+                if (!db_connect || strlen(db_connect) == 0) {
+                    printf("CANONICAL_MUSICBRAINZ_DATA_CONNECT environment variable not set\n");
+                    return;
+                }
+                conn = PQconnectdb(db_connect);
                 if (PQstatus(conn) != CONNECTION_OK) {
                     printf("Connection to database failed: %s\n", PQerrorMessage(conn));
                     PQfinish(conn);
