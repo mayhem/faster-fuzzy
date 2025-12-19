@@ -15,5 +15,6 @@ inline void log(const char *format, ...) {
     printf("%s: ", buffer);
     vprintf(format, args);
     printf("\n");
+    fflush(stdout);
     va_end(args);
 }
