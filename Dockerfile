@@ -36,14 +36,10 @@ FROM ubuntu:24.04 AS runtime
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install runtime dependencies only
+# Install runtime dependencies only (minimal since we link statically)
 RUN apt-get update && apt-get install -y \
     libreadline8 \
     libbsd0 \
-    liblapack3 \
-    libblas3 \
-    libopenblas0 \
-    libarmadillo12 \
     libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 

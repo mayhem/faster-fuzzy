@@ -19,6 +19,8 @@ cd "$BUILD_DIR"
 
 cmake -DCMAKE_BUILD_TYPE=Debug \
       -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+      -DCMAKE_EXE_LINKER_FLAGS="-static-libgcc -static-libstdc++" \
+      -DBUILD_SHARED_LIBS=OFF \
       -DBUILD_TESTING=OFF \
       -DWITHOUT_TESTS=ON \
       -DBUILD_SANDBOX=OFF \
