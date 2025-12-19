@@ -8,7 +8,9 @@ services:
       - mapper-volume:/data
     env_file:
       - .env
-    command: ["/mapper/indexer", "/data"]
+    networks:
+      - musicbrainz
+    command: ["/mapper/create", "/data", "--build-indexes"]
 
   # Run this to start the mapper
   mapper:
@@ -17,11 +19,18 @@ services:
       dockerfile: Dockerfile
     volumes:
       - mapper-volume:/data
+    env_file:
+      - .env
     ports:
       - "8080:8080"
     depends_on:
       make_index:
         condition: service_completed_successfully
+
+networks:
+  musicbrainz:
+    external: true
+    name: musicbrainz-docker_default
 
 volumes:
   mapper-volume:

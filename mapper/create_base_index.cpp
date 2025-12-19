@@ -1,4 +1,6 @@
 #include "create_base_index.hpp"
+#include "artist_index.hpp"
+#include "mbid_mapping.hpp"
 #include <libpq-fe.h>
 #include <cstdlib>
 #include <cstdio>
@@ -454,20 +456,58 @@ string CreateBaseIndex::escape_csv_field(const string& field) {
 int main(int argc, char *argv[])
 {
     if (argc < 2) {
-        printf("Usage: create_base_index <index_dir>\n");
+        printf("Usage: create_base_index [--build-indexes] <index_dir>\n");
+        printf("  --build-indexes  Also build artist and recording search indexes\n");
         return -1;
     }
     
-    string index_dir = string(argv[1]);
+    bool build_indexes = false;
+    string index_dir;
+    
+    // Parse arguments
+    for (int i = 1; i < argc; i++) {
+        string arg = argv[i];
+        if (arg == "--build-indexes") {
+            build_indexes = true;
+        } else if (arg.rfind("--", 0) == 0) {
+            printf("Unknown option: %s\n", arg.c_str());
+            printf("Usage: create_base_index [--build-indexes] <index_dir>\n");
+            return -1;
+        } else {
+            index_dir = arg;
+        }
+    }
+    
+    if (index_dir.empty()) {
+        printf("Error: Missing index directory\n");
+        printf("Usage: create_base_index [--build-indexes] <index_dir>\n");
+        return -1;
+    }
     
     try {
         CreateBaseIndex importer(index_dir);
         importer.create();
         printf("Mapping import completed successfully!\n");
+        
+        if (build_indexes) {
+            // Build the search indexes
+            printf("Building artist indexes...\n");
+            ArtistIndex *artist_index = new ArtistIndex(index_dir);
+            artist_index->build();
+            delete artist_index;
+            
+            printf("Building recording indexes...\n");
+            MBIDMapping mapping(index_dir);
+            mapping.build_recording_indexes();
+            
+            printf("All indexes built successfully!\n");
+        }
     } catch (const std::exception& e) {
         printf("Error: %s\n", e.what());
         return -1;
     }
+    
+
     
     return 0;
 }

@@ -12,6 +12,7 @@ using namespace std;
 static string g_index_dir;
 static string g_templates_dir = "templates";
 static int g_cache_size = 25;
+static int g_num_threads = 0;  // 0 = use all available cores
 static ArtistIndex* g_artist_index = nullptr;
 static IndexCache* g_index_cache = nullptr;
 static std::atomic<bool> g_ready{false};
@@ -88,6 +89,13 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "Error: Index directory is required (-i or --index)\n");
         print_usage(argv[0]);
         return 1;
+    }
+
+    // Read NUM_THREADS from environment
+    const char* num_threads_env = std::getenv("NUM_THREADS");
+    if (num_threads_env && strlen(num_threads_env) > 0) {
+        g_num_threads = atoi(num_threads_env);
+        if (g_num_threads < 0) g_num_threads = 0;
     }
 
     // Create index cache immediately (lightweight)
@@ -244,7 +252,13 @@ int main(int argc, char* argv[]) {
 
     printf("Starting server on %s:%d\n", host.c_str(), port);
     printf("Index directory: %s\n", g_index_dir.c_str());
-    app.bindaddr(host).port(port).multithreaded().run();
+    if (g_num_threads > 0) {
+        printf("Using %d threads\n", g_num_threads);
+        app.bindaddr(host).port(port).concurrency(g_num_threads).run();
+    } else {
+        printf("Using all available CPU cores\n");
+        app.bindaddr(host).port(port).multithreaded().run();
+    }
 
     return 0;
 }
