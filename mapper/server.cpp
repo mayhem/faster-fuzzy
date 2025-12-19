@@ -133,18 +133,15 @@ int main(int argc, char* argv[]) {
     // Create index cache immediately (lightweight)
     g_index_cache = new IndexCache(g_cache_size);
 
+    // Load shared indexes BEFORE starting the server
+    log("Loading shared indexes...");
+    g_artist_index = new ArtistIndex(g_index_dir);
+    g_artist_index->load();
+    log("Indexes loaded. Server ready.");
+    g_ready = true;
+
     crow::SimpleApp app;
     crow::mustache::set_global_base(g_templates_dir);
-
-    // Start background thread to load indexes
-    std::thread loader_thread([&]() {
-        log("Loading shared indexes...");
-        g_artist_index = new ArtistIndex(g_index_dir);
-        g_artist_index->load();
-        log("Indexes loaded. Server ready.");
-        g_ready = true;
-    });
-    loader_thread.detach();
 
     CROW_ROUTE(app, "/")
     ([](const crow::request& req) {

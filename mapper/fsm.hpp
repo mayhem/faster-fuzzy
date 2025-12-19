@@ -377,6 +377,10 @@ class MappingSearch {
             
             if (release_recording_index == nullptr) {
                 release_recording_index = search_functions->load_recording_release_index(selected_artist_credit_id);
+                if (release_recording_index == nullptr) {
+                    log("Failed to load recording index for artist credit %u", selected_artist_credit_id);
+                    return enter_transition(event_no_matches);
+                }
             }
 
             delete recording_matches;
@@ -419,8 +423,13 @@ class MappingSearch {
             // check for release_recording_index, load if nullptr
             // set release_matches
             
-            if (release_recording_index == nullptr)
+            if (release_recording_index == nullptr) {
                 release_recording_index = search_functions->load_recording_release_index(selected_artist_credit_id);
+                if (release_recording_index == nullptr) {
+                    log("Failed to load recording index for artist credit %u", selected_artist_credit_id);
+                    return enter_transition(event_no_matches);
+                }
+            }
 
             delete release_matches;
             auto start = std::chrono::high_resolution_clock::now();
