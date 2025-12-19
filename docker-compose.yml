@@ -28,6 +28,7 @@ services:
     environment:
       - INDEX_DIR=/data
       - NUM_BUILD_THREADS=0
+      - CANONICAL_MUSICBRAINZ_DATA_CONNECT=dbname=musicbrainz_db user=musicbrainz host=musicbrainz-docker-db-1 port=5432 password=musicbrainz
     networks:
       - musicbrainz
     command: ["/mapper/indexer"]
