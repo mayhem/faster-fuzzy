@@ -16,6 +16,7 @@ services:
       - musicbrainz
     command: ["/mapper/create"]
 
+  # TO skip builing artists indexes, run with: docker-compose run make_cache /mapper/indexer --skip-artists
   make_cache:
     build:
       context: .
@@ -27,7 +28,7 @@ services:
         required: false
     environment:
       - INDEX_DIR=/data
-      - NUM_BUILD_THREADS=0
+      - NUM_BUILD_THREADS=32
       - CANONICAL_MUSICBRAINZ_DATA_CONNECT=dbname=musicbrainz_db user=musicbrainz host=musicbrainz-docker-db-1 port=5432 password=musicbrainz
     networks:
       - musicbrainz
@@ -52,14 +53,23 @@ services:
       - TEMPLATE_DIR=/mapper/templates
       - NUM_THREADS=0
       - MAX_CACHE_SIZE=100
+      - VIRTUAL_HOST=mapper.listenbrainz.org
+      - VIRTUAL_PORT=5000
+      - LETSENCRYPT_HOST=mapper.listenbrainz.org
+      - LETSENCRYPT_EMAIL=rob@metabrainz.org
     ports:
       - "127.0.0.1:5000:5000"
+    networks:
+      - ssl-proxy-network
     command: ["/mapper/server"]
 
 networks:
   musicbrainz:
     external: true
     name: musicbrainz-docker_default
+  ssl-proxy-network:
+    name: ssl-proxy-network
+    external: true
 
 volumes:
   mapper-volume:
