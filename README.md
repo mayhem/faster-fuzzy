@@ -14,10 +14,13 @@ cd faster-fuzzy
 ### 2. Build
 
 ```bash
-cd mapper
-mkdir build && cd build
-cmake ..
-make -j$(nproc)
+./build-debug.sh
+```
+
+Or for a production optimized version:
+
+```bash
+./build-release.sh
 ```
 
 ### 3. Create Base Index

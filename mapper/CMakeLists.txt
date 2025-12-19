@@ -48,13 +48,13 @@ include_directories(deps/nmslib/similarity_search/include
                     ${libpq_SOURCE_DIR}/libpq/interfaces/libpq
                     ${libpq_SOURCE_DIR}/libpq/include
                     deps/listenbrainz-matching-tools/cpp/include
-                    ${CMAKE_CURRENT_BINARY_DIR}/deps/pcre2
+                    ${CMAKE_CURRENT_BINARY_DIR}/deps/pcre2/interface
 )
 
 
 target_link_libraries(indexer NonMetricSpaceLib
                               unidecode
-                              libpcre2-8.a
+                              pcre2-8-static
                               armadillo
                               SQLiteCpp 
                               pthread
@@ -65,7 +65,7 @@ target_link_libraries(indexer NonMetricSpaceLib
 
 target_link_libraries(test NonMetricSpaceLib
                            unidecode
-                           libpcre2-8.a
+                           pcre2-8-static
                            armadillo
                            SQLiteCpp
                            pthread
@@ -75,7 +75,7 @@ target_link_libraries(test NonMetricSpaceLib
 
 target_link_libraries(explore NonMetricSpaceLib
                                     unidecode
-                                    libpcre2-8.a
+                                    pcre2-8-static
                                     armadillo
                                     SQLiteCpp
                                     pthread
@@ -92,7 +92,7 @@ target_link_libraries(create SQLiteCpp
 
 target_link_libraries(server NonMetricSpaceLib
                              unidecode
-                             libpcre2-8.a
+                             pcre2-8-static
                              armadillo
                              SQLiteCpp
                              pthread

@@ -1,8 +1,0 @@
-Dependencies
-============
-
-Needed:
-
-libpqxx
-doxygen
-

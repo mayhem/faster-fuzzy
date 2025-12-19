@@ -26,6 +26,10 @@ cmake -DCMAKE_BUILD_TYPE=Release \
       -DSKIP_PERFORMANCE_COMPARISON=ON \
       ..
 
+# Build pcre2 first to generate pcre2.h header (needed by jpcre2)
+make pcre2-8-static
+
+# Now build everything in parallel
 make -j$(nproc)
 
 echo "Release build complete. Binaries are in: $BUILD_DIR"

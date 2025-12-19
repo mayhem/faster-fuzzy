@@ -1,0 +1,12 @@
+index
+# Skip build directories
+build/
+mapper/build/
+**/build/
+
+# Skip any CMake generated files at root
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+compile_commands.json
