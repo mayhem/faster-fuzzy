@@ -13,36 +13,36 @@ int main(int argc, char *argv[])
     bool force_rebuild = false;
     string index_dir;
     
-    if (argc < 2 || argc > 4) {
-        log("Usage: mapping_create [--skip-artists] [--force-rebuild] <index_dir>");
-        log("  --skip-artists   Skip building artist indexes");
-        log("  --force-rebuild  Force rebuild all recording indexes (ignore cache)");
-        return -1;
+    // Get index_dir from environment variable first
+    const char* env_index_dir = std::getenv("INDEX_DIR");
+    if (env_index_dir && strlen(env_index_dir) > 0) {
+        index_dir = env_index_dir;
     }
     
     // Parse arguments
-    int arg_index = 1;
-    while (arg_index < argc - 1) {
-        string arg = string(argv[arg_index]);
+    for (int i = 1; i < argc; i++) {
+        string arg = argv[i];
         if (arg == "--skip-artists") {
             skip_artists = true;
         } else if (arg == "--force-rebuild") {
             force_rebuild = true;
-        } else {
-            log("Unknown option: %s", argv[arg_index]);
-            log("Usage: mapping_create [--skip-artists] [--force-rebuild] <index_dir>");
+        } else if (arg.rfind("--", 0) == 0) {
+            log("Unknown option: %s", arg.c_str());
+            log("Usage: indexer [--skip-artists] [--force-rebuild] [<index_dir>]");
+            log("  --skip-artists   Skip building artist indexes");
+            log("  --force-rebuild  Force rebuild all recording indexes (ignore cache)");
+            log("  index_dir can also be set via INDEX_DIR environment variable");
             return -1;
+        } else {
+            // Command line argument overrides environment variable
+            index_dir = arg;
         }
-        arg_index++;
     }
     
-    // Last argument should be the index directory
-    index_dir = string(argv[argc - 1]);
-    
-    // Validate that index_dir is not a flag
-    if (index_dir.rfind("--", 0) == 0) {
-        log("Error: Missing index directory. Last argument appears to be a flag: %s", index_dir.c_str());
-        log("Usage: mapping_create [--skip-artists] [--force-rebuild] <index_dir>");
+    if (index_dir.empty()) {
+        log("Error: Missing index directory");
+        log("Usage: indexer [--skip-artists] [--force-rebuild] [<index_dir>]");
+        log("  index_dir can also be set via INDEX_DIR environment variable");
         return -1;
     }
     
