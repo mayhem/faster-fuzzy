@@ -18,6 +18,7 @@ mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"
 
 cmake -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
       -DCMAKE_CXX_FLAGS="-O3 -march=native -DNDEBUG" \
       -DBUILD_TESTING=OFF \
       -DWITHOUT_TESTS=ON \
