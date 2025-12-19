@@ -26,6 +26,7 @@ cmake -DCMAKE_BUILD_TYPE=Debug \
       -DBUILD_SANDBOX=OFF \
       -DWITH_WERROR=OFF \
       -DSKIP_PERFORMANCE_COMPARISON=ON \
+      -DHEADER_ONLY=ON \
       ..
 
 # Build pcre2 first to generate pcre2.h header (needed by jpcre2)

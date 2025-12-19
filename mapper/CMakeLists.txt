@@ -16,6 +16,10 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Find BLAS for Armadillo (header-only mode)
+# OpenBLAS typically includes LAPACK functions
+find_package(BLAS REQUIRED)
+
 add_subdirectory(deps/nmslib/similarity_search)
 add_subdirectory(deps/pcre2)
 add_subdirectory(deps/armadillo-code)
@@ -56,6 +60,7 @@ target_link_libraries(indexer NonMetricSpaceLib
                               unidecode
                               pcre2-8-static
                               armadillo
+                              ${BLAS_LIBRARIES}
                               SQLiteCpp 
                               pthread
                               cereal
@@ -67,6 +72,7 @@ target_link_libraries(test NonMetricSpaceLib
                            unidecode
                            pcre2-8-static
                            armadillo
+                           ${BLAS_LIBRARIES}
                            SQLiteCpp
                            pthread
                            cereal
@@ -77,6 +83,7 @@ target_link_libraries(explore NonMetricSpaceLib
                                     unidecode
                                     pcre2-8-static
                                     armadillo
+                                    ${BLAS_LIBRARIES}
                                     SQLiteCpp
                                     pthread
                                     cereal
@@ -88,6 +95,7 @@ target_link_libraries(create NonMetricSpaceLib
                              unidecode
                              pcre2-8-static
                              armadillo
+                             ${BLAS_LIBRARIES}
                              SQLiteCpp
                              pthread
                              cereal
@@ -99,6 +107,7 @@ target_link_libraries(server NonMetricSpaceLib
                              unidecode
                              pcre2-8-static
                              armadillo
+                             ${BLAS_LIBRARIES}
                              SQLiteCpp
                              pthread
                              cereal
