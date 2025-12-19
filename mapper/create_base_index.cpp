@@ -81,6 +81,13 @@ void CreateBaseIndex::create() {
     string db_file = index_dir + "/mapping.db";
     string csv_file = index_dir + "/import.csv";
     
+    // Check if database already exists
+    if (std::filesystem::exists(db_file)) {
+        log("Error: Database file already exists: %s", db_file.c_str());
+        log("Please remove the existing database file before creating a new one.");
+        throw std::runtime_error("Database file already exists");
+    }
+    
     // Create SQLite database
     create_sqlite_db(db_file);
     
@@ -256,9 +263,6 @@ void CreateBaseIndex::create() {
 }
 
 void CreateBaseIndex::create_sqlite_db(const string& db_file) {
-    // Remove existing database
-    std::filesystem::remove(db_file);
-    
     try {
         SQLite::Database db(db_file, SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE);
         
@@ -495,6 +499,9 @@ int main(int argc, char *argv[])
         log("Error: CANONICAL_MUSICBRAINZ_DATA_CONNECT environment variable not set");
         return -1;
     }
+    
+
+
     
     try {
         CreateBaseIndex importer(index_dir);
