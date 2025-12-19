@@ -36,7 +36,7 @@ FROM ubuntu:24.04 AS runtime
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install runtime dependencies only (minimal since we link statically)
+# Install runtime dependencies only
 RUN apt-get update && apt-get install -y \
     libreadline8 \
     libbsd0 \
@@ -52,6 +52,10 @@ COPY --from=builder /src/mapper/build/test /mapper/
 COPY --from=builder /src/mapper/build/explore /mapper/
 COPY --from=builder /src/mapper/build/create /mapper/
 COPY --from=builder /src/mapper/build/server /mapper/
+
+# Copy armadillo shared library built from submodule
+COPY --from=builder /src/mapper/build/deps/armadillo-code/libarmadillo.so* /usr/lib/
+RUN ldconfig
 
 # Copy templates for the server
 COPY --from=builder /src/mapper/templates /mapper/templates
