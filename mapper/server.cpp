@@ -1,6 +1,8 @@
 #include <string>
 #include <cstdlib>
 #include <chrono>
+#include <thread>
+#include <atomic>
 #include "crow.h"
 #include "fsm.hpp"
 
@@ -12,6 +14,7 @@ static string g_templates_dir = "templates";
 static int g_cache_size = 25;
 static ArtistIndex* g_artist_index = nullptr;
 static IndexCache* g_index_cache = nullptr;
+static std::atomic<bool> g_ready{false};
 
 MappingSearch* get_mapping_search() {
     thread_local MappingSearch* mapping_search = nullptr;
@@ -87,21 +90,30 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    // Create and load shared resources before starting server threads
-    printf("Loading shared indexes...\n");
-    g_artist_index = new ArtistIndex(g_index_dir);
-    g_artist_index->load();
-    
+    // Create index cache immediately (lightweight)
     g_index_cache = new IndexCache(g_cache_size);
-    // g_index_cache->start();  // Enable cache cleaner if needed
-    
-    printf("Indexes loaded.\n");
 
     crow::SimpleApp app;
     crow::mustache::set_global_base(g_templates_dir);
 
+    // Start background thread to load indexes
+    std::thread loader_thread([&]() {
+        printf("Loading shared indexes...\n");
+        g_artist_index = new ArtistIndex(g_index_dir);
+        g_artist_index->load();
+        printf("Indexes loaded. Server ready.\n");
+        g_ready = true;
+    });
+    loader_thread.detach();
+
     CROW_ROUTE(app, "/")
     ([](const crow::request& req) {
+        // Show loading page if not ready
+        if (!g_ready) {
+            auto page = crow::mustache::load("loading.html");
+            return crow::response(200, page.render());
+        }
+
         auto page = crow::mustache::load("index.html");
         crow::mustache::context ctx;
         
@@ -162,17 +174,28 @@ int main(int argc, char* argv[]) {
             }
         }
         
-        return page.render(ctx);
+        return crow::response(200, page.render(ctx));
     });
 
     CROW_ROUTE(app, "/docs")
     ([]() {
+        if (!g_ready) {
+            auto page = crow::mustache::load("loading.html");
+            return crow::response(200, page.render());
+        }
         auto page = crow::mustache::load("docs.html");
-        return page.render();
+        return crow::response(200, page.render());
     });
 
     CROW_ROUTE(app, "/mapping/lookup")
     ([](const crow::request& req) {
+        // Return 503 Service Unavailable if not ready
+        if (!g_ready) {
+            crow::json::wvalue error;
+            error["error"] = "Server is starting up, indexes are still loading";
+            return crow::response(503, error);
+        }
+
         auto artist_credit_name = req.url_params.get("artist_credit_name");
         auto release_name = req.url_params.get("release_name");
         auto recording_name = req.url_params.get("recording_name");
