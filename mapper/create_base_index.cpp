@@ -84,7 +84,7 @@ void CreateBaseIndex::create() {
     // Create SQLite database
     create_sqlite_db(db_file);
     
-    printf("Connecting to PostgreSQL...\n");
+    log("Connecting to PostgreSQL...");
     
     // Get DB connection string from environment variable
     const char* db_connect = std::getenv("CANONICAL_MUSICBRAINZ_DATA_CONNECT");
@@ -96,17 +96,17 @@ void CreateBaseIndex::create() {
     PGconn *conn = PQconnectdb(db_connect);
     
     if (PQstatus(conn) != CONNECTION_OK) {
-        printf("Connection to database failed: %s\n", PQerrorMessage(conn));
+        log("Connection to database failed: %s", PQerrorMessage(conn));
         PQfinish(conn);
         throw std::runtime_error("PostgreSQL connection failed");
     }
     
-    printf("Executing query...\n");
+    log("Executing query...");
     
     // Start a transaction for the cursor
     PGresult *result = PQexec(conn, "BEGIN");
     if (PQresultStatus(result) != PGRES_COMMAND_OK) {
-        printf("BEGIN failed: %s\n", PQerrorMessage(conn));
+        log("BEGIN failed: %s", PQerrorMessage(conn));
         PQclear(result);
         PQfinish(conn);
         throw std::runtime_error("PostgreSQL BEGIN failed");
@@ -117,14 +117,14 @@ void CreateBaseIndex::create() {
     string cursor_sql = "DECLARE big_cursor CURSOR FOR " + string(MAPPING_QUERY);
     result = PQexec(conn, cursor_sql.c_str());
     if (PQresultStatus(result) != PGRES_COMMAND_OK) {
-        printf("DECLARE CURSOR failed: %s\n", PQerrorMessage(conn));
+        log("DECLARE CURSOR failed: %s", PQerrorMessage(conn));
         PQclear(result);
         PQfinish(conn);
         throw std::runtime_error("PostgreSQL DECLARE CURSOR failed");
     }
     PQclear(result);
     
-    printf("Writing CSV file...\n");
+    log("Writing CSV file...");
     ofstream csvfile(csv_file);
     if (!csvfile.is_open()) {
         PQclear(result);
@@ -146,7 +146,7 @@ void CreateBaseIndex::create() {
         result = PQexec(conn, fetch_sql.c_str());
         
         if (PQresultStatus(result) != PGRES_TUPLES_OK) {
-            printf("FETCH failed: %s\n", PQerrorMessage(conn));
+            log("FETCH failed: %s", PQerrorMessage(conn));
             PQclear(result);
             PQfinish(conn);
             throw std::runtime_error("PostgreSQL FETCH failed");
@@ -238,12 +238,12 @@ void CreateBaseIndex::create() {
     
     csvfile.close();
     PQfinish(conn);
-    printf("\nWrote %d rows to CSV\n", row_count);
+    log("\nWrote %d rows to CSV", row_count);
     
-    printf("Importing CSV into SQLite...\n");
+    log("Importing CSV into SQLite...");
     import_csv_to_sqlite(db_file, csv_file);
     
-    printf("Creating indexes...\n");
+    log("Creating indexes...");
     create_indexes(db_file);
     
     // Clean up CSV file
@@ -251,7 +251,7 @@ void CreateBaseIndex::create() {
     
     auto t1 = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0);
-    printf("Loaded data and saved in %.3f seconds.\n", duration.count() / 1000.0);
+    log("Loaded data and saved in %.3f seconds.", duration.count() / 1000.0);
 }
 
 void CreateBaseIndex::create_sqlite_db(const string& db_file) {
@@ -291,7 +291,7 @@ void CreateBaseIndex::create_sqlite_db(const string& db_file) {
         db.exec("CREATE INDEX entity_id_idx ON index_cache(entity_id)");
         
     } catch (const std::exception& e) {
-        printf("SQLite database creation error: %s\n", e.what());
+        log("SQLite database creation error: %s", e.what());
         throw;
     }
 }
@@ -357,7 +357,7 @@ void CreateBaseIndex::import_csv_to_sqlite(const string& db_file, const string& 
             fields.push_back(field);
             
             if (fields.size() != 12) {
-                printf("Invalid CSV line (expected 12 fields): %s\n", line.c_str());
+                log("Invalid CSV line (expected 12 fields): %s", line.c_str());
                 continue;
             }
             
@@ -375,10 +375,10 @@ void CreateBaseIndex::import_csv_to_sqlite(const string& db_file, const string& 
                 stmt.bind(11, fields[10]);       // recording_name
                 stmt.bind(12, static_cast<int64_t>(stoul(fields[11]))); // score
             } catch (const std::invalid_argument& e) {
-                printf("Invalid integer in CSV line: %s\n", line.c_str());
+                log("Invalid integer in CSV line: %s", line.c_str());
                 continue;
             } catch (const std::out_of_range& e) {
-                printf("Integer out of range in CSV line: %s\n", line.c_str());
+                log("Integer out of range in CSV line: %s", line.c_str());
                 continue;
             }
             
@@ -395,10 +395,10 @@ void CreateBaseIndex::import_csv_to_sqlite(const string& db_file, const string& 
         db.exec("COMMIT");
         csvfile.close();
         
-        printf("\nImported %d total rows\n", count);
+        log("\nImported %d total rows", count);
         
     } catch (const std::exception& e) {
-        printf("CSV import error: %s\n", e.what());
+        log("CSV import error: %s", e.what());
         throw;
     }
 }
@@ -407,25 +407,25 @@ void CreateBaseIndex::create_indexes(const string& db_file) {
     try {
         SQLite::Database db(db_file, SQLite::OPEN_READWRITE);
         
-        printf("Creating artist_credit_id index...\n");
+        log("Creating artist_credit_id index...");
         db.exec("CREATE INDEX artist_credit_id_ndx ON mapping(artist_credit_id)");
         
-        printf("Creating release_artist_credit_id index...\n");
+        log("Creating release_artist_credit_id index...");
         db.exec("CREATE INDEX release_artist_credit_id_ndx ON mapping(release_artist_credit_id)");
         
-        printf("Creating release_id index...\n");
+        log("Creating release_id index...");
         db.exec("CREATE INDEX release_id_ndx ON mapping(release_id)");
         
-        printf("Creating recording_id index...\n");
+        log("Creating recording_id index...");
         db.exec("CREATE INDEX recording_id_ndx ON mapping(recording_id)");
         
-        printf("Creating release_id_recording_id composite index...\n");
+        log("Creating release_id_recording_id composite index...");
         db.exec("CREATE INDEX release_id_recording_id_ndx ON mapping(release_id, recording_id)");
         
-        printf("All indexes created successfully\n");
+        log("All indexes created successfully");
         
     } catch (const std::exception& e) {
-        printf("Index creation error: %s\n", e.what());
+        log("Index creation error: %s", e.what());
         throw;
     }
 }
@@ -456,8 +456,8 @@ string CreateBaseIndex::escape_csv_field(const string& field) {
 int main(int argc, char *argv[])
 {
     if (argc < 2) {
-        printf("Usage: create_base_index [--build-indexes] <index_dir>\n");
-        printf("  --build-indexes  Also build artist and recording search indexes\n");
+        log("Usage: create_base_index [--build-indexes] <index_dir>");
+        log("  --build-indexes  Also build artist and recording search indexes");
         return -1;
     }
     
@@ -470,8 +470,8 @@ int main(int argc, char *argv[])
         if (arg == "--build-indexes") {
             build_indexes = true;
         } else if (arg.rfind("--", 0) == 0) {
-            printf("Unknown option: %s\n", arg.c_str());
-            printf("Usage: create_base_index [--build-indexes] <index_dir>\n");
+            log("Unknown option: %s", arg.c_str());
+            log("Usage: create_base_index [--build-indexes] <index_dir>");
             return -1;
         } else {
             index_dir = arg;
@@ -479,31 +479,31 @@ int main(int argc, char *argv[])
     }
     
     if (index_dir.empty()) {
-        printf("Error: Missing index directory\n");
-        printf("Usage: create_base_index [--build-indexes] <index_dir>\n");
+        log("Error: Missing index directory");
+        log("Usage: create_base_index [--build-indexes] <index_dir>");
         return -1;
     }
     
     try {
         CreateBaseIndex importer(index_dir);
         importer.create();
-        printf("Mapping import completed successfully!\n");
+        log("Mapping import completed successfully!");
         
         if (build_indexes) {
             // Build the search indexes
-            printf("Building artist indexes...\n");
+            log("Building artist indexes...");
             ArtistIndex *artist_index = new ArtistIndex(index_dir);
             artist_index->build();
             delete artist_index;
             
-            printf("Building recording indexes...\n");
+            log("Building recording indexes...");
             MBIDMapping mapping(index_dir);
             mapping.build_recording_indexes();
             
-            printf("All indexes built successfully!\n");
+            log("All indexes built successfully!");
         }
     } catch (const std::exception& e) {
-        printf("Error: %s\n", e.what());
+        log("Error: %s", e.what());
         return -1;
     }
     

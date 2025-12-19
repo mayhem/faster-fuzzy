@@ -26,13 +26,13 @@ MappingSearch* get_mapping_search() {
 }
 
 void print_usage(const char* program_name) {
-    printf("Usage: %s [options]\n", program_name);
-    printf("Options:\n");
-    printf("  -h, --host <hostname>   Hostname/IP to bind to (default: 0.0.0.0)\n");
-    printf("  -p, --port <port>       Port number to listen on (default: 5000)\n");
-    printf("  -i, --index <dir>       Index directory (required)\n");
-    printf("  -t, --templates <dir>   Templates directory (default: ./templates)\n");
-    printf("  --help                  Show this help message\n");
+    log("Usage: %s [options]", program_name);
+    log("Options:");
+    log("  -h, --host <hostname>   Hostname/IP to bind to (default: 0.0.0.0)");
+    log("  -p, --port <port>       Port number to listen on (default: 5000)");
+    log("  -i, --index <dir>       Index directory (required)");
+    log("  -t, --templates <dir>   Templates directory (default: ./templates)");
+    log("  --help                  Show this help message");
 }
 
 int main(int argc, char* argv[]) {
@@ -50,43 +50,43 @@ int main(int argc, char* argv[]) {
             if (i + 1 < argc) {
                 host = argv[++i];
             } else {
-                fprintf(stderr, "Error: %s requires an argument\n", arg.c_str());
+                log("Error: %s requires an argument", arg.c_str());
                 return 1;
             }
         } else if (arg == "-p" || arg == "--port") {
             if (i + 1 < argc) {
                 port = atoi(argv[++i]);
                 if (port <= 0 || port > 65535) {
-                    fprintf(stderr, "Error: Invalid port number\n");
+                    log("Error: Invalid port number");
                     return 1;
                 }
             } else {
-                fprintf(stderr, "Error: %s requires an argument\n", arg.c_str());
+                log("Error: %s requires an argument", arg.c_str());
                 return 1;
             }
         } else if (arg == "-i" || arg == "--index") {
             if (i + 1 < argc) {
                 g_index_dir = argv[++i];
             } else {
-                fprintf(stderr, "Error: %s requires an argument\n", arg.c_str());
+                log("Error: %s requires an argument", arg.c_str());
                 return 1;
             }
         } else if (arg == "-t" || arg == "--templates") {
             if (i + 1 < argc) {
                 g_templates_dir = argv[++i];
             } else {
-                fprintf(stderr, "Error: %s requires an argument\n", arg.c_str());
+                log("Error: %s requires an argument", arg.c_str());
                 return 1;
             }
         } else {
-            fprintf(stderr, "Error: Unknown argument: %s\n", arg.c_str());
+            log("Error: Unknown argument: %s", arg.c_str());
             print_usage(argv[0]);
             return 1;
         }
     }
 
     if (g_index_dir.empty()) {
-        fprintf(stderr, "Error: Index directory is required (-i or --index)\n");
+        log("Error: Index directory is required (-i or --index)");
         print_usage(argv[0]);
         return 1;
     }
@@ -106,10 +106,10 @@ int main(int argc, char* argv[]) {
 
     // Start background thread to load indexes
     std::thread loader_thread([&]() {
-        printf("Loading shared indexes...\n");
+        log("Loading shared indexes...");
         g_artist_index = new ArtistIndex(g_index_dir);
         g_artist_index->load();
-        printf("Indexes loaded. Server ready.\n");
+        log("Indexes loaded. Server ready.");
         g_ready = true;
     });
     loader_thread.detach();
@@ -250,13 +250,13 @@ int main(int argc, char* argv[]) {
         }
     });
 
-    printf("Starting server on %s:%d\n", host.c_str(), port);
-    printf("Index directory: %s\n", g_index_dir.c_str());
+    log("Starting server on %s:%d", host.c_str(), port);
+    log("Index directory: %s", g_index_dir.c_str());
     if (g_num_threads > 0) {
-        printf("Using %d threads\n", g_num_threads);
+        log("Using %d threads", g_num_threads);
         app.bindaddr(host).port(port).concurrency(g_num_threads).run();
     } else {
-        printf("Using all available CPU cores\n");
+        log("Using all available CPU cores");
         app.bindaddr(host).port(port).multithreaded().run();
     }
 

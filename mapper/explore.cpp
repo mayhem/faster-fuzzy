@@ -103,11 +103,11 @@ class Explorer {
             vector<string> parts = split_comma_separated(query);
             
             if (parts.size() != 3) {
-                printf("Usage: s <artist>, <release>, <recording>\n");
-                printf("Examples:\n");
-                printf("  s portishead, mezzanine, teardrop\n");
-                printf("  s bjork, homogenic, joga\n");
-                printf("For artist + recording only (no release), use: rs <artist>, <recording>\n");
+                log("Usage: s <artist>, <release>, <recording>");
+                log("Examples:");
+                log("  s portishead, mezzanine, teardrop");
+                log("  s bjork, homogenic, joga");
+                log("For artist + recording only (no release), use: rs <artist>, <recording>");
                 return;
             }
             
@@ -115,7 +115,7 @@ class Explorer {
             string release_name = parts[1];
             string recording_name = parts[2];
             
-            printf("\nFull search: Artist='%s', Release='%s', Recording='%s'\n\n", 
+            log("\nFull search: Artist='%s', Release='%s', Recording='%s'\n", 
                    artist_name.c_str(), release_name.c_str(), recording_name.c_str());
             
             SearchMatch* result = nullptr;
@@ -123,45 +123,45 @@ class Explorer {
                 result = mapping_search->search(artist_name, release_name, recording_name);
             }
             catch (std::exception& e) {
-                printf("error: %s\n", e.what());
+                log("error: %s", e.what());
             }
             
             if (result) {
-                printf("Search Result:\n");
-                printf("-------------\n");
-                printf("Artist Credit: %-8d %s %s\n", 
+                log("Search Result:");
+                log("-------------");
+                log("Artist Credit: %-8d %s %s", 
                     result->artist_credit_id,
                     result->artist_credit_mbids.empty() ? "N/A" : result->artist_credit_mbids[0].c_str(),
                     result->artist_credit_name.c_str());
-                printf("Release:       %-8d %s %s\n", 
+                log("Release:       %-8d %s %s", 
                     result->release_id,
                     result->release_mbid.c_str(),
                     result->release_name.c_str());
-                printf("Recording:     %-8d %s %s\n", 
+                log("Recording:     %-8d %s %s", 
                     result->recording_id,
                     result->recording_mbid.c_str(),
                     result->recording_name.c_str());
                 
                 string mbids = make_comma_sep_string(result->artist_credit_mbids);
-                printf("\nFormatted output:\n");
-                printf("{ \"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\" }\n", 
+                log("\nFormatted output:");
+                log("{ \"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\" }", 
                     artist_name.c_str(), release_name.c_str(), recording_name.c_str(),
                     mbids.c_str(), result->release_mbid.c_str(), result->recording_mbid.c_str());
                 delete result;
             } else {
-                printf("No match found.\n");
+                log("No match found.");
             }
-            printf("\n");
+            log("");
         }
         
         void recording_search(const string& query) {
             vector<string> parts = split_comma_separated(query);
             
             if (parts.size() != 2) {
-                printf("Usage: rs <artist>, <recording>\n");
-                printf("Examples:\n");
-                printf("  rs portishead, teardrop\n");
-                printf("  rs bjork, joga\n");
+                log("Usage: rs <artist>, <recording>");
+                log("Examples:");
+                log("  rs portishead, teardrop");
+                log("  rs bjork, joga");
                 return;
             }
             
@@ -169,38 +169,38 @@ class Explorer {
             string recording_name = parts[1];
             string release_name = ""; // Empty release name for recording-only search
             
-            printf("\nRecording search: Artist='%s', Recording='%s'\n\n", 
+            log("\nRecording search: Artist='%s', Recording='%s'\n", 
                    artist_name.c_str(), recording_name.c_str());
             
             SearchMatch* result = mapping_search->search(artist_name, release_name, recording_name);
             
             if (result) {
-                printf("Search Result:\n");
-                printf("-------------\n");
-                printf("Artist Credit: %-8d %s %s\n", 
+                log("Search Result:");
+                log("-------------");
+                log("Artist Credit: %-8d %s %s", 
                     result->artist_credit_id,
                     result->artist_credit_mbids.empty() ? "N/A" : result->artist_credit_mbids[0].c_str(),
                     result->artist_credit_name.c_str());
-                printf("Release:       %-8d %s %s\n", 
+                log("Release:       %-8d %s %s", 
                     result->release_id,
                     result->release_mbid.c_str(),
                     result->release_name.c_str());
-                printf("Recording:     %-8d %s %s\n", 
+                log("Recording:     %-8d %s %s", 
                     result->recording_id,
                     result->recording_mbid.c_str(),
                     result->recording_name.c_str());
                 
                 string mbids = make_comma_sep_string(result->artist_credit_mbids);
-                printf("\nFormatted output:\n");
-                printf("{ \"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\" }\n", 
+                log("\nFormatted output:");
+                log("{ \"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\" }", 
                     artist_name.c_str(), result->release_name.c_str(), recording_name.c_str(),
                     mbids.c_str(), result->release_mbid.c_str(), result->recording_mbid.c_str());
                 
                 delete result;
             } else {
-                printf("No match found.\n");
+                log("No match found.");
             }
-            printf("\n");
+            log("");
         }
         
         void search_artist(const string &query) {
@@ -209,30 +209,30 @@ class Explorer {
             // Try to encode the string normally first
             auto artist_name = encode.encode_string(query);
             if (artist_name.size()) {
-                printf("ARTIST SEARCH: '%s' (%s)\n", query.c_str(), artist_name.c_str());
+                log("ARTIST SEARCH: '%s' (%s)", query.c_str(), artist_name.c_str());
                 res = artist_index->single_artist_index->search(artist_name, 0.5, 's');
             }
             else {
                 // Try encoding for "stupid artists" (non-Latin characters, etc.)
                 auto stupid_name = encode.encode_string_for_stupid_artists(query);
                 if (!stupid_name.size()) {
-                    printf("Could not encode query: '%s'\n", query.c_str());
+                    log("Could not encode query: '%s'", query.c_str());
                     return;
                 }
                 
-                printf("STUPID ARTIST SEARCH: '%s' (%s)\n", query.c_str(), stupid_name.c_str());
+                log("STUPID ARTIST SEARCH: '%s' (%s)", query.c_str(), stupid_name.c_str());
                 res = artist_index->stupid_artist_index->search(stupid_name, 0.5, 's');
             }
             
             if (!res->size()) {
-                printf("  No results found.\n");
+                log("  No results found.");
                 delete res;
                 return;
             }
             
-            printf("\nResults:\n");
-            printf("%-40s %-10s %-8s\n", "Name", "Confidence", "ID");
-            printf("------------------------------------------------------------\n");
+            log("\nResults:");
+            log("%-40s %-10s %-8s", "Name", "Confidence", "ID");
+            log("------------------------------------------------------------");
             
             for (auto &result : *res) {
                 string text;
@@ -245,16 +245,16 @@ class Explorer {
                 // Limit artist name to 40 characters
                 string short_name = text.length() > 40 ? text.substr(0, 40) : text;
                 
-                printf("%-40s %-10.2f %-8d\n", short_name.c_str(), result.confidence, result.id);
+                log("%-40s %-10.2f %-8d", short_name.c_str(), result.confidence, result.id);
             }
-            printf("\n");
+            log("");
             delete res;
         }
 
         void debug_artist_search(const string &encoded_text) {
-            printf("\nDirect artist index search for: '%s'\n", encoded_text.c_str());
-            printf("%-8s %-8s %-40s\n", "Index", "ID", "Artist Text");
-            printf("------------------------------------------------------------------------\n");
+            log("\nDirect artist index search for: '%s'", encoded_text.c_str());
+            log("%-8s %-8s %-40s", "Index", "ID", "Artist Text");
+            log("------------------------------------------------------------------------");
             
             bool found_any = false;
             
@@ -265,7 +265,7 @@ class Explorer {
                     if (text == encoded_text) {
                         unsigned int id = artist_index->single_artist_index->index_ids[i];
                         string display_text = text.length() > 40 ? text.substr(0, 40) : text;
-                        printf("%-8zu %-8u %-40s [single]\n", i, id, display_text.c_str());
+                        log("%-8zu %-8u %-40s [single]", i, id, display_text.c_str());
                         found_any = true;
                     }
                 }
@@ -278,7 +278,7 @@ class Explorer {
                     if (text == encoded_text) {
                         unsigned int id = artist_index->multiple_artist_index->index_ids[i];
                         string display_text = text.length() > 40 ? text.substr(0, 40) : text;
-                        printf("%-8zu %-8u %-40s [multiple]\n", i, id, display_text.c_str());
+                        log("%-8zu %-8u %-40s [multiple]", i, id, display_text.c_str());
                         found_any = true;
                     }
                 }
@@ -291,16 +291,16 @@ class Explorer {
                     if (text == encoded_text) {
                         unsigned int id = artist_index->stupid_artist_index->index_ids[i];
                         string display_text = text.length() > 40 ? text.substr(0, 40) : text;
-                        printf("%-8zu %-8u %-40s [stupid]\n", i, id, display_text.c_str());
+                        log("%-8zu %-8u %-40s [stupid]", i, id, display_text.c_str());
                         found_any = true;
                     }
                 }
             }
             
             if (!found_any) {
-                printf("No matches found for '%s'\n", encoded_text.c_str());
+                log("No matches found for '%s'", encoded_text.c_str());
             }
-            printf("\n");
+            log("");
         }
 
         void search_multiple_artist(const string &query) {
@@ -309,18 +309,18 @@ class Explorer {
             // Try to encode the string normally first
             auto artist_name = encode.encode_string(query);
             if (artist_name.size()) {
-                printf("MULTIPLE ARTIST SEARCH: '%s' (%s)\n", query.c_str(), artist_name.c_str());
+                log("MULTIPLE ARTIST SEARCH: '%s' (%s)", query.c_str(), artist_name.c_str());
                 res = artist_index->multiple_artist_index->search(artist_name, 0.5, 'm');
             }
             if (!res->size()) {
-                printf("  No results found.\n");
+                log("  No results found.");
                 delete res;
                 return;
             }
             
-            printf("\nResults:\n");
-            printf("%-40s %-10s %-8s\n", "Name", "Confidence", "Artist Credit");
-            printf("------------------------------------------------------------------------\n");
+            log("\nResults:");
+            log("%-40s %-10s %-8s", "Name", "Confidence", "Artist Credit");
+            log("------------------------------------------------------------------------");
             
             for (auto &result : *res) {
                 string text;
@@ -330,9 +330,9 @@ class Explorer {
                     text = artist_index->multiple_artist_index->get_index_text(result.result_index);
                 }
                 string short_name = text.length() > 40 ? text.substr(0, 40) : text;
-                printf("%-40s %-10.2f %-8d\n", short_name.c_str(), result.confidence, result.id);
+                log("%-40s %-10.2f %-8d", short_name.c_str(), result.confidence, result.id);
             }
-            printf("\n");
+            log("");
             delete res;
         }
 
@@ -342,35 +342,35 @@ class Explorer {
             // For stupid artist index, we always use stupid encoding
             auto stupid_name = encode.encode_string_for_stupid_artists(query);
             if (!stupid_name.size()) {
-                printf("Could not encode query for stupid artists: '%s'\n", query.c_str());
+                log("Could not encode query for stupid artists: '%s'", query.c_str());
                 return;
             }
             
-            printf("STUPID ARTIST SEARCH: '%s' (%s)\n", query.c_str(), stupid_name.c_str());
+            log("STUPID ARTIST SEARCH: '%s' (%s)", query.c_str(), stupid_name.c_str());
             res = artist_index->stupid_artist_index->search(stupid_name, 0.5, 's');
             
             if (!res->size()) {
-                printf("  No results found.\n");
+                log("  No results found.");
                 delete res;
                 return;
             }
             
-            printf("\nResults:\n");
-            printf("%-40s %-10s %-8s\n", "Name", "Confidence", "Artist Credit");
-            printf("------------------------------------------------------------------------\n");
+            log("\nResults:");
+            log("%-40s %-10s %-8s", "Name", "Confidence", "Artist Credit");
+            log("------------------------------------------------------------------------");
             
             for (auto &result : *res) {
                 string text = artist_index->stupid_artist_index->get_index_text(result.result_index);
                 string short_name = text.length() > 40 ? text.substr(0, 40) : text;
-                printf("%-40s %-10.2f %-8d\n", short_name.c_str(), result.confidence, result.id);
+                log("%-40s %-10.2f %-8d", short_name.c_str(), result.confidence, result.id);
             }
-            printf("\n");
+            log("");
             delete res;
         }
 
         void dump_recordings_for_artist_credit(unsigned int artist_credit_id) {
             try {
-                printf("\nLoading recordings for artist_credit_id: %u\n", artist_credit_id);
+                log("\nLoading recordings for artist_credit_id: %u", artist_credit_id);
                 
                 // Query the database directly to show all recordings for this artist credit
                 string db_file = index_dir + string("/mapping.db");
@@ -378,33 +378,33 @@ class Explorer {
                 SQLite::Statement direct_query(db, "SELECT DISTINCT recording_id, recording_name FROM mapping WHERE artist_credit_id = ? ORDER BY recording_name");
                 direct_query.bind(1, artist_credit_id);
                 
-                printf("\nRecordings:\n");
-                printf("%-8s %s\n", "Rec ID", "Recording Name");
-                printf("----------------------------------------------------\n");
+                log("\nRecordings:");
+                log("%-8s %s", "Rec ID", "Recording Name");
+                log("----------------------------------------------------");
                 
                 int count = 0;
                 while (direct_query.executeStep()) {
                     unsigned int rec_id = direct_query.getColumn(0).getInt();
                     string rec_name = direct_query.getColumn(1).getText();
-                    printf("%-8u %s\n", rec_id, rec_name.c_str());
+                    log("%-8u %s", rec_id, rec_name.c_str());
                     count++;
                 }
-                printf("Total recordings: %d\n", count);
+                log("Total recordings: %d", count);
                 
                 if (count == 0) {
-                    printf("No recordings found in mapping table for artist_credit_id: %u\n", artist_credit_id);
+                    log("No recordings found in mapping table for artist_credit_id: %u", artist_credit_id);
                 }
                 
-                printf("\n");
+                log("");
                 
             } catch (const std::exception& e) {
-                printf("Error loading recordings for artist_credit_id %u: %s\n", artist_credit_id, e.what());
+                log("Error loading recordings for artist_credit_id %u: %s", artist_credit_id, e.what());
             }
         }
         
         void dump_releases_for_artist_credit(unsigned int artist_credit_id) {
             try {
-                printf("\nLoading releases for artist_credit_id: %u\n", artist_credit_id);
+                log("\nLoading releases for artist_credit_id: %u", artist_credit_id);
                 
                 // Query the database directly to show all releases for this artist credit
                 string db_file = index_dir + string("/mapping.db");
@@ -412,46 +412,46 @@ class Explorer {
                 SQLite::Statement direct_query(db, "SELECT DISTINCT release_id, release_name FROM mapping WHERE artist_credit_id = ? ORDER BY release_name");
                 direct_query.bind(1, artist_credit_id);
                 
-                printf("\nReleases:\n");
-                printf("%-8s %s\n", "Rel ID", "Release Name");
-                printf("----------------------------------------------------\n");
+                log("\nReleases:");
+                log("%-8s %s", "Rel ID", "Release Name");
+                log("----------------------------------------------------");
                 
                 int count = 0;
                 while (direct_query.executeStep()) {
                     unsigned int rel_id = direct_query.getColumn(0).getInt();
                     string rel_name = direct_query.getColumn(1).getText();
-                    printf("%-8u %s\n", rel_id, rel_name.c_str());
+                    log("%-8u %s", rel_id, rel_name.c_str());
                     count++;
                 }
-                printf("Total releases: %d\n", count);
+                log("Total releases: %d", count);
                 
                 if (count == 0) {
-                    printf("No releases found in mapping table for artist_credit_id: %u\n", artist_credit_id);
+                    log("No releases found in mapping table for artist_credit_id: %u", artist_credit_id);
                 }
                 
-                printf("\n");
+                log("");
                 
             } catch (const std::exception& e) {
-                printf("Error loading releases for artist_credit_id %u: %s\n", artist_credit_id, e.what());
+                log("Error loading releases for artist_credit_id %u: %s", artist_credit_id, e.what());
             }
         }
         
         void dump_index_release_data(unsigned int artist_credit_id) {
             try {
-                printf("\nLoading recording index for artist_credit_id: %u\n", artist_credit_id);
+                log("\nLoading recording index for artist_credit_id: %u", artist_credit_id);
                 
                 // Load the recording index for this artist credit
                 ReleaseRecordingIndex *data = recording_index->load(artist_credit_id);
                 
                 if (!data) {
-                    printf("Failed to load recording index for artist_credit_id: %u\n", artist_credit_id);
+                    log("Failed to load recording index for artist_credit_id: %u", artist_credit_id);
                     return;
                 }
                 
-                printf("\n=== RELEASE DATA ===\n");
+                log("\n=== RELEASE DATA ===");
                 if (data->release_index && !data->links.empty()) {
-                    printf("%-8s %-50s %-10s %-8s\n", "Rel_Idx", "Release Text", "Rel_ID", "Rank");
-                    printf("---------------------------------------------------------------------------------------------\n");
+                    log("%-8s %-50s %-10s %-8s", "Rel_Idx", "Release Text", "Rel_ID", "Rank");
+                    log("---------------------------------------------------------------------------------------------");
                     
                     // Collect unique release entries for sorting
                     struct ReleaseEntry {
@@ -500,19 +500,19 @@ class Explorer {
                     
                     // Display sorted release data
                     for (const auto& entry : release_entries) {
-                        printf("%-8u %-50s %-10u %-8u\n", 
+                        log("%-8u %-50s %-10u %-8u", 
                                entry.release_index,
                                entry.release_text.c_str(),
                                entry.release_id,
                                entry.rank);
                     }
                     
-                    printf("Total release entries: %lu\n", release_entries.size());
+                    log("Total release entries: %lu", release_entries.size());
                 } else {
-                    printf("No release data found.\n");
+                    log("No release data found.");
                 }
                 
-                printf("\n");
+                log("");
                 
                 // Clean up
                 delete data->recording_index;
@@ -520,26 +520,26 @@ class Explorer {
                 delete data;
                 
             } catch (const std::exception& e) {
-                printf("Error loading recording index for artist_credit_id %u: %s\n", artist_credit_id, e.what());
+                log("Error loading recording index for artist_credit_id %u: %s", artist_credit_id, e.what());
             }
         }
         
         void dump_index_recording_data(unsigned int artist_credit_id) {
             try {
-                printf("\nLoading recording index for artist_credit_id: %u\n", artist_credit_id);
+                log("\nLoading recording index for artist_credit_id: %u", artist_credit_id);
                 
                 // Load the recording index for this artist credit
                 ReleaseRecordingIndex* data = recording_index->load(artist_credit_id);
                 if (!data) {
-                    printf("Failed to load recording index for artist_credit_id: %u\n", artist_credit_id);
+                    log("Failed to load recording index for artist_credit_id: %u", artist_credit_id);
                     return;
                 }
                 
-                printf("\n=== RECORDING INDEX CONTENTS ===\n");
+                log("\n=== RECORDING INDEX CONTENTS ===");
                 if (data->recording_index) {
-                    printf("Recording Index:\n");
-                    printf("%-8s %s\n", "Rec ID", "Recording Text");
-                    printf("----------------------------------------------------\n");
+                    log("Recording Index:");
+                    log("%-8s %s", "Rec ID", "Recording Text");
+                    log("----------------------------------------------------");
                     
                     // Collect all recording entries and sort by text
                     vector<pair<unsigned int, string>> recordings;
@@ -557,14 +557,14 @@ class Explorer {
                     
                     // Print sorted entries
                     for (const auto& recording : recordings) {
-                        printf("%-8u %s\n", recording.first, recording.second.c_str());
+                        log("%-8u %s", recording.first, recording.second.c_str());
                     }
-                    printf("Total recordings in index: %zu\n", recordings.size());
+                    log("Total recordings in index: %zu", recordings.size());
                 } else {
-                    printf("No recording index found.\n");
+                    log("No recording index found.");
                 }
                 
-                printf("\n");
+                log("");
                 
                 // Clean up
                 delete data->recording_index;
@@ -572,27 +572,27 @@ class Explorer {
                 delete data;
                 
             } catch (const std::exception& e) {
-                printf("Error loading recording index for artist_credit_id %u: %s\n", artist_credit_id, e.what());
+                log("Error loading recording index for artist_credit_id %u: %s", artist_credit_id, e.what());
             }
         }
         
         void dump_links_data(unsigned int artist_credit_id) {
             try {
-                printf("\nLoading recording index for artist_credit_id: %u\n", artist_credit_id);
+                log("\nLoading recording index for artist_credit_id: %u", artist_credit_id);
                 
                 // Load the recording index for this artist credit
                 ReleaseRecordingIndex *data = recording_index->load(artist_credit_id);
                 
                 if (!data) {
-                    printf("Failed to load recording index for artist_credit_id: %u\n", artist_credit_id);
+                    log("Failed to load recording index for artist_credit_id: %u", artist_credit_id);
                     return;
                 }
                 
-                printf("\n=== LINKS TABLE ===\n");
+                log("\n=== LINKS TABLE ===");
                 if (!data->links.empty()) {
-                    printf("%-10s %-8s %-21s %-10s %-8s %-8s %-21s\n", 
+                    log("%-10s %-8s %-21s %-10s %-8s %-8s %-21s", 
                            "Rec_Idx", "Rec_ID", "Recording Name", "Rel_Idx", "Rel_ID", "Rank", "Release Name");
-                    printf("---------------------------------------------------------------------------------------------------------------\n");
+                    log("---------------------------------------------------------------------------------------------------------------");
                     
                     // Get keys sorted by recording_index (not by recording_id)
                     vector<unsigned int> sorted_keys;
@@ -636,7 +636,7 @@ class Explorer {
                             const char* rank_str = (link.rank == 4294967295) ? "---" : nullptr;
                             
                             if (release_id_str && rank_str) {
-                                printf("%-10u %-8u %-21s %-10u %-8s %-8s %-21s\n", 
+                                log("%-10u %-8u %-21s %-10u %-8s %-8s %-21s", 
                                        link.recording_index, 
                                        link.recording_id,
                                        recording_name.c_str(),
@@ -645,7 +645,7 @@ class Explorer {
                                        rank_str, 
                                        release_name.c_str());
                             } else if (release_id_str) {
-                                printf("%-10u %-8u %-21s %-10u %-8s %-8u %-21s\n", 
+                                log("%-10u %-8u %-21s %-10u %-8s %-8u %-21s", 
                                        link.recording_index, 
                                        link.recording_id,
                                        recording_name.c_str(),
@@ -654,7 +654,7 @@ class Explorer {
                                        link.rank, 
                                        release_name.c_str());
                             } else if (rank_str) {
-                                printf("%-10u %-8u %-21s %-10u %-8u %-8s %-21s\n", 
+                                log("%-10u %-8u %-21s %-10u %-8u %-8s %-21s", 
                                        link.recording_index, 
                                        link.recording_id,
                                        recording_name.c_str(),
@@ -663,7 +663,7 @@ class Explorer {
                                        rank_str, 
                                        release_name.c_str());
                             } else {
-                                printf("%-10u %-8u %-21s %-10u %-8u %-8u %-21s\n", 
+                                log("%-10u %-8u %-21s %-10u %-8u %-8u %-21s", 
                                        link.recording_index, 
                                        link.recording_id,
                                        recording_name.c_str(),
@@ -689,15 +689,15 @@ class Explorer {
                     }
                     pagination_exit:
                     if (lines_printed < total_links) {
-                        printf("Displayed %zu of %zu total links\n", lines_printed, total_links);
+                        log("Displayed %zu of %zu total links", lines_printed, total_links);
                     } else {
-                        printf("Total links: %zu\n", total_links);
+                        log("Total links: %zu", total_links);
                     }
                 } else {
-                    printf("No links found.\n");
+                    log("No links found.");
                 }
                 
-                printf("\n");
+                log("");
                 
                 // Clean up
                 delete data->recording_index;
@@ -705,7 +705,7 @@ class Explorer {
                 delete data;
                 
             } catch (const std::exception& e) {
-                printf("Error loading recording index for artist_credit_id %u: %s\n", artist_credit_id, e.what());
+                log("Error loading recording index for artist_credit_id %u: %s", artist_credit_id, e.what());
             }
         }
         
@@ -731,23 +731,23 @@ class Explorer {
         void run_interactive() {
             string input;
             
-            printf("Music Explorer Interactive Mode\n");
-            printf("Index Directory: %s\n", index_dir.c_str());
-            printf("\nCommands:\n");
-            printf("  a <artist name>              - Search in single artist index\n");
-            printf("  m <artist name>              - Search in multiple artist index\n");
-            printf("  ! <artist name>              - Search in stupid artist index\n");
-            printf("  da <encoded text>            - debug artist index by looking up encoded text\n");
-            printf("  drec <artist_credit_id>      - Dump recordings for artist credit from SQLite\n");
-            printf("  drel <artist_credit_id>      - Dump releases for artist credit from SQLite\n");
-            printf("  rel <artist_credit_id>       - Dump recording index contents and release data\n");
-            printf("  rec <artist_credit_id>       - Dump recording index IDs and strings\n");
-            printf("  l <artist_credit_id>         - Dump links table for artist credit\n");
-            printf("  s <artist>, <release>, <rec> - Full search: artist + release + recording\n");
-            printf("  rs <artist>, <recording>     - Recording search: artist + recording (no release)\n");
-            printf("  q, .q, \\q, quit, exit        - Quit the program\n");
-            printf("\nUse Up/Down arrow keys for command history, Left/Right/Home/End for editing.\n");
-            printf("Ctrl+A (beginning), Ctrl+E (end), Ctrl+K (kill to end), Ctrl+U (kill to beginning)\n\n");
+            log("Music Explorer Interactive Mode");
+            log("Index Directory: %s", index_dir.c_str());
+            log("\nCommands:");
+            log("  a <artist name>              - Search in single artist index");
+            log("  m <artist name>              - Search in multiple artist index");
+            log("  ! <artist name>              - Search in stupid artist index");
+            log("  da <encoded text>            - debug artist index by looking up encoded text");
+            log("  drec <artist_credit_id>      - Dump recordings for artist credit from SQLite");
+            log("  drel <artist_credit_id>      - Dump releases for artist credit from SQLite");
+            log("  rel <artist_credit_id>       - Dump recording index contents and release data");
+            log("  rec <artist_credit_id>       - Dump recording index IDs and strings");
+            log("  l <artist_credit_id>         - Dump links table for artist credit");
+            log("  s <artist>, <release>, <rec> - Full search: artist + release + recording");
+            log("  rs <artist>, <recording>     - Recording search: artist + recording (no release)");
+            log("  q, .q, \\q, quit, exit        - Quit the program");
+            log("\nUse Up/Down arrow keys for command history, Left/Right/Home/End for editing.");
+            log("Ctrl+A (beginning), Ctrl+E (end), Ctrl+K (kill to end), Ctrl+U (kill to beginning)\n");
             
             while (true) {
                 input = get_line_with_history();
@@ -774,29 +774,29 @@ class Explorer {
                     if (!artist_query.empty()) {
                         search_artist(artist_query);
                     } else {
-                        printf("Usage: a <artist name>\n");
+                        log("Usage: a <artist name>");
                     }
                 } else if (input.substr(0, 2) == "m ") {
                     string artist_query = input.substr(2);
                     if (!artist_query.empty()) {
                         search_multiple_artist(artist_query);
                     } else {
-                        printf("Usage: m <artist name>\n");
+                        log("Usage: m <artist name>");
                     }
                 } else if (input.substr(0, 2) == "! ") {
                     string artist_query = input.substr(2);
                     if (!artist_query.empty()) {
                         search_stupid_artist(artist_query);
                     } else {
-                        printf("Usage: ! <artist name>\n");
+                        log("Usage: ! <artist name>");
                     }
                 } else if (input.substr(0, 3) == "da ") {
                     string encoded_text = input.substr(3);
                     if (!encoded_text.empty()) {
                         debug_artist_search(encoded_text);
                     } else {
-                        printf("Usage: da <encoded text>\n");
-                        printf("Search for encoded text in artist index (all three indexes)\n");
+                        log("Usage: da <encoded text>");
+                        log("Search for encoded text in artist index (all three indexes)");
                     }
                 } else if (input.substr(0, 5) == "drec ") {
                     string id_str = input.substr(5);
@@ -804,7 +804,7 @@ class Explorer {
                         unsigned int artist_credit_id = stoul(id_str);
                         dump_recordings_for_artist_credit(artist_credit_id);
                     } catch (const std::exception& e) {
-                        printf("Invalid artist_credit_id: '%s'. Please enter a valid number.\n", id_str.c_str());
+                        log("Invalid artist_credit_id: '%s'. Please enter a valid number.", id_str.c_str());
                     }
                 } else if (input.substr(0, 5) == "drel ") {
                     string id_str = input.substr(5);
@@ -812,7 +812,7 @@ class Explorer {
                         unsigned int artist_credit_id = stoul(id_str);
                         dump_releases_for_artist_credit(artist_credit_id);
                     } catch (const std::exception& e) {
-                        printf("Invalid artist_credit_id: '%s'. Please enter a valid number.\n", id_str.c_str());
+                        log("Invalid artist_credit_id: '%s'. Please enter a valid number.", id_str.c_str());
                     }
                 } else if (input.substr(0, 4) == "rel ") {
                     string id_str = input.substr(4);
@@ -820,7 +820,7 @@ class Explorer {
                         unsigned int artist_credit_id = stoul(id_str);
                         dump_index_release_data(artist_credit_id);
                     } catch (const std::exception& e) {
-                        printf("Invalid artist_credit_id: '%s'. Please enter a valid number.\n", id_str.c_str());
+                        log("Invalid artist_credit_id: '%s'. Please enter a valid number.", id_str.c_str());
                     }
                 } else if (input.substr(0, 4) == "rec ") {
                     string id_str = input.substr(4);
@@ -828,7 +828,7 @@ class Explorer {
                         unsigned int artist_credit_id = stoul(id_str);
                         dump_index_recording_data(artist_credit_id);
                     } catch (const std::exception& e) {
-                        printf("Invalid artist_credit_id: '%s'. Please enter a valid number.\n", id_str.c_str());
+                        log("Invalid artist_credit_id: '%s'. Please enter a valid number.", id_str.c_str());
                     }
                 } else if (input.substr(0, 5) == "irec ") {
                     string id_str = input.substr(5);
@@ -836,7 +836,7 @@ class Explorer {
                         unsigned int artist_credit_id = stoul(id_str);
                         dump_index_recording_data(artist_credit_id);
                     } catch (const std::exception& e) {
-                        printf("Invalid artist_credit_id: '%s'. Please enter a valid number.\n", id_str.c_str());
+                        log("Invalid artist_credit_id: '%s'. Please enter a valid number.", id_str.c_str());
                     }
                 } else if (input.substr(0, 2) == "l ") {
                     string id_str = input.substr(2);
@@ -844,32 +844,32 @@ class Explorer {
                         unsigned int artist_credit_id = stoul(id_str);
                         dump_links_data(artist_credit_id);
                     } catch (const std::exception& e) {
-                        printf("Invalid artist_credit_id: '%s'. Please enter a valid number.\n", id_str.c_str());
+                        log("Invalid artist_credit_id: '%s'. Please enter a valid number.", id_str.c_str());
                     }
                 } else if (input.substr(0, 2) == "s ") {
                     string search_query = input.substr(2);
                     if (!search_query.empty()) {
                         full_search(search_query);
                     } else {
-                        printf("Usage: s <artist>, <release>, <recording>\n");
-                        printf("Examples:\n");
-                        printf("  s portishead, mezzanine, teardrop\n");
-                        printf("  s björk, homogenic, joga\n");
-                        printf("For artist + recording only (no release), use: rs <artist>, <recording>\n");
+                        log("Usage: s <artist>, <release>, <recording>");
+                        log("Examples:");
+                        log("  s portishead, mezzanine, teardrop");
+                        log("  s björk, homogenic, joga");
+                        log("For artist + recording only (no release), use: rs <artist>, <recording>");
                     }
                 } else if (input.substr(0, 3) == "rs ") {
                     string search_query = input.substr(3);
                     if (!search_query.empty()) {
                         recording_search(search_query);
                     } else {
-                        printf("Usage: rs <artist>, <recording>\n");
-                        printf("Examples:\n");
-                        printf("  rs portishead, teardrop\n");
-                        printf("  rs björk, joga\n");
+                        log("Usage: rs <artist>, <recording>");
+                        log("Examples:");
+                        log("  rs portishead, teardrop");
+                        log("  rs björk, joga");
                     }
                 } else {
-                    printf("Unknown command: '%s'\n", input.c_str());
-                    printf("Available commands: a <artist>, rec <id>, rel <id>, irel <id>, j <id>, s <artist>,<release>[,<recording>], rs <artist>,<recording>, q/quit/\\q/.q\n");
+                    log("Unknown command: '%s'", input.c_str());
+                    log("Available commands: a <artist>, rec <id>, rel <id>, irel <id>, j <id>, s <artist>,<release>[,<recording>], rs <artist>,<recording>, q/quit/\\q/.q");
                 }
             }
         }
@@ -877,9 +877,9 @@ class Explorer {
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        printf("Usage: explore <index_dir>\n");
-        printf("  index_dir: Directory containing the mapping database and index files\n");
-        printf("\nInteractive music database explorer with artist search and recording/release lookup.\n");
+        log("Usage: explore <index_dir>");
+        log("  index_dir: Directory containing the mapping database and index files");
+        log("\nInteractive music database explorer with artist search and recording/release lookup.");
         return -1;
     }
     
@@ -887,14 +887,14 @@ int main(int argc, char* argv[]) {
         string index_dir = argv[1];
         Explorer explorer(index_dir);
         
-        printf("Loading artist index from: %s\n", index_dir.c_str());
+        log("Loading artist index from: %s", index_dir.c_str());
         explorer.load();
-        printf("Explorer ready.\n\n");
+        log("Explorer ready.\n");
         
         explorer.run_interactive();
         
     } catch (const std::exception& e) {
-        printf("Error: %s\n", e.what());
+        log("Error: %s", e.what());
         return -1;
     }
     

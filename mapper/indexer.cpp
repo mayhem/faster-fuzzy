@@ -12,9 +12,9 @@ int main(int argc, char *argv[])
     string index_dir;
     
     if (argc < 2 || argc > 4) {
-        printf("Usage: mapping_create [--skip-artists] [--force-rebuild] <index_dir>\n");
-        printf("  --skip-artists   Skip building artist indexes\n");
-        printf("  --force-rebuild  Force rebuild all recording indexes (ignore cache)\n");
+        log("Usage: mapping_create [--skip-artists] [--force-rebuild] <index_dir>");
+        log("  --skip-artists   Skip building artist indexes");
+        log("  --force-rebuild  Force rebuild all recording indexes (ignore cache)");
         return -1;
     }
     
@@ -27,8 +27,8 @@ int main(int argc, char *argv[])
         } else if (arg == "--force-rebuild") {
             force_rebuild = true;
         } else {
-            printf("Unknown option: %s\n", argv[arg_index]);
-            printf("Usage: mapping_create [--skip-artists] [--force-rebuild] <index_dir>\n");
+            log("Unknown option: %s", argv[arg_index]);
+            log("Usage: mapping_create [--skip-artists] [--force-rebuild] <index_dir>");
             return -1;
         }
         arg_index++;
@@ -39,15 +39,15 @@ int main(int argc, char *argv[])
     
     // Validate that index_dir is not a flag
     if (index_dir.rfind("--", 0) == 0) {
-        printf("Error: Missing index directory. Last argument appears to be a flag: %s\n", index_dir.c_str());
-        printf("Usage: mapping_create [--skip-artists] [--force-rebuild] <index_dir>\n");
+        log("Error: Missing index directory. Last argument appears to be a flag: %s", index_dir.c_str());
+        log("Usage: mapping_create [--skip-artists] [--force-rebuild] <index_dir>");
         return -1;
     }
     
     // Validate flag combinations
     if (skip_artists && force_rebuild) {
-        printf("Error: --skip-artists and --force-rebuild cannot be used together\n");
-        printf("Usage: mapping_create [--skip-artists] [--force-rebuild] <index_dir>\n");
+        log("Error: --skip-artists and --force-rebuild cannot be used together");
+        log("Usage: mapping_create [--skip-artists] [--force-rebuild] <index_dir>");
         return -1;
     }
    
@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
             db.exec("DELETE FROM index_cache");
             log("index cache cleared successfully");
         } catch (const std::exception& e) {
-            printf("Error clearing index cache: %s\n", e.what());
+            log("Error clearing index cache: %s", e.what());
             return -1;
         }
     }
