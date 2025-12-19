@@ -48,6 +48,7 @@ include_directories(deps/nmslib/similarity_search/include
                     ${libpq_SOURCE_DIR}/libpq/interfaces/libpq
                     ${libpq_SOURCE_DIR}/libpq/include
                     deps/listenbrainz-matching-tools/cpp/include
+                    ${CMAKE_CURRENT_BINARY_DIR}/deps/pcre2
 )
 
 
