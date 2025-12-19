@@ -47,8 +47,8 @@ void thread_build_index(const string &index_dir, CreatorThread *th, unsigned int
         oarchive(*index.release_index);
         oarchive(index.links);
     }
-    delete index.recording_index;
-    delete index.release_index;
+    // Note: index.recording_index and index.release_index are deleted by
+    // ReleaseRecordingIndex destructor when 'index' goes out of scope
     th->sstream->seekg(ios_base::end);
     th->sstream->seekg(ios_base::beg);
     th->done = true;
