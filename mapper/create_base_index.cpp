@@ -159,8 +159,6 @@ void CreateBaseIndex::create() {
             break;
         }
         
-        log("\rtotal rows imported: %d)", row_count);
-        
         for (int i = 0; i < num_rows; i++) {
             MappingRow mrow;
             
@@ -254,7 +252,7 @@ void CreateBaseIndex::create() {
     
     auto t1 = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0);
-    log("Loaded data and saved in %.3f seconds.", duration.count() / 1000.0);
+    log("\nLoaded data and saved in %.3f seconds.", duration.count() / 1000.0);
 }
 
 void CreateBaseIndex::create_sqlite_db(const string& db_file) {
