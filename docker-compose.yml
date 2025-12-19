@@ -10,7 +10,7 @@ services:
       - .env
     networks:
       - musicbrainz
-    command: ["/mapper/create", "/data", "--build-indexes"]
+    command: ["/mapper/create"]
 
   make_cache:
     build:
@@ -22,7 +22,7 @@ services:
       - .env
     networks:
       - musicbrainz
-    command: ["/mapper/indexer", "/data"]
+    command: ["/mapper/indexer"]
 
   # Run this to start the mapper
   server:

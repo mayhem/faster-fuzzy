@@ -41,6 +41,10 @@ const char* MAPPING_QUERY = R"(
               , recording_name
               , rec.id
               , score
+          LIMIT 100000
+)";
+
+#if 0
       UNION
            SELECT r.artist_credit as artist_credit_id
                 , array_agg(a.gid::TEXT) as artist_mbids
@@ -67,7 +71,7 @@ const char* MAPPING_QUERY = R"(
                 , release_name
                 , r.name
                 , r.id
-)";
+#endif
 
 CreateBaseIndex::CreateBaseIndex(const string& _index_dir) : index_dir(_index_dir) {
 }
@@ -246,7 +250,11 @@ void CreateBaseIndex::create() {
     create_indexes(db_file);
     
     // Clean up CSV file
-    std::filesystem::remove(csv_file);
+    if (std::filesystem::remove(csv_file)) {
+        log("Removed temporary CSV file");
+    } else {
+        log("Warning: Could not remove temporary CSV file: %s", csv_file.c_str());
+    }
     
     auto t1 = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0);
