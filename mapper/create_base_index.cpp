@@ -41,10 +41,6 @@ const char* MAPPING_QUERY = R"(
               , recording_name
               , rec.id
               , score
-          LIMIT 100000
-)";
-
-#if 0
       UNION
            SELECT r.artist_credit as artist_credit_id
                 , array_agg(a.gid::TEXT) as artist_mbids
@@ -71,7 +67,7 @@ const char* MAPPING_QUERY = R"(
                 , release_name
                 , r.name
                 , r.id
-#endif
+)";
 
 CreateBaseIndex::CreateBaseIndex(const string& _index_dir) : index_dir(_index_dir) {
 }
