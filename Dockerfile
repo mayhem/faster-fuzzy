@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     liblapack-dev \
     libblas-dev \
     libopenblas-dev \
+    libarmadillo-dev \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 

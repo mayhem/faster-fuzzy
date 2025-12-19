@@ -104,10 +104,10 @@ class Explorer {
             
             if (parts.size() != 3) {
                 printf("Usage: s <artist>, <release>, <recording>\n\n");
-                printf("Examples:\n");
-                printf("  s portishead, mezzanine, teardrop\n");
-                printf("  s bjork, homogenic, joga\n");
-                printf("For artist + recording only (no release), use: rs <artist>, <recording>\n");
+                print("Examples:\n");
+                print("  s portishead, mezzanine, teardrop\n");
+                print("  s bjork, homogenic, joga\n");
+                print("For artist + recording only (no release), use: rs <artist>, <recording>\n");
                 return;
             }
             
