@@ -64,6 +64,7 @@ class FuzzyIndex {
         get_index_text(unsigned int offset) {
             if (offset >= index_texts.size()) {
                 printf("ERROR: get_index_text offset %u out of bounds (size: %zu)\n", offset, index_texts.size());
+                fflush(stdout);
                 return "";
             }
             return index_texts[offset];
@@ -124,7 +125,8 @@ class FuzzyIndex {
             vector<IndexResult> *results = new vector<IndexResult>;
             
             if (index == nullptr) {
-                printf("No index available.");
+                printf("No index available.\n");
+                fflush(stdout);
                 return nullptr;
             }
 

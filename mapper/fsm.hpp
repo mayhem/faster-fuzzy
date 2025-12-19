@@ -211,9 +211,9 @@ class MappingSearch {
                         (this->*state_functions[current_state])();
                     }
                     else {
-                        printf("ERROR: No valid function found for %s via %s\n", 
-                               get_state_name(current_state), 
-                               get_event_name(event));
+                        log("ERROR: No valid function found for %s via %s", 
+                            get_state_name(current_state), 
+                            get_event_name(event));
                         return false;
                     }
                     
@@ -221,9 +221,9 @@ class MappingSearch {
                 }
             }
             
-            printf("ERROR: No valid transition found from %s with %s\n", 
-                   get_state_name(current_state), 
-                   get_event_name(event));
+            log("ERROR: No valid transition found from %s with %s", 
+                get_state_name(current_state), 
+                get_event_name(event));
             return false;
         }
 
