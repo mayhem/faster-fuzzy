@@ -10,6 +10,12 @@
 
 using namespace std;
 
+// THis error message stems from artist who have only one recording that that recording has zero encodable characters.
+// this will be fixed by have stupid recording/release indexes.
+// artist_credit 4455221: Recording index build error: 'no index data provided.'
+// id 0 text 0artist_credit 4455221: release index build error: 'no index data provided.'
+
+
 // Destructor implementation for ReleaseRecordingIndex (declared in defs.hpp)
 // Must be here because FuzzyIndex is only forward-declared in defs.hpp
 ReleaseRecordingIndex::~ReleaseRecordingIndex() {
@@ -75,8 +81,6 @@ class RecordingIndex {
                     if (artist_credit_id != ac_id && artist_credit_id != release_artist_credit_id)
                         continue;
                     
-                    //printf("%-40s, %-40s\n", release_name.c_str(), recording_name.c_str());
-
                     string encoded_release_name = encode.encode_string(release_name);
                     string encoded_recording_name = encode.encode_string(recording_name);
                     if (encoded_recording_name.size() == 0)
@@ -108,7 +112,7 @@ class RecordingIndex {
             }
             catch (std::exception& e)
             {
-                printf("build rec index db exception: %s\n", e.what());
+                log("build rec index db exception: %s", e.what());
             }
             
             vector<string>       recording_texts(recording_string_index_map.size());
@@ -126,7 +130,7 @@ class RecordingIndex {
             }
             catch(const std::exception& e)
             {
-                printf("artist_credit %d: Recording index build error: '%s'\n", artist_credit_id, e.what());
+                log("artist_credit %d: Recording index build error: '%s'", artist_credit_id, e.what());
             }
 
             vector<string>       release_texts(release_string_index_map.size());
@@ -143,8 +147,8 @@ class RecordingIndex {
             }
             catch(const std::exception& e)
             {
-                printf("id %lu text %lu", release_ids.size(), release_texts.size());
-                printf("artist_credit %d: release index build error: '%s'\n", artist_credit_id, e.what());
+                log("id %lu text %lu", release_ids.size(), release_texts.size());
+                log("artist_credit %d: release index build error: '%s'", artist_credit_id, e.what());
             }
             
             // Sort each vector of ReleaseRecordingLink by release_id
@@ -183,7 +187,7 @@ class RecordingIndex {
                     }
                     return new ReleaseRecordingIndex(recording_index, release_index, links);
                 } else {
-                    printf("Cannot load index for %d\n", artist_credit_id);
+                    log("Cannot load index for %d", artist_credit_id);
                     delete recording_index;
                     delete release_index;
                     return nullptr;
@@ -191,7 +195,7 @@ class RecordingIndex {
             }
             catch (std::exception& e)
             {
-                printf("load rec index db exception: %s\n", e.what());
+                log("load rec index db exception: %s", e.what());
                 delete recording_index;
                 delete release_index;
             }

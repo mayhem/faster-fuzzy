@@ -322,14 +322,14 @@ class ArtistIndex {
                 
                 conn = PQconnectdb("dbname=musicbrainz_db user=musicbrainz password=musicbrainz host=127.0.0.1 port=5432");
                 if (PQstatus(conn) != CONNECTION_OK) {
-                    printf("Connection to database failed: %s\n", PQerrorMessage(conn));
+                    log("Connection to database failed: %s", PQerrorMessage(conn));
                     PQfinish(conn);
                     return;
                 }
                
                 res = PQexec(conn, query);
                 if (PQresultStatus(res) != PGRES_TUPLES_OK) {
-                    printf("Query failed: %s\n", PQerrorMessage(conn));
+                    log("Query failed: %s", PQerrorMessage(conn));
                     PQclear(res);
                     PQfinish(conn);
                     return;
