@@ -6,16 +6,17 @@
 
 using namespace std;
 
-// Thread-local MappingSearch instance
+// Shared resources (created once, shared across all threads)
 static string g_index_dir;
 static string g_templates_dir = "templates";
 static int g_cache_size = 25;
+static ArtistIndex* g_artist_index = nullptr;
+static IndexCache* g_index_cache = nullptr;
 
 MappingSearch* get_mapping_search() {
     thread_local MappingSearch* mapping_search = nullptr;
     if (mapping_search == nullptr) {
-        mapping_search = new MappingSearch(g_index_dir, g_cache_size);
-        mapping_search->load();
+        mapping_search = new MappingSearch(g_index_dir, g_artist_index, g_index_cache);
     }
     return mapping_search;
 }
@@ -85,6 +86,16 @@ int main(int argc, char* argv[]) {
         print_usage(argv[0]);
         return 1;
     }
+
+    // Create and load shared resources before starting server threads
+    printf("Loading shared indexes...\n");
+    g_artist_index = new ArtistIndex(g_index_dir);
+    g_artist_index->load();
+    
+    g_index_cache = new IndexCache(g_cache_size);
+    // g_index_cache->start();  // Enable cache cleaner if needed
+    
+    printf("Indexes loaded.\n");
 
     crow::SimpleApp app;
     crow::mustache::set_global_base(g_templates_dir);

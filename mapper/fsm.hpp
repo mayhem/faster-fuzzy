@@ -136,9 +136,9 @@ class MappingSearch {
     EncodeSearchData                    encode;
     string                              index_dir;
 
-    ArtistIndex                        *artist_index;
-    IndexCache                         *index_cache;
-    SearchFunctions                    *search_functions;
+    ArtistIndex                        *artist_index;      // Shared, not owned
+    IndexCache                         *index_cache;       // Shared, not owned
+    SearchFunctions                    *search_functions;  // Per-thread, owned
     lb_matching_tools::MetadataCleaner  metadata_cleaner;
 
     // FSM variables that carry state for the machine
@@ -157,11 +157,12 @@ class MappingSearch {
 
     public:
 
-        MappingSearch(const string &_index_dir, int cache_size) {
+        // artist_index and index_cache are shared across threads - caller retains ownership
+        MappingSearch(const string &_index_dir, ArtistIndex *_artist_index, IndexCache *_index_cache) {
             index_dir = _index_dir;
-            artist_index = new ArtistIndex(index_dir);
-            index_cache = new IndexCache(cache_size);
-            search_functions = new SearchFunctions(index_dir, cache_size);
+            artist_index = _artist_index;  // Shared, don't delete
+            index_cache = _index_cache;    // Shared, don't delete
+            search_functions = new SearchFunctions(index_dir, index_cache);
 
             // Initialize pointers to nullptr before reset_state_variables() tries to delete them
             artist_matches = nullptr;
@@ -189,19 +190,11 @@ class MappingSearch {
         }
 
         ~MappingSearch() {
-            delete artist_index;
-            delete index_cache;
+            // artist_index and index_cache are shared, don't delete them
             delete search_functions;
 
             // dealloc state variables
             reset_state_variables();
-        }
-
-        void
-        load() {
-            artist_index->load();
-            // TODO: Enable this when we start running a server
-            //index_cache.start();
         }
         
         bool enter_transition(int event) {

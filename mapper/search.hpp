@@ -38,7 +38,7 @@ class SearchFunctions {
     private:
         string                              index_dir;
         string                              db_file;
-        IndexCache                         *index_cache;
+        IndexCache                         *index_cache;  // Shared, not owned
         EncodeSearchData                    encode;
         std::unique_ptr<SQLite::Database>   db;
 
@@ -52,21 +52,15 @@ class SearchFunctions {
 
     public:
 
-        // cache size is specified in MB
-        SearchFunctions(const string &_index_dir, int cache_size) {
+        // index_cache is shared across threads - caller retains ownership
+        SearchFunctions(const string &_index_dir, IndexCache *_index_cache) {
             index_dir = _index_dir;
             db_file = index_dir + string("/mapping.db");
-            index_cache = new IndexCache(cache_size);
+            index_cache = _index_cache;
         }
         
         ~SearchFunctions() {
-            delete index_cache;
-        }
-        
-        void
-        start() {
-            // TODO: Enable this when we start running a server
-            //index_cache.start();
+            // index_cache is shared, don't delete it
         }
 
         vector<string> split(const std::string& input) {

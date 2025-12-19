@@ -48,7 +48,8 @@ class Explorer {
         string              index_dir;
         ArtistIndex        *artist_index;
         RecordingIndex     *recording_index;
-        MappingSearch   *mapping_search;
+        MappingSearch      *mapping_search;
+        IndexCache         *index_cache;
         EncodeSearchData    encode;
 
     public:
@@ -56,17 +57,19 @@ class Explorer {
             index_dir = _index_dir;
             artist_index = new ArtistIndex(index_dir);
             recording_index = new RecordingIndex(index_dir);
-            mapping_search = new MappingSearch(index_dir, 25); // 25MB cache
+            index_cache = new IndexCache(25);  // 25MB cache
+            mapping_search = new MappingSearch(index_dir, artist_index, index_cache);
         }
         
         ~Explorer() {
+            delete mapping_search;
             delete artist_index;
             delete recording_index;
-            delete mapping_search;
+            delete index_cache;
         }
         
         void load() {
-            mapping_search->load();
+            artist_index->load();
         }
         
         string make_comma_sep_string(const vector<string> &str_array) {

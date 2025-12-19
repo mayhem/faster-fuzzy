@@ -207,13 +207,20 @@ int main(int argc, char* argv[]) {
         return -1;
     }
     
-    mapping_search = new MappingSearch(string(argv[1]), 10);
-    mapping_search->load();
+    string index_dir = string(argv[1]);
+    ArtistIndex* artist_index = new ArtistIndex(index_dir);
+    // not needed for tests
+    // artist_index->load();
+    IndexCache* index_cache = new IndexCache(10);
+    
+    mapping_search = new MappingSearch(index_dir, artist_index, index_cache);
 
     Catch::Session session;
     int returnCode = session.run(argc-1, argv+1);
     
     delete mapping_search;
+    delete artist_index;
+    delete index_cache;
 
     return returnCode;
 }
