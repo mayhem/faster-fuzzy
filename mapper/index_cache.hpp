@@ -66,34 +66,46 @@ class IndexCache {
         
         void
         trim() {
+            mtx.lock();
             for(; index.size();) {
                 vector<std::pair<unsigned int, time_t>> access_times(last_accessed.begin(), last_accessed.end());
                 std::sort(access_times.begin(), access_times.end(), [](const auto& a, const auto& b) {
                     return a.second > b.second;
                 });
-                mtx.lock();
                 int items_to_remove = min((size_t)10, index.size());
                 for(int i = 0; i < items_to_remove; i++) {
                     unsigned int entity_id = access_times[i].first;
-                    last_accessed.erase(entity_id);
                     delete index[entity_id];
                     index.erase(entity_id);
+                    last_accessed.erase(entity_id);
                 }
                 mtx.unlock();
                 
                 long current_use = get_memory_footprint();
                 if (current_use <= cleaning_target)
-                    break;
+                    return;
+                mtx.lock();
             }
+            mtx.unlock();
         }
         
+        // Cache takes ownership of data. Caller must not delete it.
         void
         add(unsigned int artist_credit_id, ReleaseRecordingIndex *data) {
             mtx.lock();
-            index[artist_credit_id] = data;
+            auto iter = index.find(artist_credit_id);
+            if (iter != index.end()) {
+                // Already in cache - delete the new one, keep existing
+                delete data;
+            } else {
+                index[artist_credit_id] = data;
+                time_t cur_time = std::chrono::system_clock::to_time_t(chrono::system_clock::now());
+                last_accessed[artist_credit_id] = cur_time;
+            }
             mtx.unlock();
         }
 
+        // Returns pointer to cached data. Caller must NOT delete it - cache owns the memory.
         ReleaseRecordingIndex *
         get(unsigned int artist_credit_id) {
             ReleaseRecordingIndex *data = nullptr;
