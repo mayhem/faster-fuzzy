@@ -11,6 +11,9 @@ if [ -d "$BUILD_DIR" ]; then
     exit 1
 fi
 
+# Disable unidecode tests (requires Boost) -- a horrible hack that skips more horrible dependencies
+sed -i 's/^add_subdirectory(tests)/#add_subdirectory(tests)/' "$SCRIPT_DIR/mapper/deps/unidecode/CMakeLists.txt"
+
 mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"
 
