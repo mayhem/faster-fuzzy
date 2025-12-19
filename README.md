@@ -45,6 +45,12 @@ Example:
 ./indexer ../index
 ```
 
+
+./run.sh make_index
+./run.sh make_cache
+./run.sh make_cache --skip-artists
+./run.sh explore
+
 ### 5. Run Server
 
 ```bash

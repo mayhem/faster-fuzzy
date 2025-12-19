@@ -1,5 +1,6 @@
 services:
-  # Run this to build the index, before starting the mapper
+
+  # To run these services, use run.sh, do not invoke via docker compose directly
   make_index:
     build:
       context: .
@@ -16,7 +17,6 @@ services:
       - musicbrainz
     command: ["/mapper/create"]
 
-  # TO skip builing artists indexes, run with: docker-compose run make_cache /mapper/indexer --skip-artists
   make_cache:
     build:
       context: .
@@ -46,6 +46,21 @@ services:
     environment:
       - INDEX_DIR=/data
     command: ["/mapper/explore"]
+
+  shell:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - mapper-volume:/data
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - INDEX_DIR=/data
+    command: ["/bin/bash"]
+    stdin_open: true
+    tty: true
 
   # Run this to start the mapper
   server:

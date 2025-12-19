@@ -84,7 +84,7 @@ void CreateBaseIndex::create() {
     // Check if database already exists
     if (std::filesystem::exists(db_file)) {
         log("Error: Database file already exists: %s", db_file.c_str());
-        log("Please remove the existing database file before creating a new one.");
+        log("Please remove the existing database file before creating a new one. Perhaps you didn't mean this? :)");
         throw std::runtime_error("Database file already exists");
     }
     
