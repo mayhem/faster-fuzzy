@@ -34,6 +34,19 @@ services:
       - musicbrainz
     command: ["/mapper/indexer"]
 
+  explore:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - mapper-volume:/data
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      - INDEX_DIR=/data
+    command: ["/mapper/explore"]
+
   # Run this to start the mapper
   server:
     build:
