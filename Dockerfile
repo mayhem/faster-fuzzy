@@ -13,10 +13,7 @@ RUN apt-get update && apt-get install -y \
     git \
     libreadline-dev \
     libbsd-dev \
-    liblapack-dev \
-    libblas-dev \
     libopenblas-dev \
-    libarmadillo-dev \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
@@ -37,10 +34,13 @@ FROM ubuntu:24.04 AS runtime
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install runtime dependencies only
+# Installing libopenblas0 from apt is less than ideal, but installing it from
+# source includes needing to install fortran. <mind blown>
 RUN apt-get update && apt-get install -y \
     libreadline8 \
     libbsd0 \
     libgomp1 \
+    libopenblas0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create target directory
