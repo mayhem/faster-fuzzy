@@ -151,10 +151,16 @@ int main(int argc, char* argv[]) {
         // Show loading page if not ready
         if (!g_ready) {
             auto page = crow::mustache::load("loading.html");
+            if (page.body().empty()) {
+                return crow::response(500, "Template \"loading.html\" not found.");
+            }
             return crow::response(200, page.render());
         }
 
         auto page = crow::mustache::load("index.html");
+        if (page.body().empty()) {
+            return crow::response(500, "Template \"index.html\" not found.");
+        }
         crow::mustache::context ctx;
         
         auto artist_credit_name = req.url_params.get("artist_credit_name");
