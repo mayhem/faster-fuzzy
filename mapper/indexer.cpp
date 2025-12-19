@@ -12,11 +12,18 @@ int main(int argc, char *argv[])
     bool skip_artists = false;
     bool force_rebuild = false;
     string index_dir;
+    int num_threads = 0;  // 0 means use number of CPU cores
     
     // Get index_dir from environment variable first
     const char* env_index_dir = std::getenv("INDEX_DIR");
     if (env_index_dir && strlen(env_index_dir) > 0) {
         index_dir = env_index_dir;
+    }
+    
+    // Get num_threads from environment variable
+    const char* env_num_threads = std::getenv("NUM_BUILD_THREADS");
+    if (env_num_threads && strlen(env_num_threads) > 0) {
+        num_threads = std::atoi(env_num_threads);
     }
     
     // Parse arguments
@@ -32,6 +39,7 @@ int main(int argc, char *argv[])
             log("  --skip-artists   Skip building artist indexes");
             log("  --force-rebuild  Force rebuild all recording indexes (ignore cache)");
             log("  index_dir can also be set via INDEX_DIR environment variable");
+            log("  NUM_BUILD_THREADS env var sets thread count (0 = num CPU cores)");
             return -1;
         } else {
             // Command line argument overrides environment variable
@@ -78,7 +86,7 @@ int main(int argc, char *argv[])
     }
 
     log("build recording indexes");
-    MBIDMapping mapping(index_dir);
+    MBIDMapping mapping(index_dir, num_threads);
     mapping.build_recording_indexes();
 
     return 0;

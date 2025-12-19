@@ -9,7 +9,6 @@
 // Shared constants
 //const float ARTIST_CONFIDENCE_THRESHOLD = 0.45;
 const int NUM_ROWS_PER_COMMIT = 25000;
-const int MAX_THREADS = 16;
 const auto MAX_ENCODED_STRING_LENGTH = 30;
 
 struct ReleaseRecordingLink {

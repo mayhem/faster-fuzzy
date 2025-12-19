@@ -56,13 +56,17 @@ void thread_build_index(const string &index_dir, CreatorThread *th, unsigned int
     
 class MBIDMapping {
     private:
-        string                  index_dir, db_file; 
+        string                  index_dir, db_file;
+        int                     num_threads;
 
     public:
 
-        MBIDMapping(const string &_index_dir) { 
+        MBIDMapping(const string &_index_dir, int _num_threads = 0) { 
             index_dir = _index_dir;
             db_file = _index_dir + "/mapping.db";
+            // 0 means use number of CPU cores
+            num_threads = (_num_threads <= 0) ? std::thread::hardware_concurrency() : _num_threads;
+            if (num_threads <= 0) num_threads = 4;  // fallback if hardware_concurrency() fails
         }
         
         ~MBIDMapping() {
@@ -103,6 +107,7 @@ class MBIDMapping {
                 
                 auto now = chrono::system_clock::now();
                 time_t t0 = std::chrono::system_clock::to_time_t(now);
+                log("Using %d threads", num_threads);
                 while(artist_ids.size() || threads.size()) {
                     for(int i = threads.size() - 1; i >= 0; i--) {
                         if (i < 0)
@@ -127,7 +132,7 @@ class MBIDMapping {
                         }
                     }
                     
-                    while (artist_ids.size() && threads.size() < MAX_THREADS) {
+                    while (artist_ids.size() && threads.size() < (size_t)num_threads) {
                         CreatorThread *newthread = new CreatorThread();
                         unsigned int artist_id = artist_ids[0];
                         artist_ids.erase(artist_ids.begin());
