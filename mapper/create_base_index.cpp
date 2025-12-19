@@ -84,8 +84,14 @@ void CreateBaseIndex::create() {
     
     printf("Connecting to PostgreSQL...\n");
     
+    // Get DB connection string from environment variable
+    const char* db_connect = std::getenv("CANONICAL_MUSICBRAINZ_DATA_CONNECT");
+    if (!db_connect || strlen(db_connect) == 0) {
+        throw std::runtime_error("CANONICAL_MUSICBRAINZ_DATA_CONNECT environment variable not set");
+    }
+    
     // Connect to PostgreSQL using libpq
-    PGconn *conn = PQconnectdb(DB_CONNECT.c_str());
+    PGconn *conn = PQconnectdb(db_connect);
     
     if (PQstatus(conn) != CONNECTION_OK) {
         printf("Connection to database failed: %s\n", PQerrorMessage(conn));

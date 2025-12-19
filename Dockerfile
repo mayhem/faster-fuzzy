@@ -60,7 +60,7 @@ COPY --from=builder /src/mapper/build/server /mapper/
 # Copy templates for the server
 COPY --from=builder /src/mapper/templates /mapper/templates
 
-WORKDIR /mapper
+WORKDIR /data
 
 # Default command
-CMD ["/mapper/server", "-i", "/index", "-t", "/mapper/templates"]
+CMD ["/mapper/server", "-i", "/index", "-t", "/mapper/data"]

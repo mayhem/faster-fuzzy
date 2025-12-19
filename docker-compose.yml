@@ -1,0 +1,27 @@
+services:
+  # Run this to build the index, before starting the mapper
+  build:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - mapper-volume:/data
+    environment:
+      - CANONICAL_MUSICBRAINZ_DATA_CONNECT=${CANONICAL_MUSICBRAINZ_DATA_CONNECT}
+    command: ["/mapper/indexer", "/data"]
+
+  # Run this to start the mapper
+  mapper:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - mapper-volume:/data
+    ports:
+      - "8080:8080"
+    depends_on:
+      build:
+        condition: service_completed_successfully
+
+volumes:
+  mapper-volume:

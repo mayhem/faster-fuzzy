@@ -1,3 +1,4 @@
+.env
 build
 mapper/build
 #mapper/deps/nmslib
