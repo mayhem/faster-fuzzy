@@ -123,6 +123,13 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    // Validate required environment variables
+    if (g_index_dir.empty()) {
+        log("Error: INDEX_DIR environment variable not set and no index directory provided");
+        print_usage(argv[0]);
+        return 1;
+    }
+
     // Create index cache immediately (lightweight)
     g_index_cache = new IndexCache(g_cache_size);
 

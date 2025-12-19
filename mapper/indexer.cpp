@@ -48,10 +48,19 @@ int main(int argc, char *argv[])
     }
     
     if (index_dir.empty()) {
-        log("Error: Missing index directory");
+        log("Error: INDEX_DIR environment variable not set and no index directory provided");
         log("Usage: indexer [--skip-artists] [--force-rebuild] [<index_dir>]");
-        log("  index_dir can also be set via INDEX_DIR environment variable");
         return -1;
+    }
+    
+    // Validate CANONICAL_MUSICBRAINZ_DATA_CONNECT is set (needed for artist index building)
+    if (!skip_artists) {
+        const char* db_connect = std::getenv("CANONICAL_MUSICBRAINZ_DATA_CONNECT");
+        if (!db_connect || strlen(db_connect) == 0) {
+            log("Error: CANONICAL_MUSICBRAINZ_DATA_CONNECT environment variable not set");
+            log("This is required for building artist indexes. Use --skip-artists to skip.");
+            return -1;
+        }
     }
     
     // Validate flag combinations

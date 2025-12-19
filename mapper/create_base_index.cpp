@@ -489,10 +489,16 @@ int main(int argc, char *argv[])
         }
     }
     
+    // Validate required environment variables
     if (index_dir.empty()) {
-        log("Error: Missing index directory");
+        log("Error: INDEX_DIR environment variable not set and no index directory provided");
         log("Usage: create_base_index [--build-indexes] [<index_dir>]");
-        log("  index_dir can also be set via INDEX_DIR environment variable");
+        return -1;
+    }
+    
+    const char* db_connect = std::getenv("CANONICAL_MUSICBRAINZ_DATA_CONNECT");
+    if (!db_connect || strlen(db_connect) == 0) {
+        log("Error: CANONICAL_MUSICBRAINZ_DATA_CONNECT environment variable not set");
         return -1;
     }
     
