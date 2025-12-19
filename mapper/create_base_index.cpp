@@ -464,14 +464,14 @@ int main(int argc, char *argv[])
 {
     init_logging();
     
-    if (argc < 2) {
-        log("Usage: create_base_index [--build-indexes] <index_dir>");
-        log("  --build-indexes  Also build artist and recording search indexes");
-        return -1;
-    }
-    
     bool build_indexes = false;
     string index_dir;
+    
+    // Get index_dir from environment variable first
+    const char* env_index_dir = std::getenv("INDEX_DIR");
+    if (env_index_dir && strlen(env_index_dir) > 0) {
+        index_dir = env_index_dir;
+    }
     
     // Parse arguments
     for (int i = 1; i < argc; i++) {
@@ -480,16 +480,19 @@ int main(int argc, char *argv[])
             build_indexes = true;
         } else if (arg.rfind("--", 0) == 0) {
             log("Unknown option: %s", arg.c_str());
-            log("Usage: create_base_index [--build-indexes] <index_dir>");
+            log("Usage: create_base_index [--build-indexes] [<index_dir>]");
+            log("  index_dir can also be set via INDEX_DIR environment variable");
             return -1;
         } else {
+            // Command line argument overrides environment variable
             index_dir = arg;
         }
     }
     
     if (index_dir.empty()) {
         log("Error: Missing index directory");
-        log("Usage: create_base_index [--build-indexes] <index_dir>");
+        log("Usage: create_base_index [--build-indexes] [<index_dir>]");
+        log("  index_dir can also be set via INDEX_DIR environment variable");
         return -1;
     }
     
