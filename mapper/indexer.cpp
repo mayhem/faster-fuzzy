@@ -7,6 +7,8 @@
 
 int main(int argc, char *argv[])
 {
+    init_logging();
+    
     bool skip_artists = false;
     bool force_rebuild = false;
     string index_dir;

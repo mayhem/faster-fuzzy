@@ -159,8 +159,7 @@ void CreateBaseIndex::create() {
             break;
         }
         
-        printf("\rtotal rows imported: %d)", row_count);
-        fflush(stdout);
+        log("\rtotal rows imported: %d)", row_count);
         
         for (int i = 0; i < num_rows; i++) {
             MappingRow mrow;
@@ -387,7 +386,7 @@ void CreateBaseIndex::import_csv_to_sqlite(const string& db_file, const string& 
             
             count++;
             if (count % 100000 == 0) {
-                printf("\rImported %d rows in sqlite", count);
+                fprintf(stdout, "\rImported %d rows in sqlite", count);
                 fflush(stdout);
             }
         }
@@ -455,6 +454,8 @@ string CreateBaseIndex::escape_csv_field(const string& field) {
 
 int main(int argc, char *argv[])
 {
+    init_logging();
+    
     if (argc < 2) {
         log("Usage: create_base_index [--build-indexes] <index_dir>");
         log("  --build-indexes  Also build artist and recording search indexes");

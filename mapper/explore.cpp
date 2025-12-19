@@ -876,6 +876,8 @@ class Explorer {
 };
 
 int main(int argc, char* argv[]) {
+    init_logging();
+    
     if (argc < 2) {
         log("Usage: explore <index_dir>");
         log("  index_dir: Directory containing the mapping database and index files");

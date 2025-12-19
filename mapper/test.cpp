@@ -201,7 +201,8 @@ TEST_CASE("basic lookup tests") {
 }
 
 int main(int argc, char* argv[]) {
-
+    init_logging();
+    
     if (argc < 2) {
         log("Usage: mapping_tests <index_dir>");
         return -1;

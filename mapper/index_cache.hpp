@@ -8,6 +8,7 @@
 using namespace std;
 
 const int SLEEP_DELAY = 30;
+const float CLEANING_TARGET_RATIO = 0.9;
 
 class IndexCache {
     private:
@@ -26,7 +27,7 @@ class IndexCache {
             stop = false;
             cleaner_thread = nullptr;
             max_memory_usage = max_memory_usage_;
-            cleaning_target = (int)(max_memory_usage * .9);
+            cleaning_target = (int)(max_memory_usage * CLEANING_TARGET_RATIO);
         }
         
         ~IndexCache() {

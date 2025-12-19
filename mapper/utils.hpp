@@ -4,6 +4,12 @@
 
 using namespace std;
 
+// Call this at the start of main() to ensure logs appear in Docker
+inline void init_logging() {
+    setvbuf(stdout, NULL, _IONBF, 0);
+    setvbuf(stderr, NULL, _IONBF, 0);
+}
+
 inline void log(const char *format, ...) {
     va_list   args;
     char      buffer[255];

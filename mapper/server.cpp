@@ -9,9 +9,9 @@
 using namespace std;
 
 // Shared resources (created once, shared across all threads)
-static string g_index_dir;
-static string g_templates_dir = "templates";
-static int g_cache_size = 25;
+static string g_index_dir = "/data";
+static string g_templates_dir = "/mapper/templates";
+static int g_cache_size = 100;  // in MB
 static int g_num_threads = 0;  // 0 = use all available cores
 static ArtistIndex* g_artist_index = nullptr;
 static IndexCache* g_index_cache = nullptr;
@@ -31,15 +31,53 @@ void print_usage(const char* program_name) {
     log("  -h, --host <hostname>   Hostname/IP to bind to (default: 0.0.0.0)");
     log("  -p, --port <port>       Port number to listen on (default: 5000)");
     log("  -i, --index <dir>       Index directory (required)");
-    log("  -t, --templates <dir>   Templates directory (default: ./templates)");
+    log("  -t, --templates <dir>   Templates directory (default: /mapper/templates)");
+    log("  -c, --cache-memory <MB> Max index cache memory usage");
     log("  --help                  Show this help message");
 }
 
 int main(int argc, char* argv[]) {
+    init_logging();
+    
+    // Default values
     string host = "0.0.0.0";
     int port = 5000;
+    
+    // Read defaults from environment variables first
+    const char* env_host = std::getenv("HOST");
+    if (env_host && strlen(env_host) > 0) {
+        host = env_host;
+    }
+    
+    const char* env_port = std::getenv("PORT");
+    if (env_port && strlen(env_port) > 0) {
+        int p = atoi(env_port);
+        if (p > 0 && p <= 65535) port = p;
+    }
+    
+    const char* env_index_dir = std::getenv("INDEX_DIR");
+    if (env_index_dir && strlen(env_index_dir) > 0) {
+        g_index_dir = env_index_dir;
+    }
+    
+    const char* env_template_dir = std::getenv("TEMPLATE_DIR");
+    if (env_template_dir && strlen(env_template_dir) > 0) {
+        g_templates_dir = env_template_dir;
+    }
+    
+    const char* env_num_threads = std::getenv("NUM_THREADS");
+    if (env_num_threads && strlen(env_num_threads) > 0) {
+        g_num_threads = atoi(env_num_threads);
+        if (g_num_threads < 0) g_num_threads = 0;
+    }
+    
+    const char* env_cache_size = std::getenv("MAX_CACHE_SIZE");
+    if (env_cache_size && strlen(env_cache_size) > 0) {
+        g_cache_size = atoi(env_cache_size);
+        if (g_cache_size < 1) g_cache_size = 100;
+    }
 
-    // Parse command line arguments
+    // Parse command line arguments (override env vars)
     for (int i = 1; i < argc; i++) {
         string arg = argv[i];
         
@@ -83,19 +121,6 @@ int main(int argc, char* argv[]) {
             print_usage(argv[0]);
             return 1;
         }
-    }
-
-    if (g_index_dir.empty()) {
-        log("Error: Index directory is required (-i or --index)");
-        print_usage(argv[0]);
-        return 1;
-    }
-
-    // Read NUM_THREADS from environment
-    const char* num_threads_env = std::getenv("NUM_THREADS");
-    if (num_threads_env && strlen(num_threads_env) > 0) {
-        g_num_threads = atoi(num_threads_env);
-        if (g_num_threads < 0) g_num_threads = 0;
     }
 
     // Create index cache immediately (lightweight)
