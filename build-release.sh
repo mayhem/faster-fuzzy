@@ -1,0 +1,27 @@
+#!/bin/bash
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BUILD_DIR="$SCRIPT_DIR/mapper/build"
+
+if [ -d "$BUILD_DIR" ]; then
+    echo "Error: Build directory already exists: $BUILD_DIR"
+    echo "Please remove it first if you want to reconfigure."
+    exit 1
+fi
+
+mkdir -p "$BUILD_DIR"
+cd "$BUILD_DIR"
+
+cmake -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_CXX_FLAGS="-O3 -march=native -DNDEBUG" \
+      -DBUILD_TESTING=OFF \
+      -DWITHOUT_TESTS=ON \
+      -DBUILD_SANDBOX=OFF \
+      -DWITH_WERROR=OFF \
+      ..
+
+make -j$(nproc)
+
+echo "Release build complete. Binaries are in: $BUILD_DIR"

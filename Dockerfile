@@ -27,11 +27,8 @@ RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100 \
 WORKDIR /src/faster-fuzzy
 COPY . .
 
-# Build all targets
-WORKDIR /src/faster-fuzzy/mapper
-RUN mkdir -p build && cd build \
-    && cmake .. \
-    && make -j$(nproc)
+# Build all targets using release script
+RUN ./build-release.sh
 
 # Runtime stage - smaller final image
 FROM ubuntu:24.04 AS runtime
