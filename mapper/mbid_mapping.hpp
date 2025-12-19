@@ -11,10 +11,6 @@
 
 using namespace std;
 
-const float ARTIST_CONFIDENCE_THRESHOLD = .45;
-const int   NUM_ROWS_PER_COMMIT = 500;
-const int   MAX_THREADS = 16;
-
 const char *fetch_pending_artists_query = R"(
     WITH artist_ids AS (
             SELECT DISTINCT mapping.artist_credit_id

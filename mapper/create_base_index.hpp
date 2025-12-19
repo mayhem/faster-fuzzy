@@ -10,12 +10,9 @@
 
 #include "SQLiteCpp.h"
 #include "utils.hpp"
+#include "defs.hpp"
 
 using namespace std;
-
-const float ARTIST_CONFIDENCE_THRESHOLD = 0.45;
-const int NUM_ROWS_PER_COMMIT = 25000;
-const int MAX_THREADS = 8;
 
 struct MappingRow {
     unsigned int artist_credit_id;
