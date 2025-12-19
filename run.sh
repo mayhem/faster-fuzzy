@@ -5,7 +5,7 @@ set -e
 VALID_SERVICES=("make_index" "make_cache" "explore" "shell")
 
 usage() {
-    echo "Usage: $0 <service>"
+    echo "Usage: $0 <service> [args...]"
     echo ""
     echo "Available services:"
     echo "  make_index  - Build the base index from MusicBrainz database"
@@ -13,14 +13,16 @@ usage() {
     echo "  explore     - Run the interactive explorer"
     echo "  shell       - Open a bash shell in the container"
     echo ""
-    echo "Options:"
-    echo "  Any additional arguments are passed to the container command"
+    echo "Arguments after the service name are passed to the container command."
     echo ""
     echo "Examples:"
     echo "  $0 make_index"
+    echo "  $0 make_index --build-indexes"
     echo "  $0 make_cache"
     echo "  $0 make_cache --skip-artists"
+    echo "  $0 make_cache --skip-recordings"
     echo "  $0 explore"
+    echo "  $0 shell"
     exit 1
 }
 
@@ -49,17 +51,24 @@ fi
 
 echo "Running service: $SERVICE"
 
+# Map service names to commands
+declare -A SERVICE_COMMANDS
+SERVICE_COMMANDS["make_index"]="/mapper/create"
+SERVICE_COMMANDS["make_cache"]="/mapper/indexer"
+SERVICE_COMMANDS["explore"]="/mapper/explore"
+
 # Handle shell specially - needs interactive terminal
 if [ "$SERVICE" = "shell" ]; then
     echo "Opening interactive shell..."
     docker compose run --rm -it explore /bin/bash
 else
+    CMD="${SERVICE_COMMANDS[$SERVICE]}"
     if [ $# -gt 0 ]; then
         echo "Additional arguments: $@"
     fi
     # Run with --rm to automatically clean up container after exit
-    # Pass any additional arguments to the container
-    docker compose run --rm "$SERVICE" "$@"
+    # Pass command and any additional arguments to the container
+    docker compose run --rm "$SERVICE" "$CMD" "$@"
 fi
 
 echo "Done."

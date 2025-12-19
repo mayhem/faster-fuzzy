@@ -15,7 +15,6 @@ services:
       - CANONICAL_MUSICBRAINZ_DATA_CONNECT=dbname=musicbrainz_db user=musicbrainz host=musicbrainz-docker-db-1 port=5432 password=musicbrainz
     networks:
       - musicbrainz
-    command: ["/mapper/create"]
 
   make_cache:
     build:
@@ -32,7 +31,6 @@ services:
       - CANONICAL_MUSICBRAINZ_DATA_CONNECT=dbname=musicbrainz_db user=musicbrainz host=musicbrainz-docker-db-1 port=5432 password=musicbrainz
     networks:
       - musicbrainz
-    command: ["/mapper/indexer"]
 
   explore:
     build:
