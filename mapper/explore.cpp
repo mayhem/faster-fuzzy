@@ -871,18 +871,40 @@ class Explorer {
         }
 };
 
+void print_usage() {
+    printf("Usage: explore\n");
+    printf("\nInteractive music database explorer with artist search and recording/release lookup.\n");
+    printf("\nRequired environment variables:\n");
+    printf("  INDEX_DIR  Directory containing the mapping database and index files\n");
+}
+
 int main(int argc, char* argv[]) {
     init_logging();
+    load_env_file();  // Load .env file, env vars take precedence
     
-    if (argc < 2) {
-        printf("Usage: explore <index_dir>\n");
-        printf("  index_dir: Directory containing the mapping database and index files\n");
-        printf("\nInteractive music database explorer with artist search and recording/release lookup.\n");
-        return -1;
+    // Parse arguments (options only)
+    for (int i = 1; i < argc; i++) {
+        string arg = argv[i];
+        if (arg == "--help" || arg == "-h") {
+            print_usage();
+            return 0;
+        } else {
+            printf("Error: Unknown option: %s\n", arg.c_str());
+            print_usage();
+            return -1;
+        }
     }
     
+    // Get required INDEX_DIR from environment
+    const char* env_index_dir = std::getenv("INDEX_DIR");
+    if (!env_index_dir || strlen(env_index_dir) == 0) {
+        printf("Error: INDEX_DIR environment variable not set\n");
+        print_usage();
+        return -1;
+    }
+    string index_dir = env_index_dir;
+    
     try {
-        string index_dir = argv[1];
         Explorer explorer(index_dir);
         
         printf("Loading artist index from: %s\n", index_dir.c_str());

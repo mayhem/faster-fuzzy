@@ -6,52 +6,59 @@
 #include "utils.hpp"
 #include "SQLiteCpp.h"
 
+void print_usage() {
+    log("Usage: make_indexes [--skip-artists] [--force-rebuild]");
+    log("Options:");
+    log("  --skip-artists   Skip building artist indexes");
+    log("  --force-rebuild  Force rebuild all recording indexes (ignore cache)");
+    log("");
+    log("Required environment variables:");
+    log("  INDEX_DIR                         Directory containing mapping.db");
+    log("  CANONICAL_MUSICBRAINZ_DATA_CONNECT  PostgreSQL connection string (unless --skip-artists)");
+    log("");
+    log("Optional environment variables:");
+    log("  NUM_BUILD_THREADS                 Thread count (0 = num CPU cores, default: 0)");
+}
+
 int main(int argc, char *argv[])
 {
     init_logging();
+    load_env_file();  // Load .env file, env vars take precedence
     
     bool skip_artists = false;
     bool force_rebuild = false;
-    string index_dir;
-    int num_threads = 0;  // 0 means use number of CPU cores
     
-    // Get index_dir from environment variable first
-    const char* env_index_dir = std::getenv("INDEX_DIR");
-    if (env_index_dir && strlen(env_index_dir) > 0) {
-        index_dir = env_index_dir;
-    }
-    
-    // Get num_threads from environment variable
-    const char* env_num_threads = std::getenv("NUM_BUILD_THREADS");
-    if (env_num_threads && strlen(env_num_threads) > 0) {
-        num_threads = std::atoi(env_num_threads);
-    }
-    
-    // Parse arguments
+    // Parse arguments (options only, no positional arguments)
     for (int i = 1; i < argc; i++) {
         string arg = argv[i];
         if (arg == "--skip-artists") {
             skip_artists = true;
         } else if (arg == "--force-rebuild") {
             force_rebuild = true;
-        } else if (arg.rfind("--", 0) == 0) {
-            log("Unknown option: %s", arg.c_str());
-            log("Usage: make_indexes [--skip-artists] [--force-rebuild] [<index_dir>]");
-            log("  --skip-artists   Skip building artist indexes");
-            log("  --force-rebuild  Force rebuild all recording indexes (ignore cache)");
-            log("  index_dir can also be set via INDEX_DIR environment variable");
-            log("  NUM_BUILD_THREADS env var sets thread count (0 = num CPU cores)");
-            return -1;
+        } else if (arg == "--help" || arg == "-h") {
+            print_usage();
+            return 0;
         } else {
-            // Command line argument overrides environment variable
-            index_dir = arg;
+            log("Error: Unknown option: %s", arg.c_str());
+            print_usage();
+            return -1;
         }
     }
     
-    if (index_dir.empty()) {
-        log("Error: INDEX_DIR environment variable not set and no index directory provided");
-        log("Usage: make_cache [--skip-artists] [--force-rebuild] [<index_dir>]");
+    // Get required INDEX_DIR from environment
+    const char* env_index_dir = std::getenv("INDEX_DIR");
+    if (!env_index_dir || strlen(env_index_dir) == 0) {
+        log("Error: INDEX_DIR environment variable not set");
+        print_usage();
         return -1;
+    }
+    string index_dir = env_index_dir;
+    
+    // Get optional NUM_BUILD_THREADS from environment
+    int num_threads = 0;
+    const char* env_num_threads = std::getenv("NUM_BUILD_THREADS");
+    if (env_num_threads && strlen(env_num_threads) > 0) {
+        num_threads = std::atoi(env_num_threads);
     }
     
     // Validate CANONICAL_MUSICBRAINZ_DATA_CONNECT is set (needed for artist index building)
@@ -67,7 +74,7 @@ int main(int argc, char *argv[])
     // Validate flag combinations
     if (skip_artists && force_rebuild) {
         log("Error: --skip-artists and --force-rebuild cannot be used together");
-        log("Usage: mapping_create [--skip-artists] [--force-rebuild] <index_dir>");
+        print_usage();
         return -1;
     }
    

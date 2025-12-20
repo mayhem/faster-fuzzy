@@ -458,42 +458,46 @@ string MakeMapping::escape_csv_field(const string& field) {
     return escaped;
 }
 
+void print_usage() {
+    log("Usage: make_mapping");
+    log("");
+    log("Required environment variables:");
+    log("  INDEX_DIR                         Directory to create mapping.db in");
+    log("  CANONICAL_MUSICBRAINZ_DATA_CONNECT  PostgreSQL connection string");
+}
+
 int main(int argc, char *argv[])
 {
     init_logging();
+    load_env_file();  // Load .env file, env vars take precedence
     
-    string index_dir;
-    
-    // Get index_dir from environment variable first
-    const char* env_index_dir = std::getenv("INDEX_DIR");
-    if (env_index_dir && strlen(env_index_dir) > 0) {
-        index_dir = env_index_dir;
-    }
-    
-    // Parse arguments
+    // Parse arguments (options only)
     for (int i = 1; i < argc; i++) {
         string arg = argv[i];
-        if (arg.rfind("--", 0) == 0) {
-            log("Unknown option: %s", arg.c_str());
-            log("Usage: make_mapping [<index_dir>]");
-            log("  index_dir can also be set via INDEX_DIR environment variable");
-            return -1;
+        if (arg == "--help" || arg == "-h") {
+            print_usage();
+            return 0;
         } else {
-            // Command line argument overrides environment variable
-            index_dir = arg;
+            log("Error: Unknown option: %s", arg.c_str());
+            print_usage();
+            return -1;
         }
     }
     
-    // Validate required environment variables
-    if (index_dir.empty()) {
-        log("Error: INDEX_DIR environment variable not set and no index directory provided");
-        log("Usage: make_mapping [--build-indexes] [<index_dir>]");
+    // Get required INDEX_DIR from environment
+    const char* env_index_dir = std::getenv("INDEX_DIR");
+    if (!env_index_dir || strlen(env_index_dir) == 0) {
+        log("Error: INDEX_DIR environment variable not set");
+        print_usage();
         return -1;
     }
+    string index_dir = env_index_dir;
     
+    // Validate CANONICAL_MUSICBRAINZ_DATA_CONNECT is set
     const char* db_connect = std::getenv("CANONICAL_MUSICBRAINZ_DATA_CONNECT");
     if (!db_connect || strlen(db_connect) == 0) {
         log("Error: CANONICAL_MUSICBRAINZ_DATA_CONNECT environment variable not set");
+        print_usage();
         return -1;
     }
     

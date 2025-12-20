@@ -2,8 +2,14 @@
 
 set -e
 
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 # Docker image name (must match what docker compose builds)
 IMAGE_NAME="faster-fuzzy-mapper"
+
+# Environment file
+ENV_FILE="$SCRIPT_DIR/.env"
 
 # Map command names to binaries - this is the single source of truth
 declare -A COMMAND_BINARIES
@@ -13,9 +19,10 @@ COMMAND_BINARIES["explore"]="/mapper/explore"
 COMMAND_BINARIES["shell"]=""  # handled specially
 
 usage() {
-    echo "Usage: $0 <command> [args...]"
+    echo "Usage: $0 <command> [options...]"
     echo ""
     echo "Use this script to run commands inside a docker deployment."
+    echo "Configuration is read from .env file in the script directory."
     echo ""
     echo "Available commands:"
     echo "  make_mapping - Build the base mapping from MusicBrainz database"
@@ -23,7 +30,7 @@ usage() {
     echo "  explore      - Run the interactive explorer shell (debugging the mapping)"
     echo "  shell        - Open a bash shell in the container"
     echo ""
-    echo "Arguments after the command name are passed to the container process."
+    echo "Options are passed to the container process (e.g., --skip-artists, --force-rebuild)"
     echo ""
     echo "Examples:"
     echo "  $0 make_mapping"
@@ -31,7 +38,7 @@ usage() {
     echo "  $0 explore"
     echo "  $0 shell"
     echo ""
-    echo "To run the server, do docker compose up"
+    echo "To run the server, do: docker compose up"
     exit 1
 }
 
@@ -52,15 +59,25 @@ if [[ ! -v COMMAND_BINARIES[$COMMAND] ]]; then
     usage
 fi
 
+# Check for .env file
+if [ ! -f "$ENV_FILE" ]; then
+    echo "Error: .env file not found at $ENV_FILE"
+    echo "Please create a .env file with the required configuration."
+    echo ""
+    echo "Required variables:"
+    echo "  INDEX_DIR=/data"
+    echo "  CANONICAL_MUSICBRAINZ_DATA_CONNECT=dbname=... user=... host=... port=... password=..."
+    exit 1
+fi
+
 echo "Running: $COMMAND"
 
-# Common docker run options as an array to handle spaces properly
+# Common docker run options as an array
 DOCKER_OPTS=(
     --rm
     -v faster-fuzzy_mapper-volume:/data
     --network musicbrainz-docker_default
-    -e INDEX_DIR=/data
-    -e "CANONICAL_MUSICBRAINZ_DATA_CONNECT=dbname=musicbrainz_db user=musicbrainz host=musicbrainz-docker-db-1 port=5432 password=musicbrainz"
+    --env-file "$ENV_FILE"
 )
 
 # Handle shell specially - needs interactive terminal
@@ -74,10 +91,13 @@ else
         exit 1
     fi
     if [ $# -gt 0 ]; then
-        echo "Additional arguments: $@"
+        echo "Options: $@"
     fi
     # Run with --rm to automatically clean up container after exit
     docker run "${DOCKER_OPTS[@]}" "$IMAGE_NAME" "$BIN" "$@"
+fi
+
+echo "Done."
 fi
 
 echo "Done."

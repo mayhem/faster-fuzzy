@@ -27,25 +27,50 @@ MappingSearch* get_mapping_search() {
     return mapping_search;
 }
 
-void print_usage(const char* program_name) {
-    log("Usage: %s [options]", program_name);
-    log("Options:");
-    log("  -h, --host <hostname>   Hostname/IP to bind to (default: 0.0.0.0)");
-    log("  -p, --port <port>       Port number to listen on (default: 5000)");
-    log("  -i, --index <dir>       Index directory (required)");
-    log("  -t, --templates <dir>   Templates directory (default: /mapper/templates)");
-    log("  -c, --cache-memory <MB> Max index cache memory usage");
-    log("  --help                  Show this help message");
+void print_usage() {
+    log("Usage: server");
+    log("");
+    log("Required environment variables:");
+    log("  INDEX_DIR        Directory containing mapping.db and index files");
+    log("");
+    log("Optional environment variables:");
+    log("  HOST             Hostname/IP to bind to (default: 0.0.0.0)");
+    log("  PORT             Port number to listen on (default: 5000)");
+    log("  TEMPLATE_DIR     Templates directory (default: /mapper/templates)");
+    log("  NUM_THREADS      Number of worker threads (0 = auto, default: 0)");
+    log("  MAX_CACHE_SIZE   Max index cache size in MB (default: 100)");
 }
 
 int main(int argc, char* argv[]) {
     init_logging();
+    load_env_file();  // Load .env file, env vars take precedence
     
-    // Default values
+    // Parse arguments (options only)
+    for (int i = 1; i < argc; i++) {
+        string arg = argv[i];
+        if (arg == "--help" || arg == "-h") {
+            print_usage();
+            return 0;
+        } else {
+            log("Error: Unknown option: %s", arg.c_str());
+            print_usage();
+            return 1;
+        }
+    }
+    
+    // Get required INDEX_DIR from environment
+    const char* env_index_dir = std::getenv("INDEX_DIR");
+    if (!env_index_dir || strlen(env_index_dir) == 0) {
+        log("Error: INDEX_DIR environment variable not set");
+        print_usage();
+        return 1;
+    }
+    g_index_dir = env_index_dir;
+    
+    // Get optional config from environment variables
     string host = "0.0.0.0";
     int port = 5000;
     
-    // Read defaults from environment variables first
     const char* env_host = std::getenv("HOST");
     if (env_host && strlen(env_host) > 0) {
         host = env_host;
@@ -55,11 +80,6 @@ int main(int argc, char* argv[]) {
     if (env_port && strlen(env_port) > 0) {
         int p = atoi(env_port);
         if (p > 0 && p <= 65535) port = p;
-    }
-    
-    const char* env_index_dir = std::getenv("INDEX_DIR");
-    if (env_index_dir && strlen(env_index_dir) > 0) {
-        g_index_dir = env_index_dir;
     }
     
     const char* env_template_dir = std::getenv("TEMPLATE_DIR");
@@ -77,59 +97,6 @@ int main(int argc, char* argv[]) {
     if (env_cache_size && strlen(env_cache_size) > 0) {
         g_cache_size = atoi(env_cache_size);
         if (g_cache_size < 1) g_cache_size = 100;
-    }
-
-    // Parse command line arguments (override env vars)
-    for (int i = 1; i < argc; i++) {
-        string arg = argv[i];
-        
-        if (arg == "--help") {
-            print_usage(argv[0]);
-            return 0;
-        } else if (arg == "-h" || arg == "--host") {
-            if (i + 1 < argc) {
-                host = argv[++i];
-            } else {
-                log("Error: %s requires an argument", arg.c_str());
-                return 1;
-            }
-        } else if (arg == "-p" || arg == "--port") {
-            if (i + 1 < argc) {
-                port = atoi(argv[++i]);
-                if (port <= 0 || port > 65535) {
-                    log("Error: Invalid port number");
-                    return 1;
-                }
-            } else {
-                log("Error: %s requires an argument", arg.c_str());
-                return 1;
-            }
-        } else if (arg == "-i" || arg == "--index") {
-            if (i + 1 < argc) {
-                g_index_dir = argv[++i];
-            } else {
-                log("Error: %s requires an argument", arg.c_str());
-                return 1;
-            }
-        } else if (arg == "-t" || arg == "--templates") {
-            if (i + 1 < argc) {
-                g_templates_dir = argv[++i];
-            } else {
-                log("Error: %s requires an argument", arg.c_str());
-                return 1;
-            }
-        } else {
-            log("Error: Unknown argument: %s", arg.c_str());
-            print_usage(argv[0]);
-            return 1;
-        }
-    }
-
-    // Validate required environment variables
-    if (g_index_dir.empty()) {
-        log("Error: INDEX_DIR environment variable not set and no index directory provided");
-        print_usage(argv[0]);
-        return 1;
     }
 
     // Create index cache immediately (lightweight)
