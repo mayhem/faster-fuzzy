@@ -57,7 +57,7 @@ echo "Running: $COMMAND"
 # Common docker run options as an array to handle spaces properly
 DOCKER_OPTS=(
     --rm
-    -v mapper-volume:/data
+    -v faster-fuzzy_mapper-volume:/data
     --network musicbrainz-docker_default
     -e INDEX_DIR=/data
     -e "CANONICAL_MUSICBRAINZ_DATA_CONNECT=dbname=musicbrainz_db user=musicbrainz host=musicbrainz-docker-db-1 port=5432 password=musicbrainz"
