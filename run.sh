@@ -55,7 +55,7 @@ echo "Running: $COMMAND"
 # Handle shell specially - needs interactive terminal
 if [ "$COMMAND" = "shell" ]; then
     echo "Opening interactive shell..."
-    docker compose run --rm -it --service-ports mapper /bin/bash
+    docker compose run --rm -it -v mapper-volume:/data --network musicbrainz-docker_default mapper /bin/bash
 else
     BIN="${COMMAND_BINARIES[$COMMAND]}"
     if [ -z "$BIN" ]; then
@@ -66,9 +66,10 @@ else
         echo "Additional arguments: $@"
     fi
     # Run with --rm to automatically clean up container after exit
-    # Use --service-ports to inherit network config from docker-compose.yml
+    # Mount the mapper-volume explicitly for data access
+    # Connect to musicbrainz network for database access
     # Pass binary and any additional arguments to the container
-    docker compose run --rm --service-ports mapper "$BIN" "$@"
+    docker compose run --rm -v mapper-volume:/data --network musicbrainz-docker_default mapper "$BIN" "$@"
 fi
 
 echo "Done."

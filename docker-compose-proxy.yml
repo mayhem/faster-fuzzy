@@ -1,3 +1,5 @@
+name: ssl-proxy
+
 services:
 
   nginx:
