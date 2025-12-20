@@ -54,17 +54,19 @@ fi
 
 echo "Running: $COMMAND"
 
-# Common docker run options
-DOCKER_OPTS="--rm"
-DOCKER_OPTS="$DOCKER_OPTS -v mapper-volume:/data"
-DOCKER_OPTS="$DOCKER_OPTS --network musicbrainz-docker_default"
-DOCKER_OPTS="$DOCKER_OPTS -e INDEX_DIR=/data"
-DOCKER_OPTS="$DOCKER_OPTS -e CANONICAL_MUSICBRAINZ_DATA_CONNECT=dbname=musicbrainz_db\ user=musicbrainz\ host=musicbrainz-docker-db-1\ port=5432\ password=musicbrainz"
+# Common docker run options as an array to handle spaces properly
+DOCKER_OPTS=(
+    --rm
+    -v mapper-volume:/data
+    --network musicbrainz-docker_default
+    -e INDEX_DIR=/data
+    -e "CANONICAL_MUSICBRAINZ_DATA_CONNECT=dbname=musicbrainz_db user=musicbrainz host=musicbrainz-docker-db-1 port=5432 password=musicbrainz"
+)
 
 # Handle shell specially - needs interactive terminal
 if [ "$COMMAND" = "shell" ]; then
     echo "Opening interactive shell..."
-    docker run $DOCKER_OPTS -it "$IMAGE_NAME" /bin/bash
+    docker run "${DOCKER_OPTS[@]}" -it "$IMAGE_NAME" /bin/bash
 else
     BIN="${COMMAND_BINARIES[$COMMAND]}"
     if [ -z "$BIN" ]; then
@@ -75,7 +77,7 @@ else
         echo "Additional arguments: $@"
     fi
     # Run with --rm to automatically clean up container after exit
-    docker run $DOCKER_OPTS "$IMAGE_NAME" "$BIN" "$@"
+    docker run "${DOCKER_OPTS[@]}" "$IMAGE_NAME" "$BIN" "$@"
 fi
 
 echo "Done."
