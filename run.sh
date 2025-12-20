@@ -25,7 +25,7 @@ usage() {
     echo "Examples:"
     echo "  $0 make_mapping"
     echo "  $0 make_mapping [--build-indexes]"
-    echo "  $0 make_indexes [--skip-artists] [--skip-recordings]"
+    echo "  $0 make_indexes [--skip-artists] [--force-rebuild]"
     echo "  $0 explore"
     echo "  $0 shell"
     echo ""
@@ -55,7 +55,7 @@ echo "Running: $COMMAND"
 # Handle shell specially - needs interactive terminal
 if [ "$COMMAND" = "shell" ]; then
     echo "Opening interactive shell..."
-    docker compose run --rm -it mapper /bin/bash
+    docker compose run --rm -it --service-ports mapper /bin/bash
 else
     BIN="${COMMAND_BINARIES[$COMMAND]}"
     if [ -z "$BIN" ]; then
@@ -66,8 +66,9 @@ else
         echo "Additional arguments: $@"
     fi
     # Run with --rm to automatically clean up container after exit
+    # Use --service-ports to inherit network config from docker-compose.yml
     # Pass binary and any additional arguments to the container
-    docker compose run --rm mapper "$BIN" "$@"
+    docker compose run --rm --service-ports mapper "$BIN" "$@"
 fi
 
 echo "Done."
