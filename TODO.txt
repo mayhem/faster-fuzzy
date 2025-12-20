@@ -4,4 +4,3 @@
 
 Problematic test case:
 
-1. TAEYEON,, Gemini: Support recording aliases

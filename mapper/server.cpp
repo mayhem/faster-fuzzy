@@ -7,6 +7,7 @@
 #include <sstream>
 #include "crow.h"
 #include "fsm.hpp"
+#include "test_cases.hpp"
 
 using namespace std;
 
@@ -216,64 +217,6 @@ int main(int argc, char* argv[]) {
         auto page = crow::mustache::compile(page_text);
         crow::mustache::context ctx;
         
-        // Test cases - these match the ones in test.cpp
-        struct TestCase {
-            std::string artist;
-            std::string release;
-            std::string recording;
-        };
-        
-        std::vector<TestCase> test_cases = {
-            { "portishead", "portishead", "western eyes" },
-            { "portished", "portishad", "western ey" },
-            { "morcheeba", "parts of the process", "trigger hippie" },
-            { "Billie Eilish", "", "COPYCAT" },
-            { "Angelo Badalamenti", "Music From Twin Peaks", "Laura Palmer's Theme" },
-            { "Alicia Keys", "Keys", "Skydive (originals)" },
-            { "Godspeed You! Black Emperor", "Lift Your Skinny Fists Like Antennas to Heaven", "Like Antennas To Heaven\u2026" },
-            { "Charli xcx", "BRAT", "365" },
-            { "Milana", "MALLORCA STONER VOL.1", "Forest Tale" },
-            { "x#!*\u2566\x39\x37", "1 LP", "untitled 1" },
-            { "Ishay Ribo", "\u05e1\u05d5\u05e3 \u05d7\u05de\u05d4 \u05dc\u05d1\u05d5\u05d0", "\u05e8\u05d1\u05d9 \u05e9\u05de\u05e2\u05d5\u05df" },
-            { "\u5e7e\u4f55\u5b66\u6a21\u69d8", "masana temples", "nana" },
-            { "Kikagaku Moyo", "masana temples", "nana" },
-            { "Harry Nilsson", "Nilsson Schmilsson", "Without You" },
-            { "xhashsymbolexclamationpointasteriskrightdoublevertical97", "1 LP", "untitled 1" },
-            { "Enya Patricia Brennan", "watermark", "watermark" },
-            { "Hanan Ben Ari", "\u05dc\u05d0 \u05dc\u05d1\u05d3", "\u05e8\u05d2\u05e2" },
-            { "!!!", "As If", "Ooo" },
-            { "Yaakov Shwekey", "\u05d2\u05d5\u05e3 \u05d5\u05e0\u05e9\u05de\u05d4 1/4", "\u05d2\u05dc\u05d2\u05dc\u05d9\u05dd" },
-            { "mynoise", "primeval forest", "springtime birds" },
-            { "queen & david bowie", "Hot Space", "under pressure" },
-            { "queen", "Hot Space", "under pressure" },
-            { "darkseed", "", "entre dos tierras" },
-            { "guns n' roses", "Appetite for Destruction", "welcome to the jungle" },
-            { "guns n' roses", "Appetite for Destruction", "mr. brownstone" },
-            { "pink floyd", "Animals", "pigs on the wing part 1" },
-            { "nine inch nails", "The Downward Spiral", "hurt" },
-            { "portishead", "Dummy", "glory box" },
-            { "thievery corporation", "The Richest Man in Babylon", "heaven's gonna burn your eyes" },
-            { "telepopmusik", "Genetic World", "trishika" },
-            { "charli xcx", "SUCKER", "break the rules" },
-            { "charli xcx", "SUCKER", "break the rules (femme remix)" },
-            { "daft punk", "Random Access Memories", "horizon" },
-            { "daft punk", "", "horizon" },
-            { "the xx", "Coexist", "reconsider" },
-            { "florence + the machine", "Lungs", "bird song" },
-            { "the libertines", "The Libertines", "cyclops" },
-            { "foo fighters", "Echoes, Silence, Patience & Grace", "seda" },
-            { "lorde", "Pure Heroine", "bravado (fffrrannno remix)" },
-            { "queen", "A Day at the Races", "teo torriatte (let us cling together)" },
-            { "lana del rey", "Ultraviolence", "flipside" },
-            { "david bowie", "The Next Day", "god bless the girl" },
-            { "arctic monkeys", "AM", "2013" },
-            { "void", "", "verdict for worst dictator" },
-            { "\u9b31P feat. \u521d\u97f3\u30df\u30af", "HAPPYPILLS", "\u30ac" },
-            { "void", "Remind a Locus", "verdict for worst dictator" },
-            { "\u9b31P", "HAPPYPILLS", "\u30ac" },
-            { "Eve", "pray - Single", "pray" },
-        };
-        
         // URL encode helper
         auto url_encode = [](const std::string& value) -> std::string {
             std::ostringstream escaped;
@@ -292,14 +235,14 @@ int main(int argc, char* argv[]) {
         };
         
         std::vector<crow::mustache::context> cases_list;
-        for (const auto& tc : test_cases) {
+        for (const auto& tc : get_test_cases()) {
             crow::mustache::context tc_ctx;
-            tc_ctx["artist_credit_name"] = tc.artist;
-            tc_ctx["release_name"] = tc.release;
-            tc_ctx["recording_name"] = tc.recording;
-            tc_ctx["artist_credit_name_encoded"] = url_encode(tc.artist);
-            tc_ctx["release_name_encoded"] = url_encode(tc.release);
-            tc_ctx["recording_name_encoded"] = url_encode(tc.recording);
+            tc_ctx["artist_credit_name"] = tc.artist_credit_name;
+            tc_ctx["release_name"] = tc.release_name;
+            tc_ctx["recording_name"] = tc.recording_name;
+            tc_ctx["artist_credit_name_encoded"] = url_encode(tc.artist_credit_name);
+            tc_ctx["release_name_encoded"] = url_encode(tc.release_name);
+            tc_ctx["recording_name_encoded"] = url_encode(tc.recording_name);
             cases_list.push_back(tc_ctx);
         }
         ctx["test_cases"] = std::move(cases_list);
