@@ -322,22 +322,21 @@ class ArtistIndex {
                 
                 const char* db_connect = std::getenv("CANONICAL_MUSICBRAINZ_DATA_CONNECT");
                 if (!db_connect || strlen(db_connect) == 0) {
-                    log("CANONICAL_MUSICBRAINZ_DATA_CONNECT environment variable not set");
-                    return;
+                    throw std::runtime_error("CANONICAL_MUSICBRAINZ_DATA_CONNECT environment variable not set");
                 }
                 conn = PQconnectdb(db_connect);
                 if (PQstatus(conn) != CONNECTION_OK) {
                     log("Connection to database failed: %s", PQerrorMessage(conn));
                     PQfinish(conn);
-                    return;
+                    throw std::runtime_error("PostgreSQL connection failed");
                 }
                
                 res = PQexec(conn, query);
                 if (PQresultStatus(res) != PGRES_TUPLES_OK) {
-                    log("Query failed: %s", PQerrorMessage(conn));
+                    std::string error_msg = "Query failed: " + std::string(PQerrorMessage(conn));
                     PQclear(res);
                     PQfinish(conn);
-                    return;
+                    throw std::runtime_error(error_msg);
                 }
 
                 for (int i = 0; i < PQntuples(res) + 1; i++) {
@@ -396,22 +395,21 @@ class ArtistIndex {
                 
                 const char* db_connect = std::getenv("CANONICAL_MUSICBRAINZ_DATA_CONNECT");
                 if (!db_connect || strlen(db_connect) == 0) {
-                    printf("CANONICAL_MUSICBRAINZ_DATA_CONNECT environment variable not set\n");
-                    return;
+                    throw std::runtime_error("CANONICAL_MUSICBRAINZ_DATA_CONNECT environment variable not set");
                 }
                 conn = PQconnectdb(db_connect);
                 if (PQstatus(conn) != CONNECTION_OK) {
-                    printf("Connection to database failed: %s\n", PQerrorMessage(conn));
+                    log("Connection to database failed: %s", PQerrorMessage(conn));
                     PQfinish(conn);
-                    return;
+                    throw std::runtime_error("PostgreSQL connection failed");
                 }
                
                 res = PQexec(conn, fetch_artist_aliases_query);
                 if (PQresultStatus(res) != PGRES_TUPLES_OK) {
-                    printf("Query failed: %s\n", PQerrorMessage(conn));
+                    std::string error_msg = "Query failed: " + std::string(PQerrorMessage(conn));
                     PQclear(res);
                     PQfinish(conn);
-                    return;
+                    throw std::runtime_error(error_msg);
                 }
 
                 map<unsigned int, set<string>> alias_groups;

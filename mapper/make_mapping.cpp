@@ -1,6 +1,6 @@
-#include "create_base_index.hpp"
+#include "make_mapping.hpp"
 #include "artist_index.hpp"
-#include "mbid_mapping.hpp"
+#include "indexer_thread.hpp"
 #include <libpq-fe.h>
 #include <cstdlib>
 #include <cstdio>
@@ -69,10 +69,10 @@ const char* MAPPING_QUERY = R"(
                 , r.id
 )";
 
-CreateBaseIndex::CreateBaseIndex(const string& _index_dir) : index_dir(_index_dir) {
+MakeMapping::MakeMapping(const string& _index_dir) : index_dir(_index_dir) {
 }
 
-void CreateBaseIndex::create() {
+void MakeMapping::create() {
     auto t0 = std::chrono::high_resolution_clock::now();
     
     // Create index directory if it doesn't exist
@@ -262,7 +262,7 @@ void CreateBaseIndex::create() {
     log("\nLoaded data and saved in %.3f seconds.", duration.count() / 1000.0);
 }
 
-void CreateBaseIndex::create_sqlite_db(const string& db_file) {
+void MakeMapping::create_sqlite_db(const string& db_file) {
     try {
         SQLite::Database db(db_file, SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE);
         
@@ -301,7 +301,7 @@ void CreateBaseIndex::create_sqlite_db(const string& db_file) {
     }
 }
 
-void CreateBaseIndex::import_csv_to_sqlite(const string& db_file, const string& csv_file) {
+void MakeMapping::import_csv_to_sqlite(const string& db_file, const string& csv_file) {
     try {
         SQLite::Database db(db_file, SQLite::OPEN_READWRITE);
         
@@ -408,7 +408,7 @@ void CreateBaseIndex::import_csv_to_sqlite(const string& db_file, const string& 
     }
 }
 
-void CreateBaseIndex::create_indexes(const string& db_file) {
+void MakeMapping::create_indexes(const string& db_file) {
     try {
         SQLite::Database db(db_file, SQLite::OPEN_READWRITE);
         
@@ -435,7 +435,7 @@ void CreateBaseIndex::create_indexes(const string& db_file) {
     }
 }
 
-string CreateBaseIndex::escape_csv_field(const string& field) {
+string MakeMapping::escape_csv_field(const string& field) {
     if (field.empty()) return "\"\"";
     
     bool needs_quotes = field.find(',') != string::npos ||
@@ -478,7 +478,7 @@ int main(int argc, char *argv[])
             build_indexes = true;
         } else if (arg.rfind("--", 0) == 0) {
             log("Unknown option: %s", arg.c_str());
-            log("Usage: create_base_index [--build-indexes] [<index_dir>]");
+            log("Usage: make_mapping [--build-indexes] [<index_dir>]");
             log("  index_dir can also be set via INDEX_DIR environment variable");
             return -1;
         } else {
@@ -490,7 +490,7 @@ int main(int argc, char *argv[])
     // Validate required environment variables
     if (index_dir.empty()) {
         log("Error: INDEX_DIR environment variable not set and no index directory provided");
-        log("Usage: create_base_index [--build-indexes] [<index_dir>]");
+        log("Usage: make_mapping [--build-indexes] [<index_dir>]");
         return -1;
     }
     
@@ -504,7 +504,7 @@ int main(int argc, char *argv[])
 
     
     try {
-        CreateBaseIndex importer(index_dir);
+        MakeMapping importer(index_dir);
         importer.create();
         log("Mapping import completed successfully!");
         
@@ -516,7 +516,7 @@ int main(int argc, char *argv[])
             delete artist_index;
             
             log("Building recording indexes...");
-            MBIDMapping mapping(index_dir);
+            IndexerThread mapping(index_dir);
             mapping.build_recording_indexes();
             
             log("All indexes built successfully!");

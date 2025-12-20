@@ -31,10 +31,10 @@ FetchContent_Declare(libpq
     SOURCE_SUBDIR libpq)
 FetchContent_MakeAvailable(libpq)
 
-add_executable(indexer indexer.cpp tfidf_vectorizer.cpp)
+add_executable(make_indexes make_indexes.cpp tfidf_vectorizer.cpp)
 add_executable(test test.cpp tfidf_vectorizer.cpp levenshtein.cpp)
 add_executable(explore explore.cpp tfidf_vectorizer.cpp levenshtein.cpp)
-add_executable(create create_base_index.cpp tfidf_vectorizer.cpp)
+add_executable(make_mapping make_mapping.cpp tfidf_vectorizer.cpp)
 add_executable(server server.cpp tfidf_vectorizer.cpp levenshtein.cpp)
 
 include_directories(deps/nmslib/similarity_search/include
@@ -52,7 +52,7 @@ include_directories(deps/nmslib/similarity_search/include
 )
 
 
-target_link_libraries(indexer NonMetricSpaceLib
+target_link_libraries(make_indexes NonMetricSpaceLib
                               unidecode
                               pcre2-8-static
                               armadillo
@@ -84,7 +84,7 @@ target_link_libraries(explore NonMetricSpaceLib
                                     readline
 )
 
-target_link_libraries(create NonMetricSpaceLib
+target_link_libraries(make_mapping NonMetricSpaceLib
                              unidecode
                              pcre2-8-static
                              armadillo

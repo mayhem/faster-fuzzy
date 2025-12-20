@@ -9,7 +9,7 @@
 
 #include "artist_index.hpp"
 #include "recording_index.hpp"
-#include "mbid_mapping.hpp"
+#include "indexer_thread.hpp"
 #include "index_cache.hpp"
 #include "utils.hpp"
 #include "encode.hpp"

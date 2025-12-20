@@ -2,27 +2,28 @@
 
 set -e
 
-# TODO: Server doesn't work.
-
-VALID_COMMANDS=("make_index" "make_cache" "explore" "shell")
+# Map command names to binaries - this is the single source of truth
+declare -A COMMAND_BINARIES
+COMMAND_BINARIES["make_mapping"]="/mapper/make_mapping"
+COMMAND_BINARIES["make_indexes"]="/mapper/make_indexes"
+COMMAND_BINARIES["explore"]="/mapper/explore"
+COMMAND_BINARIES["shell"]=""  # handled specially
 
 usage() {
     echo "Usage: $0 <command> [args...]"
     echo ""
     echo "Available commands:"
-    echo "  make_index  - Build the base index from MusicBrainz database"
-    echo "  make_cache  - Build the search indexes (artist and recording)"
-    echo "  explore     - Run the interactive explorer"
-    echo "  shell       - Open a bash shell in the container"
+    echo "  make_mapping - Build the base mapping from MusicBrainz database"
+    echo "  make_indexes - Build the search indexes (artist and recording) used for the cache"
+    echo "  explore      - Run the interactive explorer shell (debugging the mapping)"
+    echo "  shell        - Open a bash shell in the container"
     echo ""
     echo "Arguments after the command name are passed to the container process."
     echo ""
     echo "Examples:"
-    echo "  $0 make_index"
-    echo "  $0 make_index --build-indexes"
-    echo "  $0 make_cache"
-    echo "  $0 make_cache --skip-artists"
-    echo "  $0 make_cache --skip-recordings"
+    echo "  $0 make_mapping"
+    echo "  $0 make_mapping [--build-indexes]"
+    echo "  $0 make_indexes [--skip-artists] [--skip-recordings]"
     echo "  $0 explore"
     echo "  $0 shell"
     echo ""
@@ -39,28 +40,15 @@ fi
 COMMAND="$1"
 shift  # Remove command from arguments, rest will be passed to container
 
-# Validate command name
-valid=false
-for c in "${VALID_COMMANDS[@]}"; do
-    if [ "$COMMAND" = "$c" ]; then
-        valid=true
-        break
-    fi
-done
-
-if [ "$valid" = false ]; then
+# Validate command exists in COMMAND_BINARIES
+if [[ ! -v COMMAND_BINARIES[$COMMAND] ]]; then
     echo "Error: Invalid command '$COMMAND'"
+    echo "Valid commands: ${!COMMAND_BINARIES[*]}"
+    echo ""
     usage
 fi
 
 echo "Running: $COMMAND"
-
-# Map command names to binaries
-declare -A COMMAND_BINARIES
-COMMAND_BINARIES["make_index"]="/mapper/create"
-COMMAND_BINARIES["make_cache"]="/mapper/indexer"
-COMMAND_BINARIES["explore"]="/mapper/explore"
-COMMAND_BINARIES["server"]="/mapper/server"
 
 # Handle shell specially - needs interactive terminal
 if [ "$COMMAND" = "shell" ]; then
@@ -68,6 +56,10 @@ if [ "$COMMAND" = "shell" ]; then
     docker compose run --rm -it mapper /bin/bash
 else
     BIN="${COMMAND_BINARIES[$COMMAND]}"
+    if [ -z "$BIN" ]; then
+        echo "Error: No binary configured for command '$COMMAND'"
+        exit 1
+    fi
     if [ $# -gt 0 ]; then
         echo "Additional arguments: $@"
     fi

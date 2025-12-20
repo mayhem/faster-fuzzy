@@ -29,7 +29,7 @@ struct MappingRow {
     unsigned int score;
 };
 
-class CreateBaseIndex {
+class MakeMapping {
 private:
     string index_dir;
     void create_sqlite_db(const string& db_file);
@@ -38,6 +38,6 @@ private:
     string escape_csv_field(const string& field);
 
 public:
-    CreateBaseIndex(const string& _index_dir);
+    MakeMapping(const string& _index_dir);
     void create();
 };

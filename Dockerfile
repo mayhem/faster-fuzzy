@@ -48,10 +48,10 @@ RUN apt-get update && apt-get install -y \
 RUN mkdir -p /mapper
 
 # Copy built binaries from builder stage
-COPY --from=builder /src/mapper/build/indexer /mapper/
+COPY --from=builder /src/mapper/build/make_indexes /mapper/
 COPY --from=builder /src/mapper/build/test /mapper/
 COPY --from=builder /src/mapper/build/explore /mapper/
-COPY --from=builder /src/mapper/build/create /mapper/
+COPY --from=builder /src/mapper/build/make_mapping /mapper/
 COPY --from=builder /src/mapper/build/server /mapper/
 
 # Copy armadillo shared library built from submodule

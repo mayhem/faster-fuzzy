@@ -37,18 +37,18 @@ Example:
 ### 4. Build Search Indexes
 
 ```bash
-./indexer <index_dir>
+./make_indexes <index_dir>
 ```
 
 Example:
 ```bash
-./indexer ../index
+./make_indexes ../index
 ```
 
 
 ./run.sh make_index
-./run.sh make_cache
-./run.sh make_cache --skip-artists
+./run.sh make_indexes
+./run.sh make_indexes --skip-artists
 ./run.sh explore
 
 ### 5. Run Server

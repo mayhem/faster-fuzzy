@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #include "artist_index.hpp"
-#include "mbid_mapping.hpp"
+#include "indexer_thread.hpp"
 #include "utils.hpp"
 #include "SQLiteCpp.h"
 
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
             force_rebuild = true;
         } else if (arg.rfind("--", 0) == 0) {
             log("Unknown option: %s", arg.c_str());
-            log("Usage: indexer [--skip-artists] [--force-rebuild] [<index_dir>]");
+            log("Usage: make_indexes [--skip-artists] [--force-rebuild] [<index_dir>]");
             log("  --skip-artists   Skip building artist indexes");
             log("  --force-rebuild  Force rebuild all recording indexes (ignore cache)");
             log("  index_dir can also be set via INDEX_DIR environment variable");
@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
     
     if (index_dir.empty()) {
         log("Error: INDEX_DIR environment variable not set and no index directory provided");
-        log("Usage: indexer [--skip-artists] [--force-rebuild] [<index_dir>]");
+        log("Usage: make_cache [--skip-artists] [--force-rebuild] [<index_dir>]");
         return -1;
     }
     
@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
     }
 
     log("build recording indexes with %d threads", num_threads);
-    MBIDMapping mapping(index_dir, num_threads);
+    IndexerThread mapping(index_dir, num_threads);
     mapping.build_recording_indexes();
 
     return 0;

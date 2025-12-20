@@ -54,14 +54,14 @@ void thread_build_index(const string &index_dir, CreatorThread *th, unsigned int
     th->done = true;
 }
     
-class MBIDMapping {
+class IndexerThread {
     private:
         string                  index_dir, db_file;
         int                     num_threads;
 
     public:
 
-        MBIDMapping(const string &_index_dir, int _num_threads = 0) { 
+        IndexerThread(const string &_index_dir, int _num_threads = 0) { 
             index_dir = _index_dir;
             db_file = _index_dir + "/mapping.db";
             // 0 means use number of CPU cores
@@ -69,7 +69,7 @@ class MBIDMapping {
             if (num_threads <= 0) num_threads = 4;  // fallback if hardware_concurrency() fails
         }
         
-        ~MBIDMapping() {
+        ~IndexerThread() {
         }
         
         void write_indexes_to_db(SQLite::Database &db, vector<CreatorThread *> &data) {
