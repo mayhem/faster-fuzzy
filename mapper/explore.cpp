@@ -566,9 +566,7 @@ class Explorer {
                 
                 printf("\n");
                 
-                // Clean up
-                delete data->recording_index;
-                delete data->release_index;
+                // Clean up - destructor handles recording_index and release_index
                 delete data;
                 
             } catch (const std::exception& e) {
@@ -699,9 +697,7 @@ class Explorer {
                 
                 printf("\n");
                 
-                // Clean up
-                delete data->recording_index;
-                delete data->release_index;
+                // Clean up - destructor handles recording_index and release_index
                 delete data;
                 
             } catch (const std::exception& e) {

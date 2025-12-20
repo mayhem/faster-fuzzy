@@ -200,8 +200,7 @@ int main(int argc, char* argv[]) {
     
     string index_dir = string(argv[1]);
     ArtistIndex* artist_index = new ArtistIndex(index_dir);
-    // not needed for tests
-    // artist_index->load();
+    artist_index->load();
     IndexCache* index_cache = new IndexCache(10);
     
     mapping_search = new MappingSearch(index_dir, artist_index, index_cache);

@@ -462,7 +462,6 @@ int main(int argc, char *argv[])
 {
     init_logging();
     
-    bool build_indexes = false;
     string index_dir;
     
     // Get index_dir from environment variable first
@@ -474,11 +473,9 @@ int main(int argc, char *argv[])
     // Parse arguments
     for (int i = 1; i < argc; i++) {
         string arg = argv[i];
-        if (arg == "--build-indexes") {
-            build_indexes = true;
-        } else if (arg.rfind("--", 0) == 0) {
+        if (arg.rfind("--", 0) == 0) {
             log("Unknown option: %s", arg.c_str());
-            log("Usage: make_mapping [--build-indexes] [<index_dir>]");
+            log("Usage: make_mapping [<index_dir>]");
             log("  index_dir can also be set via INDEX_DIR environment variable");
             return -1;
         } else {
@@ -507,20 +504,6 @@ int main(int argc, char *argv[])
         MakeMapping importer(index_dir);
         importer.create();
         log("Mapping import completed successfully!");
-        
-        if (build_indexes) {
-            // Build the search indexes
-            log("Building artist indexes...");
-            ArtistIndex *artist_index = new ArtistIndex(index_dir);
-            artist_index->build();
-            delete artist_index;
-            
-            log("Building recording indexes...");
-            IndexerThread mapping(index_dir);
-            mapping.build_recording_indexes();
-            
-            log("All indexes built successfully!");
-        }
     } catch (const std::exception& e) {
         log("Error: %s", e.what());
         return -1;

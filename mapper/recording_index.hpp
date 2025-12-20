@@ -63,6 +63,7 @@ class RecordingIndex {
        
         void
         load_recording_aliases() {
+            log("load recording aliases");
             try
             {
                 PGconn     *conn;
@@ -175,6 +176,28 @@ class RecordingIndex {
                 recording_texts[it.second] = it.first;
                 // Use the actual recording_id from the database, not the index
                 recording_ids[it.second] = recording_name_to_id_map[it.first];
+            }
+            
+            // Add recording aliases to the index
+            // Collect unique recording_ids from our data
+            set<unsigned int> unique_recording_ids;
+            for(auto &it : recording_name_to_id_map) {
+                unique_recording_ids.insert(it.second);
+            }
+            
+            // For each recording_id, add its aliases if they exist
+            for(unsigned int rec_id : unique_recording_ids) {
+                auto alias_it = recording_aliases.find(rec_id);
+                if (alias_it != recording_aliases.end()) {
+                    for(const string &alias : alias_it->second) {
+                        // Only add if this alias text is not already in the index
+                        if (recording_string_index_map.find(alias) == recording_string_index_map.end()) {
+                            log("add recording alias: %u '%s'", rec_id, alias.c_str());
+                            recording_texts.push_back(alias);
+                            recording_ids.push_back(rec_id);
+                        }
+                    }
+                }
             }
 
             FuzzyIndex *recording_index = new FuzzyIndex();

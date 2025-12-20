@@ -1,7 +1,6 @@
 #pragma once
 
 #include <unistd.h>
-#include <thread>
 #include <chrono>
 
 #include "fuzzy_index.hpp"
@@ -60,12 +59,10 @@ class IndexerThread {
 
     public:
 
-        IndexerThread(const string &_index_dir, int _num_threads = 0) { 
+        IndexerThread(const string &_index_dir, int _num_threads) { 
             index_dir = _index_dir;
             db_file = _index_dir + "/mapping.db";
-            // 0 means use number of CPU cores
-            num_threads = (_num_threads <= 0) ? std::thread::hardware_concurrency() : _num_threads;
-            if (num_threads <= 0) num_threads = 4;  // fallback if hardware_concurrency() fails
+            num_threads = _num_threads;
         }
         
         ~IndexerThread() {
@@ -88,7 +85,6 @@ class IndexerThread {
             vector<unsigned int> artist_ids; 
             try
             {
-                log("Load data");
                 SQLite::Database    db(db_file, SQLite::OPEN_READWRITE);
                 SQLite::Statement   query(db, fetch_pending_artists_query);
 
