@@ -6,7 +6,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Docker image name (must match what docker compose builds)
-IMAGE_NAME="faster-fuzzy-mapper"
+IMAGE_NAME="mbid-mapper-mapper"
 
 # Environment file
 ENV_FILE="$SCRIPT_DIR/.env"
@@ -75,7 +75,7 @@ echo "Running: $COMMAND"
 # Common docker run options as an array
 DOCKER_OPTS=(
     --rm
-    -v faster-fuzzy_mapper-volume:/data
+    -v mbid-mapper_mapper-volume:/data
     --network musicbrainz-docker_default
     --env-file "$ENV_FILE"
 )
@@ -95,9 +95,6 @@ else
     fi
     # Run with --rm to automatically clean up container after exit
     docker run "${DOCKER_OPTS[@]}" "$IMAGE_NAME" "$BIN" "$@"
-fi
-
-echo "Done."
 fi
 
 echo "Done."

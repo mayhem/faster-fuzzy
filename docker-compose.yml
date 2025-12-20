@@ -13,19 +13,6 @@ services:
     env_file:
       - path: .env
         required: false
-    environment:
-      - INDEX_DIR=/data
-      - HOST=0.0.0.0
-      - PORT=5000
-      - TEMPLATE_DIR=/mapper/templates
-      - NUM_THREADS=0
-      - NUM_BUILD_THREADS=32
-      - MAX_CACHE_SIZE=100
-      - VIRTUAL_HOST=mapper.listenbrainz.org
-      - VIRTUAL_PORT=5000
-      - LETSENCRYPT_HOST=mapper.listenbrainz.org
-      - LETSENCRYPT_EMAIL=rob@metabrainz.org
-      - CANONICAL_MUSICBRAINZ_DATA_CONNECT=dbname=musicbrainz_db user=musicbrainz host=musicbrainz-docker-db-1 port=5432 password=musicbrainz
     ports:
       - "127.0.0.1:5000:5000"
     networks:
