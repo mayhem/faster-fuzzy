@@ -172,10 +172,17 @@ class RecordingIndex {
             
             vector<string>       recording_texts(recording_string_index_map.size());
             vector<unsigned int> recording_ids(recording_string_index_map.size());
+            // Map from recording_id to its original index (for linking aliases)
+            map<unsigned int, unsigned int> recording_id_to_index;
             for(auto &it : recording_string_index_map) {
                 recording_texts[it.second] = it.first;
                 // Use the actual recording_id from the database, not the index
-                recording_ids[it.second] = recording_name_to_id_map[it.first];
+                unsigned int rec_id = recording_name_to_id_map[it.first];
+                recording_ids[it.second] = rec_id;
+                // Store the first index we see for each recording_id
+                if (recording_id_to_index.find(rec_id) == recording_id_to_index.end()) {
+                    recording_id_to_index[rec_id] = it.second;
+                }
             }
             
             // Add recording aliases to the index
@@ -192,9 +199,18 @@ class RecordingIndex {
                     for(const string &alias : alias_it->second) {
                         // Only add if this alias text is not already in the index
                         if (recording_string_index_map.find(alias) == recording_string_index_map.end()) {
-                            log("add recording alias: %u '%s'", rec_id, alias.c_str());
+                            unsigned int new_index = recording_texts.size();
                             recording_texts.push_back(alias);
                             recording_ids.push_back(rec_id);
+                            
+                            // Copy links from the original recording to this alias
+                            auto orig_idx_it = recording_id_to_index.find(rec_id);
+                            if (orig_idx_it != recording_id_to_index.end()) {
+                                auto link_it = links.find(orig_idx_it->second);
+                                if (link_it != links.end()) {
+                                    links[new_index] = link_it->second;
+                                }
+                            }
                         }
                     }
                 }
