@@ -94,6 +94,7 @@ int main(int argc, char *argv[])
         log("skipping artist indexes (--skip-artists specified)");
     }
 
+
     log("build recording indexes with %d threads", num_threads);
     IndexerThread mapping(index_dir, num_threads);
     mapping.build_recording_indexes();

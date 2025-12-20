@@ -12,6 +12,8 @@ COMMAND_BINARIES["shell"]=""  # handled specially
 usage() {
     echo "Usage: $0 <command> [args...]"
     echo ""
+    echo "Use this script to run commands inside a docker deployment."
+    echo ""
     echo "Available commands:"
     echo "  make_mapping - Build the base mapping from MusicBrainz database"
     echo "  make_indexes - Build the search indexes (artist and recording) used for the cache"

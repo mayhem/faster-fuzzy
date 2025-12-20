@@ -1,4 +1,4 @@
-#pragma once
+    #pragma once
 #include <stdio.h>
 #include <ctime>
 #include <algorithm>
@@ -37,10 +37,19 @@ const char *fetch_query = R"(
     ORDER BY score, m.release_id
 )";
 
+const char *fetch_recording_aliases_query = R"(
+      SELECT r.id
+           , ra.name
+        FROM recording r
+        JOIN recording_alias ra
+          ON ra.recording = r.id
+)";
+
 class RecordingIndex {
     private:
-        string           index_dir, db_file; 
-        EncodeSearchData encode;
+        string                         index_dir, db_file; 
+        EncodeSearchData               encode;
+        map<unsigned int, set<string>> recording_aliases;
 
     public:
 
@@ -52,6 +61,51 @@ class RecordingIndex {
         ~RecordingIndex() {
         }
        
+        void
+        load_recording_aliases() {
+            try
+            {
+                PGconn     *conn;
+                PGresult   *res;
+                
+                const char* db_connect = std::getenv("CANONICAL_MUSICBRAINZ_DATA_CONNECT");
+                if (!db_connect || strlen(db_connect) == 0) {
+                    throw std::runtime_error("CANONICAL_MUSICBRAINZ_DATA_CONNECT environment variable not set");
+                }
+                conn = PQconnectdb(db_connect);
+                if (PQstatus(conn) != CONNECTION_OK) {
+                    log("Connection to database failed: %s", PQerrorMessage(conn));
+                    PQfinish(conn);
+                    throw std::runtime_error("PostgreSQL connection failed");
+                }
+               
+                res = PQexec(conn, fetch_recording_aliases_query);
+                if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+                    std::string error_msg = "Query failed: " + std::string(PQerrorMessage(conn));
+                    PQclear(res);
+                    PQfinish(conn);
+                    throw std::runtime_error(error_msg);
+                }
+
+                for (int i = 0; i < PQntuples(res); i++) {
+                    unsigned int recording_id = atoi(PQgetvalue(res, i, 0));
+                    
+                    // TODO: add this to stupid recording index
+                    string encoded = encode.encode_string(PQgetvalue(res, i, 1));
+                    if (encoded.size())
+                        recording_aliases[recording_id].insert(encoded);
+                }
+                
+                // Clear the PGresult object to free memory
+                PQclear(res);
+                PQfinish(conn);
+            }
+            catch (exception& e)
+            {
+                printf("build recording aliases db exception: %s\n", e.what());
+            }
+        }
+
         ReleaseRecordingIndex
         build_recording_release_indexes(unsigned int artist_credit_id) {
 

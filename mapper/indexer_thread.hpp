@@ -35,12 +35,11 @@ class CreatorThread {
         }
 };
 
-void thread_build_index(const string &index_dir, CreatorThread *th, unsigned int artist_id) {
-    RecordingIndex  ri(index_dir);
+void thread_build_index(RecordingIndex *ri, CreatorThread *th, unsigned int artist_id) {
     
     th->sstream = new stringstream();
     
-    auto index = ri.build_recording_release_indexes(artist_id);
+    auto index = ri->build_recording_release_indexes(artist_id);
     {
         cereal::BinaryOutputArchive oarchive(*th->sstream);
         oarchive(*index.recording_index);
@@ -105,6 +104,9 @@ class IndexerThread {
                 unsigned int count = 0;
                 unsigned int total_count = artist_ids.size();
                 
+                RecordingIndex recording_index(index_dir);
+                recording_index.load_recording_aliases();
+                
                 auto now = chrono::system_clock::now();
                 time_t t0 = std::chrono::system_clock::to_time_t(now);
                 log("Using %d threads", num_threads);
@@ -138,7 +140,7 @@ class IndexerThread {
                         artist_ids.erase(artist_ids.begin());
                         newthread->done = false;
                         newthread->artist_id = artist_id;
-                        newthread->th = new thread(thread_build_index, index_dir, newthread, artist_id); 
+                        newthread->th = new thread(thread_build_index, &recording_index, newthread, artist_id); 
                         threads.push_back(newthread);
                         count++;
                         if ((count % 10) == 0) {
