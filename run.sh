@@ -2,6 +2,9 @@
 
 set -e
 
+# Docker image name (must match what docker compose builds)
+IMAGE_NAME="faster-fuzzy-mapper"
+
 # Map command names to binaries - this is the single source of truth
 declare -A COMMAND_BINARIES
 COMMAND_BINARIES["make_mapping"]="/mapper/make_mapping"
@@ -24,7 +27,6 @@ usage() {
     echo ""
     echo "Examples:"
     echo "  $0 make_mapping"
-    echo "  $0 make_mapping [--build-indexes]"
     echo "  $0 make_indexes [--skip-artists] [--force-rebuild]"
     echo "  $0 explore"
     echo "  $0 shell"
@@ -52,10 +54,17 @@ fi
 
 echo "Running: $COMMAND"
 
+# Common docker run options
+DOCKER_OPTS="--rm"
+DOCKER_OPTS="$DOCKER_OPTS -v mapper-volume:/data"
+DOCKER_OPTS="$DOCKER_OPTS --network musicbrainz-docker_default"
+DOCKER_OPTS="$DOCKER_OPTS -e INDEX_DIR=/data"
+DOCKER_OPTS="$DOCKER_OPTS -e CANONICAL_MUSICBRAINZ_DATA_CONNECT=dbname=musicbrainz_db\ user=musicbrainz\ host=musicbrainz-docker-db-1\ port=5432\ password=musicbrainz"
+
 # Handle shell specially - needs interactive terminal
 if [ "$COMMAND" = "shell" ]; then
     echo "Opening interactive shell..."
-    docker compose run --rm -it -v mapper-volume:/data --network musicbrainz-docker_default mapper /bin/bash
+    docker run $DOCKER_OPTS -it "$IMAGE_NAME" /bin/bash
 else
     BIN="${COMMAND_BINARIES[$COMMAND]}"
     if [ -z "$BIN" ]; then
@@ -66,10 +75,7 @@ else
         echo "Additional arguments: $@"
     fi
     # Run with --rm to automatically clean up container after exit
-    # Mount the mapper-volume explicitly for data access
-    # Connect to musicbrainz network for database access
-    # Pass binary and any additional arguments to the container
-    docker compose run --rm -v mapper-volume:/data --network musicbrainz-docker_default mapper "$BIN" "$@"
+    docker run $DOCKER_OPTS "$IMAGE_NAME" "$BIN" "$@"
 fi
 
 echo "Done."
