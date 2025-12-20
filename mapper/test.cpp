@@ -92,7 +92,6 @@ TestCase test_cases[] = {
 //    { "Celtic Woman","20th Anniversary","When You Believe","4d483147-c871-48c4-8470-85e5a66381c5","9659808f-3382-42be-8c5d-477d271f9791","376e5743-7bf5-49ee-9c7e-f00aa479882c" },
 // Album/recording matching bug . nor research
 //    { "Alicia Keys","Keys","Skydive","8ef1df30-ae4f-4dbd-9351-1a32b208a01e","f7c03888-7c31-4416-a57c-f1686f59ac89","a7bae269-2dd6-4297-a4c7-36a472a2a8fc" },
-//
 // This one requires Album + Soundtrack to be ranked higher than EP.
 //    { "Angelo Badalamenti","","Laura Palmer’s Theme","e441d678-b225-3ea1-808c-9c488fdc3ac6","5894dac5-0260-4175-b36e-e34680a859d6","4cc6e566-96c3-4709-9ec0-a9b39c115e2f" },
 //    { "The Beach Boys","The Smile Sessions","Child Is Father of the Man","ebfc1398-8d96-47e3-82c3-f782abcdb13d","581db767-5221-424b-b6a0-d5db2ff707a1","710ef859-ad3e-4e0e-981b-cecad50e41f4" },
@@ -105,17 +104,6 @@ TestCase test_cases[] = {
 //    { "Ornette Coleman","Ornette!","W.R.U.","31ea99e3-c222-4809-8912-95678314beec","4c7b347e-16b2-41eb-b56e-97edb77ee961","43065996-51e7-4942-8803-aa2a0249b8a6" },
 //    -- Galgalim is the translation of the hebrew word, we're only searching for transliterations.
 //    { "Yaakov Shwekey","גוף ונשמה 1/4","Galgalim","b5792b6a-1561-4499-a9d3-82fa7f40b33f", "90820c40-dfee-4d31-9147-a56383df402b","59855bd1-9e13-4b55-9c77-c793c4dd8cc2" },
-//    
-// Test cases from old mapper:
-// richard wagner,die walkure: feuerzauber,1756c795-9c60-4052-8aae-a4847c5a243c
-//erosion 89,rising from the ashes,6979fc1a-f6bc-45a6-9240-a0ca06d213b3
-//linkin park,1Stp klosr,f662175c-070f-4d93-b85b-0068aeaacdfc
-//linkin park,Ppr:kut,f662175c-070f-4d93-b85b-0068aeaacdfc
-//jonah matranga,new york,9a9a1473-d4a6-41c8-bee8-ded086677d18
-//halou,the professional,ab5301c5-4ab9-4c71-81fc-96cc3faf9de4
-//agents of satan,h.o.g.,ec195e5e-344e-4c24-adec-3c69f0330c18
-//river city tanlines,gimme whatever,88c55540-0a0a-4cc3-8e39-2cadd68868e8
-//bob dylan,turkey chase,c5f460cd-4564-40d9-b684-0d499429d0a0
 };
 
 string

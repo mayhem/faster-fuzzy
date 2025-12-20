@@ -13,6 +13,12 @@
         }
         .logo img {
             height: 40px;
+            max-width: 250px;
+        }
+        @media (max-width: 768px) {
+            .logo {
+                display: none;
+            }
         }
         .timing { color: var(--pico-muted-color); font-size: 0.9em; margin-top: 1rem; }
         .no-match { color: var(--pico-del-color); }
@@ -47,6 +53,7 @@
             <button type="submit">Search</button>
         </form>
         
+        {{#searched}}
         {{#has_match}}
         <article>
             <summary>Found match</summary>
@@ -91,6 +98,7 @@
         {{/has_match}}
         
         <p class="timing">Search completed in <strong>{{search_time_ms}} ms</strong></p>
+        {{/searched}}
 
         {{#searched}}
         <hr>
@@ -117,7 +125,7 @@
         {{/searched}}
         
         <footer>
-            <p><a href="/docs">API Documentation</a></p>
+            <p><a href="/supported">Supported Test Cases</a> | <a href="/docs">API Documentation</a></p>
         </footer>
     </main>
 </body>

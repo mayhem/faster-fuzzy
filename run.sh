@@ -2,18 +2,20 @@
 
 set -e
 
-VALID_SERVICES=("make_index" "make_cache" "explore" "shell")
+# TODO: Server doesn't work.
+
+VALID_COMMANDS=("make_index" "make_cache" "explore" "shell")
 
 usage() {
-    echo "Usage: $0 <service> [args...]"
+    echo "Usage: $0 <command> [args...]"
     echo ""
-    echo "Available services:"
+    echo "Available commands:"
     echo "  make_index  - Build the base index from MusicBrainz database"
     echo "  make_cache  - Build the search indexes (artist and recording)"
     echo "  explore     - Run the interactive explorer"
     echo "  shell       - Open a bash shell in the container"
     echo ""
-    echo "Arguments after the service name are passed to the container command."
+    echo "Arguments after the command name are passed to the container process."
     echo ""
     echo "Examples:"
     echo "  $0 make_index"
@@ -23,52 +25,55 @@ usage() {
     echo "  $0 make_cache --skip-recordings"
     echo "  $0 explore"
     echo "  $0 shell"
+    echo ""
+    echo "To run the server, do docker compose up"
     exit 1
 }
 
-# Check if service argument provided
+# Check if command argument provided
 if [ -z "$1" ]; then
-    echo "Error: No service specified"
+    echo "Error: No command specified"
     usage
 fi
 
-SERVICE="$1"
-shift  # Remove service from arguments, rest will be passed to container
+COMMAND="$1"
+shift  # Remove command from arguments, rest will be passed to container
 
-# Validate service name
+# Validate command name
 valid=false
-for s in "${VALID_SERVICES[@]}"; do
-    if [ "$SERVICE" = "$s" ]; then
+for c in "${VALID_COMMANDS[@]}"; do
+    if [ "$COMMAND" = "$c" ]; then
         valid=true
         break
     fi
 done
 
 if [ "$valid" = false ]; then
-    echo "Error: Invalid service '$SERVICE'"
+    echo "Error: Invalid command '$COMMAND'"
     usage
 fi
 
-echo "Running service: $SERVICE"
+echo "Running: $COMMAND"
 
-# Map service names to commands
-declare -A SERVICE_COMMANDS
-SERVICE_COMMANDS["make_index"]="/mapper/create"
-SERVICE_COMMANDS["make_cache"]="/mapper/indexer"
-SERVICE_COMMANDS["explore"]="/mapper/explore"
+# Map command names to binaries
+declare -A COMMAND_BINARIES
+COMMAND_BINARIES["make_index"]="/mapper/create"
+COMMAND_BINARIES["make_cache"]="/mapper/indexer"
+COMMAND_BINARIES["explore"]="/mapper/explore"
+COMMAND_BINARIES["server"]="/mapper/server"
 
 # Handle shell specially - needs interactive terminal
-if [ "$SERVICE" = "shell" ]; then
+if [ "$COMMAND" = "shell" ]; then
     echo "Opening interactive shell..."
-    docker compose run --rm -it explore /bin/bash
+    docker compose run --rm -it mapper /bin/bash
 else
-    CMD="${SERVICE_COMMANDS[$SERVICE]}"
+    BIN="${COMMAND_BINARIES[$COMMAND]}"
     if [ $# -gt 0 ]; then
         echo "Additional arguments: $@"
     fi
     # Run with --rm to automatically clean up container after exit
-    # Pass command and any additional arguments to the container
-    docker compose run --rm "$SERVICE" "$CMD" "$@"
+    # Pass binary and any additional arguments to the container
+    docker compose run --rm mapper "$BIN" "$@"
 fi
 
 echo "Done."

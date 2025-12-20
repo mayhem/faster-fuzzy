@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Supported Test Cases - MBID Mapper</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <style>
+        .logo {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+        }
+        .logo img {
+            height: 40px;
+            max-width: 250px;
+        }
+        @media (max-width: 768px) {
+            .logo {
+                display: none;
+            }
+        }
+        table {
+            font-size: 0.9em;
+        }
+        td {
+            word-break: break-word;
+        }
+    </style>
+</head>
+<body>
+    <a href="https://listenbrainz.org" class="logo" target="_blank">
+        <img src="https://listenbrainz.org/static/img/navbar_logo.svg" alt="ListenBrainz">
+    </a>
+    <main class="container">
+        <h1>Supported Test Cases</h1>
+        <p>These are the test cases used to validate the MBID mapping service. Click any row to search for that recording.</p>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Artist</th>
+                    <th>Release</th>
+                    <th>Recording</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#test_cases}}
+                <tr>
+                    <td><a href="/?artist_credit_name={{artist_credit_name_encoded}}&release_name={{release_name_encoded}}&recording_name={{recording_name_encoded}}">{{artist_credit_name}}</a></td>
+                    <td>{{release_name}}</td>
+                    <td>{{recording_name}}</td>
+                </tr>
+                {{/test_cases}}
+            </tbody>
+        </table>
+        
+        <footer>
+            <p><a href="/">← Back to Search</a> | <a href="/docs">API Documentation</a></p>
+        </footer>
+    </main>
+</body>
+</html>
